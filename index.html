@@ -5,8 +5,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://rawcdn.githack.com/kripken/ammo.js/23e96cb0/ammo.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
@@ -22,6 +22,8 @@
             renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
+
+            window.addEventListener('resize', onWindowResize, false);
 
             let light = new THREE.DirectionalLight(0xffffff, 1);
             light.position.set(5, 5, 5).normalize();
@@ -40,6 +42,12 @@
             scene.add(sphere);
 
             animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function animate() {
