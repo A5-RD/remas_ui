@@ -3,30 +3,32 @@
 <head>
     <title>Intro Animation</title>
     <style>
-        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
         #logo {
             opacity: 0;
             transition: opacity 3s ease-in-out;
             width: 200px; /* Adjust size as needed */
         }
         #fullscreen-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
             cursor: pointer;
             border: none;
-            background-color: #007bff;
+            background-color: grey;
             color: white;
-            border-radius: 5px;
+            border-radius: 3px;
         }
         #fullscreen-btn:hover {
-            background-color: #0056b3;
+            background-color: darkgrey;
         }
     </style>
 </head>
 <body>
     <img id="logo" src="logo.png" alt="ATOM 5 Logo">
-    <button id="fullscreen-btn" onclick="toggleFullScreen()">Full Screen</button>
+    <button id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
     <script>
         window.onload = function() {
             let logo = document.getElementById("logo");
