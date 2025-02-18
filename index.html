@@ -1,75 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Physics Game</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://rawcdn.githack.com/kripken/ammo.js/23e96cb0/ammo.js"></script>
+    <title>Intro Animation</title>
     <style>
-        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; }
-        canvas { display: block; width: 100vw; height: 100vh; }
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; display: flex; justify-content: center; align-items: center; }
         #logo {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 1;
-            transition: opacity 2s ease-out;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            width: 300px; /* Adjust size as needed */
         }
     </style>
 </head>
 <body>
     <img id="logo" src="logo.png" alt="ATOM 5 Logo">
     <script>
-        let scene, camera, renderer, physicsWorld;
-        let sphere, ground;
-
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.set(0, 5, 10);
-
-            renderer = new THREE.WebGLRenderer();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            window.addEventListener('resize', onWindowResize, false);
-
-            let light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(5, 5, 5).normalize();
-            scene.add(light);
-
-            let groundGeo = new THREE.BoxGeometry(10, 1, 10);
-            let groundMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.position.y = -1;
-            scene.add(ground);
-
-            let sphereGeo = new THREE.SphereGeometry(1, 32, 32);
-            let sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            sphere.position.y = 2;
-            scene.add(sphere);
-
-            setTimeout(() => {
-                document.getElementById("logo").style.opacity = "0";
-                setTimeout(() => { document.getElementById("logo").remove(); }, 2000);
-            }, 2000);
-
-            animate();
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-
-        window.onload = init;
+        window.onload = function() {
+            let logo = document.getElementById("logo");
+            setTimeout(() => { logo.style.opacity = "1"; }, 500); // Fade in delay
+            setTimeout(() => { logo.style.opacity = "0"; }, 4500); // Fade out after 4.5s
+        };
     </script>
 </body>
 </html>
