@@ -24,17 +24,65 @@
         #fullscreen-btn:hover {
             background-color: darkgrey;
         }
+        #password-container {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 5px;
+        }
+        #password-input {
+            padding: 5px;
+            font-size: 14px;
+        }
+        #password-btn {
+            padding: 5px 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: grey;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        #password-btn:hover {
+            background-color: darkgrey;
+        }
     </style>
 </head>
 <body>
+    <div id="password-container">
+        <input type="password" id="password-input" placeholder="Enter Password" />
+        <button id="password-btn" onclick="checkPassword()">Submit</button>
+    </div>
     <img id="logo" src="logo.png" alt="ATOM 5 Logo">
     <button id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
+    
     <script>
+        const correctPassword = "siliconfuture21";
+
         window.onload = function() {
+            document.getElementById("logo").style.opacity = "0"; // Keep logo hidden initially
+        };
+
+        function checkPassword() {
+            const password = document.getElementById("password-input").value;
+            if (password === correctPassword) {
+                document.getElementById("password-container").style.display = "none"; // Hide password prompt
+                showIntroAnimation(); // Start intro animation
+            } else {
+                alert("Incorrect password, please try again.");
+            }
+        }
+
+        function showIntroAnimation() {
             let logo = document.getElementById("logo");
             setTimeout(() => { logo.style.opacity = "1"; }, 500); // Fade in delay
             setTimeout(() => { logo.style.opacity = "0"; }, 4500); // Fade out after 4.5s
-        };
+        }
 
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
