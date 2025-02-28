@@ -73,18 +73,22 @@
             background-color: darkgrey;
         }
 
-        #login-container, #signup-container {
+        /* Box for Login and Signup */
+        .auth-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 20px;
         }
 
         #login-container input, #signup-container input {
             margin: 10px;
             padding: 10px;
             width: 200px;
-            font-size: 14px;
+            font-size: 12px; /* Smaller text */
             font-family: 'Roboto', sans-serif;
         }
 
@@ -93,18 +97,32 @@
             background-color: grey;
             color: white;
             border: none;
-            font-size: 14px;
+            font-size: 12px; /* Smaller text */
             margin-top: 10px;
             cursor: pointer;
+            width: 100px;
+            text-align: center;
         }
 
         #login-container button:hover, #signup-container button:hover {
             background-color: darkgrey;
         }
+
+        /* Align buttons next to each other */
+        #login-container button, #signup-container button {
+            display: inline-block;
+            margin: 5px;
+        }
+
+        /* Style for the content container */
+        #content-container {
+            display: none;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div id="login-container">
+    <div id="login-container" class="auth-box">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Enter email" />
         <input type="password" id="password" placeholder="Enter password" />
@@ -112,7 +130,7 @@
         <button id="signup-btn" onclick="showSignup()">Sign Up</button>
     </div>
 
-    <div id="signup-container" style="display:none;">
+    <div id="signup-container" class="auth-box" style="display:none;">
         <h2>Create an Account</h2>
         <input type="email" id="signup-email" placeholder="Enter email" />
         <input type="password" id="signup-password" placeholder="Enter password" />
