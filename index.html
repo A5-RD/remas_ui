@@ -4,70 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login and Sign Up</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
     <style>
         body, html {
             margin: 0;
             overflow: hidden;
             width: 100%;
             height: 100%;
-            background: #f4f4f4;
+            background: #d3d3d3;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Roboto', sans-serif;
         }
         .container {
-            background-color: white;
+            background-color: #b0b0b0;
             border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             width: 300px;
             text-align: center;
+            transition: all 0.3s ease;
         }
         .container input, .container button {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #ccc;
+            border: 1px solid #999;
             border-radius: 5px;
-            font-size: 16px;
-        }
-        .container input[type="password"], .container input[type="email"] {
+            background: #d3d3d3;
             font-size: 14px;
+            color: #333;
+            font-weight: 100;
         }
         .container button {
             cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            font-size: 16px;
+            background-color: #a0a0a0;
+            color: #fff;
             border: none;
         }
         .container button:hover {
-            background-color: #45a049;
-        }
-        .container button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+            background-color: #888;
         }
         .container h2 {
             margin-bottom: 20px;
             font-size: 24px;
+            font-weight: 100;
+            color: #333;
         }
-        .switch-to-signup, .switch-to-login {
-            font-size: 14px;
-            color: #007BFF;
-            cursor: pointer;
-            text-decoration: underline;
-            background: none;
-            border: none;
-            padding: 0;
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
         }
-        .switch-to-signup:hover, .switch-to-login:hover {
-            color: #0056b3;
-        }
-        .container .signup-box {
-            display: none;
+        .action-buttons button {
+            width: 48%;
         }
     </style>
 </head>
@@ -75,23 +65,22 @@
 
     <div class="container" id="loginBox">
         <h2>Login</h2>
-        <input type="email" id="email" placeholder="Enter Email" />
-        <input type="password" id="password" placeholder="Enter Password" />
-        <button onclick="login()">Login</button>
-        <p>Don't have an account? <button class="switch-to-signup" onclick="showSignup()">Sign Up</button></p>
+        <input type="email" id="loginEmail" placeholder="Email" />
+        <input type="password" id="loginPassword" placeholder="Password" />
+        <div class="action-buttons">
+            <button onclick="login()">Login</button>
+            <button onclick="showSignup()">Sign Up</button>
+        </div>
     </div>
 
-    <div class="container signup-box" id="signupBox">
+    <div class="container" id="signupBox" style="display: none;">
         <h2>Sign Up</h2>
-        <input type="email" id="signupEmail" placeholder="Enter Email" />
-        <input type="password" id="signupPassword" placeholder="Enter Password" />
-        <button onclick="signup()">Sign Up</button>
-        <p>Already have an account? <button class="switch-to-login" onclick="showLogin()">Login</button></p>
+        <input type="email" id="signupEmail" placeholder="Email" />
+        <input type="password" id="signupPassword" placeholder="Password" />
+        <button onclick="createAccount()">Create</button>
     </div>
 
     <script>
-        const correctPassword = "siliconfuture2100"; // Update with a more secure password management method
-
         function showSignup() {
             document.getElementById('loginBox').style.display = 'none';
             document.getElementById('signupBox').style.display = 'block';
@@ -103,27 +92,21 @@
         }
 
         function login() {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
             if (email && password) {
-                // Simulate Firebase login process
-                console.log('Logged in with:', email);
-                // Validate and check against stored data (in a real-world app, check against Firebase)
-                alert("Welcome back!");
+                alert("Logging in...");
+                // Add authentication logic here
             } else {
                 alert("Please enter both email and password.");
             }
         }
 
-        function signup() {
+        function createAccount() {
             const email = document.getElementById("signupEmail").value;
             const password = document.getElementById("signupPassword").value;
             if (email && password) {
-                // Simulate Firebase signup process
-                console.log('Signed up with:', email);
-                // In a real-world app, store the user info in Firebase Authentication
                 alert("Account created successfully!");
-                // Optionally switch to login view after sign up
                 showLogin();
             } else {
                 alert("Please enter both email and password.");
