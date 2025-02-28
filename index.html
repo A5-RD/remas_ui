@@ -2,13 +2,29 @@
 <html>
 <head>
     <title>Login & Account Creation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> <!-- Roboto Light -->
     <style>
-        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        body, html { 
+            margin: 0; 
+            overflow: hidden; 
+            width: 100%; 
+            height: 100%; 
+            background: white; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            position: relative; 
+            font-family: 'Roboto', sans-serif; /* Applying Roboto font */
+            font-weight: 300; /* Light weight */
+        }
+
         #logo {
             opacity: 0;
             transition: opacity 3s ease-in-out;
             width: 50px; /* Adjust size as needed */
         }
+
         #fullscreen-btn {
             position: absolute;
             bottom: 10px;
@@ -24,6 +40,7 @@
         #fullscreen-btn:hover {
             background-color: darkgrey;
         }
+
         #password-container {
             position: absolute;
             display: flex;
@@ -34,10 +51,13 @@
             padding: 20px;
             border-radius: 5px;
         }
+
         #password-input {
             padding: 5px;
             font-size: 14px;
+            font-family: 'Roboto', sans-serif;
         }
+
         #password-btn {
             padding: 5px 10px;
             margin-top: 10px;
@@ -48,21 +68,26 @@
             border: none;
             border-radius: 3px;
         }
+
         #password-btn:hover {
             background-color: darkgrey;
         }
+
         #login-container, #signup-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin: 20px;
         }
+
         #login-container input, #signup-container input {
             margin: 10px;
             padding: 10px;
             width: 200px;
             font-size: 14px;
+            font-family: 'Roboto', sans-serif;
         }
+
         #login-container button, #signup-container button {
             padding: 10px 20px;
             background-color: grey;
@@ -72,6 +97,7 @@
             margin-top: 10px;
             cursor: pointer;
         }
+
         #login-container button:hover, #signup-container button:hover {
             background-color: darkgrey;
         }
