@@ -1,22 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intro Animation</title>
+    <title>Login & Account Creation</title>
     <style>
-        body, html { 
-            margin: 0; 
-            overflow: hidden; 
-            width: 100%; 
-            height: 100%; 
-            background: white; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            position: relative; 
-        }
+        body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
         #logo {
             opacity: 0;
             transition: opacity 3s ease-in-out;
@@ -64,33 +51,152 @@
         #password-btn:hover {
             background-color: darkgrey;
         }
+        #login-container, #signup-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+        }
+        #login-container input, #signup-container input {
+            margin: 10px;
+            padding: 10px;
+            width: 200px;
+            font-size: 14px;
+        }
+        #login-container button, #signup-container button {
+            padding: 10px 20px;
+            background-color: grey;
+            color: white;
+            border: none;
+            font-size: 14px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        #login-container button:hover, #signup-container button:hover {
+            background-color: darkgrey;
+        }
     </style>
 </head>
 <body>
-    <!-- Password Prompt -->
-    <div id="password-container">
-        <input type="password" id="password-input" placeholder="Enter Password" />
-        <button id="password-btn" onclick="checkPassword()">Submit</button>
+    <div id="login-container">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Enter email" />
+        <input type="password" id="password" placeholder="Enter password" />
+        <button id="login-btn" onclick="login()">Login</button>
+        <button id="signup-btn" onclick="showSignup()">Sign Up</button>
     </div>
-    <!-- Intro Animation -->
-    <img id="logo" src="logo.png" alt="ATOM 5 Logo">
-    <!-- Fullscreen Button -->
-    <button id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
+
+    <div id="signup-container" style="display:none;">
+        <h2>Create an Account</h2>
+        <input type="email" id="signup-email" placeholder="Enter email" />
+        <input type="password" id="signup-password" placeholder="Enter password" />
+        <button id="signup-submit" onclick="signup()">Create Account</button>
+        <button id="cancel-signup" onclick="cancelSignup()">Cancel</button>
+    </div>
+
+    <div id="content-container" style="display:none;">
+        <div id="password-container">
+            <input type="password" id="password-input" placeholder="Enter Password" />
+            <button id="password-btn" onclick="checkPassword()">Submit</button>
+        </div>
+        <img id="logo" src="logo.png" alt="ATOM 5 Logo">
+        <button id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.js"></script>
 
     <script>
-        const correctPassword = "siliconfuture2100";
-        const apiUrl = "https://your-cloud-run-url.a.run.app";  // Replace with your REMAS API URL
-
-        window.onload = function() {
-            document.getElementById("logo").style.opacity = "0"; // Keep logo hidden initially
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-auth-domain",
+            projectId: "your-project-id",
+            storageBucket: "your-storage-bucket",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
         };
 
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+        
+        let userId;
+
+        // Show the signup form
+        function showSignup() {
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("signup-container").style.display = "block";
+        }
+
+        // Cancel signup and go back to login
+        function cancelSignup() {
+            document.getElementById("signup-container").style.display = "none";
+            document.getElementById("login-container").style.display = "block";
+        }
+
+        // Handle user signup
+        async function signup() {
+            const email = document.getElementById("signup-email").value;
+            const password = document.getElementById("signup-password").value;
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                userId = userCredential.user.uid;
+                createUserBucket(userId);
+                alert("Sign Up Successful! Please log in.");
+                cancelSignup();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Handle user login
+        async function login() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                userId = userCredential.user.uid;
+                alert("Login Successful!");
+                displayContent();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Create a unique storage bucket for the user
+        async function createUserBucket(userId) {
+            const bucketName = `your-project-id-user-buckets/${userId}/maps/`;
+
+            // Call your backend to create a bucket or set the user's folder in Cloud Storage
+            try {
+                const response = await fetch('/create-bucket', {
+                    method: 'POST',
+                    body: JSON.stringify({ userId: userId, bucketName: bucketName }),
+                    headers: { 'Content-Type': 'application/json' },
+                });
+
+                if (response.ok) {
+                    console.log("Bucket created or assigned for user.");
+                } else {
+                    alert("Error creating bucket.");
+                }
+            } catch (error) {
+                console.error("Error with creating user bucket:", error);
+            }
+        }
+
+        // Check password to trigger intro animation
         function checkPassword() {
             const password = document.getElementById("password-input").value;
+            const correctPassword = "siliconfuture2100"; // Same password as before for intro animation
             if (password === correctPassword) {
-                document.getElementById("password-container").style.display = "none"; // Hide password prompt
-                showIntroAnimation(); // Start intro animation
-                fetchMapsData(); // Fetch data from API after correct password
+                document.getElementById("password-container").style.display = "none";
+                showIntroAnimation();
             } else {
                 alert("Incorrect password, please try again.");
             }
@@ -110,34 +216,11 @@
             }
         }
 
-        // Fetch data from REMAS API (Cloud Run service)
-        async function fetchMapsData() {
-            try {
-                const response = await fetch(`${apiUrl}/api/maps`); // Example API endpoint
-                if (response.ok) {
-                    const mapsData = await response.json();
-                    console.log("Fetched Maps Data: ", mapsData);
-                    // Now you can use this data in your UI or store it
-                    displayMaps(mapsData); // Example of how you might use the data
-                } else {
-                    alert("Failed to fetch data from API");
-                }
-            } catch (error) {
-                console.error("Error fetching maps data: ", error);
-                alert("Error fetching data from API");
-            }
-        }
-
-        // Display maps data in the UI (Example function)
-        function displayMaps(mapsData) {
-            // Example of how you could display the maps data in the UI
-            const mapsContainer = document.createElement('div');
-            mapsData.forEach(map => {
-                const mapElement = document.createElement('div');
-                mapElement.textContent = `Map ID: ${map.id} - Map Gradient: ${map.gradient}`;
-                mapsContainer.appendChild(mapElement);
-            });
-            document.body.appendChild(mapsContainer);
+        // Display content after login
+        function displayContent() {
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("signup-container").style.display = "none";
+            document.getElementById("content-container").style.display = "block";
         }
     </script>
 </body>
