@@ -1,272 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login & Account Creation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> <!-- Roboto Light -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login and Sign Up</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
     <style>
-        body, html { 
-            margin: 0; 
-            overflow: hidden; 
-            width: 100%; 
-            height: 100%; 
-            background: white; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            position: relative; 
-            font-family: 'Roboto', sans-serif; /* Applying Roboto font */
-            font-weight: 300; /* Light weight */
-        }
-
-        #logo {
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
-            width: 50px; /* Adjust size as needed */
-        }
-
-        #fullscreen-btn {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            font-size: 12px;
-            cursor: pointer;
-            border: none;
-            background-color: grey;
-            color: white;
-            border-radius: 3px;
-        }
-        #fullscreen-btn:hover {
-            background-color: darkgrey;
-        }
-
-        #password-container {
-            position: absolute;
+        body, html {
+            margin: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            background: #f4f4f4;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 5px;
-        }
-
-        #password-input {
-            padding: 5px;
-            font-size: 14px;
             font-family: 'Roboto', sans-serif;
         }
-
-        #password-btn {
-            padding: 5px 10px;
-            margin-top: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            background-color: grey;
-            color: white;
-            border: none;
-            border-radius: 3px;
-        }
-
-        #password-btn:hover {
-            background-color: darkgrey;
-        }
-
-        /* Box for Login and Signup */
-        .auth-box {
+        .container {
             background-color: white;
-            padding: 20px;
             border-radius: 10px;
+            padding: 40px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 300px;
+            text-align: center;
         }
-
-        #login-container input, #signup-container input {
-            margin: 10px;
+        .container input, .container button {
+            width: 100%;
             padding: 10px;
-            width: 200px;
-            font-size: 12px; /* Smaller text */
-            font-family: 'Roboto', sans-serif;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
         }
-
-        #login-container button, #signup-container button {
-            padding: 10px 20px;
-            background-color: grey;
-            color: white;
-            border: none;
-            font-size: 12px; /* Smaller text */
-            margin-top: 10px;
+        .container input[type="password"], .container input[type="email"] {
+            font-size: 14px;
+        }
+        .container button {
             cursor: pointer;
-            width: 100px;
-            text-align: center;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            border: none;
         }
-
-        #login-container button:hover, #signup-container button:hover {
-            background-color: darkgrey;
+        .container button:hover {
+            background-color: #45a049;
         }
-
-        /* Align buttons next to each other */
-        #login-container button, #signup-container button {
-            display: inline-block;
-            margin: 5px;
+        .container button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
-
-        /* Style for the content container */
-        #content-container {
+        .container h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .switch-to-signup, .switch-to-login {
+            font-size: 14px;
+            color: #007BFF;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+        .switch-to-signup:hover, .switch-to-login:hover {
+            color: #0056b3;
+        }
+        .container .signup-box {
             display: none;
-            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="login-container" class="auth-box">
+
+    <div class="container" id="loginBox">
         <h2>Login</h2>
-        <input type="email" id="email" placeholder="Enter email" />
-        <input type="password" id="password" placeholder="Enter password" />
-        <button id="login-btn" onclick="login()">Login</button>
-        <button id="signup-btn" onclick="showSignup()">Sign Up</button>
+        <input type="email" id="email" placeholder="Enter Email" />
+        <input type="password" id="password" placeholder="Enter Password" />
+        <button onclick="login()">Login</button>
+        <p>Don't have an account? <button class="switch-to-signup" onclick="showSignup()">Sign Up</button></p>
     </div>
 
-    <div id="signup-container" class="auth-box" style="display:none;">
-        <h2>Create an Account</h2>
-        <input type="email" id="signup-email" placeholder="Enter email" />
-        <input type="password" id="signup-password" placeholder="Enter password" />
-        <button id="signup-submit" onclick="signup()">Create Account</button>
-        <button id="cancel-signup" onclick="cancelSignup()">Cancel</button>
+    <div class="container signup-box" id="signupBox">
+        <h2>Sign Up</h2>
+        <input type="email" id="signupEmail" placeholder="Enter Email" />
+        <input type="password" id="signupPassword" placeholder="Enter Password" />
+        <button onclick="signup()">Sign Up</button>
+        <p>Already have an account? <button class="switch-to-login" onclick="showLogin()">Login</button></p>
     </div>
-
-    <div id="content-container" style="display:none;">
-        <div id="password-container">
-            <input type="password" id="password-input" placeholder="Enter Password" />
-            <button id="password-btn" onclick="checkPassword()">Submit</button>
-        </div>
-        <img id="logo" src="logo.png" alt="ATOM 5 Logo">
-        <button id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.js"></script>
 
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "your-api-key",
-            authDomain: "your-auth-domain",
-            projectId: "your-project-id",
-            storageBucket: "your-storage-bucket",
-            messagingSenderId: "your-sender-id",
-            appId: "your-app-id"
-        };
+        const correctPassword = "siliconfuture2100"; // Update with a more secure password management method
 
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const storage = firebase.storage();
-        
-        let userId;
-
-        // Show the signup form
         function showSignup() {
-            document.getElementById("login-container").style.display = "none";
-            document.getElementById("signup-container").style.display = "block";
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('signupBox').style.display = 'block';
         }
 
-        // Cancel signup and go back to login
-        function cancelSignup() {
-            document.getElementById("signup-container").style.display = "none";
-            document.getElementById("login-container").style.display = "block";
+        function showLogin() {
+            document.getElementById('signupBox').style.display = 'none';
+            document.getElementById('loginBox').style.display = 'block';
         }
 
-        // Handle user signup
-        async function signup() {
-            const email = document.getElementById("signup-email").value;
-            const password = document.getElementById("signup-password").value;
-
-            try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                userId = userCredential.user.uid;
-                createUserBucket(userId);
-                alert("Sign Up Successful! Please log in.");
-                cancelSignup();
-            } catch (error) {
-                alert(error.message);
-            }
-        }
-
-        // Handle user login
-        async function login() {
+        function login() {
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
-
-            try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                userId = userCredential.user.uid;
-                alert("Login Successful!");
-                displayContent();
-            } catch (error) {
-                alert(error.message);
-            }
-        }
-
-        // Create a unique storage bucket for the user
-        async function createUserBucket(userId) {
-            const bucketName = `your-project-id-user-buckets/${userId}/maps/`;
-
-            // Call your backend to create a bucket or set the user's folder in Cloud Storage
-            try {
-                const response = await fetch('/create-bucket', {
-                    method: 'POST',
-                    body: JSON.stringify({ userId: userId, bucketName: bucketName }),
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                if (response.ok) {
-                    console.log("Bucket created or assigned for user.");
-                } else {
-                    alert("Error creating bucket.");
-                }
-            } catch (error) {
-                console.error("Error with creating user bucket:", error);
-            }
-        }
-
-        // Check password to trigger intro animation
-        function checkPassword() {
-            const password = document.getElementById("password-input").value;
-            const correctPassword = "siliconfuture2100"; // Same password as before for intro animation
-            if (password === correctPassword) {
-                document.getElementById("password-container").style.display = "none";
-                showIntroAnimation();
+            if (email && password) {
+                // Simulate Firebase login process
+                console.log('Logged in with:', email);
+                // Validate and check against stored data (in a real-world app, check against Firebase)
+                alert("Welcome back!");
             } else {
-                alert("Incorrect password, please try again.");
+                alert("Please enter both email and password.");
             }
         }
 
-        function showIntroAnimation() {
-            let logo = document.getElementById("logo");
-            setTimeout(() => { logo.style.opacity = "1"; }, 500); // Fade in delay
-            setTimeout(() => { logo.style.opacity = "0"; }, 4500); // Fade out after 4.5s
-        }
-
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else if (document.exitFullscreen) {
-                document.exitFullscreen();
+        function signup() {
+            const email = document.getElementById("signupEmail").value;
+            const password = document.getElementById("signupPassword").value;
+            if (email && password) {
+                // Simulate Firebase signup process
+                console.log('Signed up with:', email);
+                // In a real-world app, store the user info in Firebase Authentication
+                alert("Account created successfully!");
+                // Optionally switch to login view after sign up
+                showLogin();
+            } else {
+                alert("Please enter both email and password.");
             }
-        }
-
-        // Display content after login
-        function displayContent() {
-            document.getElementById("login-container").style.display = "none";
-            document.getElementById("signup-container").style.display = "none";
-            document.getElementById("content-container").style.display = "block";
         }
     </script>
+
 </body>
 </html>
- 
