@@ -1,0 +1,86 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #f4f4f4;
+    font-family: 'Roboto', sans-serif;
+    overflow: hidden;
+}
+
+/* Fade-in effect */
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 1.5s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Simulation Container */
+#simulation-container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+}
+
+/* Right-side file toolbar */
+#file-toolbar {
+    width: 250px;
+    background: #ddd;
+    padding: 10px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+}
+
+#file-toolbar h3 {
+    margin: 10px 0;
+}
+
+#file-list {
+    list-style: none;
+    padding: 0;
+}
+
+.file-item {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.3s;
+}
+
+.file-item:hover {
+    background: #ccc;
+}
+
+/* Main simulation area */
+#simulation-area {
+    flex-grow: 1;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Bottom right control panel */
+#control-panel {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+}
+
+.tab-button, #fullscreen-toggle {
+    background: #444;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.tab-button:hover, #fullscreen-toggle:hover {
+    background: #666;
+}
