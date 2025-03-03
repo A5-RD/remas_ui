@@ -3,167 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login and Sign Up</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
+    <title>Login</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap');
+        
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Roboto', sans-serif;
+            background-color: white;
         }
-        .container {
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            width: 300px;
+        
+        #login-container {
+            background: #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: all 0.3s ease;
+            width: 300px;
         }
-        .container input, .container button {
-            width: 100%;
+
+        h2 {
+            margin-bottom: 20px;
+            font-weight: 100;
+        }
+
+        input {
+            width: 90%;
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #ccc;
+            border: 1px solid #bbb;
             border-radius: 5px;
             font-size: 14px;
-            background: #fff;
-            color: #333;
-            font-weight: 100;
         }
-        .container button {
-            cursor: pointer;
-            background-color: #888;
-            color: #fff;
-            border: none;
-        }
-        .container button:hover {
-            background-color: #666;
-        }
-        .container h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: 100;
-            color: #333;
-        }
-        .action-buttons {
+
+        .button-container {
             display: flex;
             justify-content: space-between;
         }
-        .action-buttons button {
+
+        button {
             width: 48%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: grey;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
         }
-        #forgot-password {
-            display: block;
-            margin-top: 10px;
-            font-size: 12px;
-            color: #555;
-            text-decoration: none;
+
+        button:hover {
+            background: darkgrey;
         }
-        #forgot-password:hover {
-            text-decoration: underline;
-        }
-        .password-rules {
-            text-align: left;
-            font-size: 12px;
-            color: #444;
-            margin-top: 10px;
-        }
-        .password-rules li {
-            margin: 3px 0;
-        }
-        .password-rules .valid {
-            color: green;
-        }
-        .password-rules .invalid {
-            color: red;
+
+        #logo {
+            display: none;
+            margin-top: 20px;
+            width: 50px;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
         }
     </style>
 </head>
 <body>
 
-    <div class="container" id="loginBox">
+    <div id="login-container">
         <h2>Login</h2>
-        <input type="email" id="loginEmail" placeholder="Enter Email" />
-        <input type="password" id="loginPassword" placeholder="Enter Password" />
-        <a href="#" id="forgot-password">Forgot Password?</a>
-        <div class="action-buttons">
+        <input type="email" id="email" placeholder="Enter Email">
+        <input type="password" id="password" placeholder="Enter Password">
+        <div class="button-container">
             <button onclick="login()">Login</button>
-            <button onclick="showSignup()">Sign Up</button>
+            <button onclick="resetPassword()">Reset</button>
         </div>
     </div>
 
-    <div class="container" id="signupBox" style="display: none;">
-        <h2>Sign Up</h2>
-        <input type="email" id="signupEmail" placeholder="Enter Email" />
-        <input type="password" id="signupPassword" placeholder="Enter Password" oninput="validatePassword()" />
-        <input type="password" id="confirmPassword" placeholder="Confirm Password" />
-        <ul class="password-rules">
-            <li id="rule-length" class="invalid">At least 8 characters</li>
-            <li id="rule-uppercase" class="invalid">At least one uppercase letter</li>
-            <li id="rule-lowercase" class="invalid">At least one lowercase letter</li>
-            <li id="rule-number" class="invalid">At least one number</li>
-            <li id="rule-special" class="invalid">At least one special character</li>
-            <li id="rule-sequence" class="invalid">No sequential numbers (e.g., 123, 456)</li>
-        </ul>
-        <button onclick="createAccount()">Create</button>
-    </div>
+    <img id="logo" src="logo.png" alt="ATOM 5 Logo">
 
     <script>
-        function showSignup() {
-            document.getElementById('loginBox').style.display = 'none';
-            document.getElementById('signupBox').style.display = 'block';
-        }
-
-        function showLogin() {
-            document.getElementById('signupBox').style.display = 'none';
-            document.getElementById('loginBox').style.display = 'block';
-        }
-
-        function validatePassword() {
-            const password = document.getElementById("signupPassword").value;
-            document.getElementById("rule-length").className = password.length >= 8 ? "valid" : "invalid";
-            document.getElementById("rule-uppercase").className = /[A-Z]/.test(password) ? "valid" : "invalid";
-            document.getElementById("rule-lowercase").className = /[a-z]/.test(password) ? "valid" : "invalid";
-            document.getElementById("rule-number").className = /[0-9]/.test(password) ? "valid" : "invalid";
-            document.getElementById("rule-special").className = /[!@#$%^&*(),.?":{}|<>]/.test(password) ? "valid" : "invalid";
-            document.getElementById("rule-sequence").className = !/(012|123|234|345|456|567|678|789)/.test(password) ? "valid" : "invalid";
-        }
-
         function login() {
-            const email = document.getElementById("loginEmail").value;
-            const password = document.getElementById("loginPassword").value;
-            if (email && password) {
-                alert("Logging in...");
-            } else {
-                alert("Please enter both email and password.");
-            }
+            // Simulate authentication success
+            document.getElementById("login-container").style.display = "none"; 
+            let logo = document.getElementById("logo");
+            logo.style.display = "block";
+            setTimeout(() => { logo.style.opacity = "1"; }, 500); // Fade in
+            setTimeout(() => { logo.style.opacity = "0"; }, 4500); // Fade out
         }
 
-        function createAccount() {
-            const email = document.getElementById("signupEmail").value;
-            const password = document.getElementById("signupPassword").value;
-            const confirmPassword = document.getElementById("confirmPassword").value;
-
-            if (password !== confirmPassword) {
-                alert("Passwords do not match.");
-                return;
-            }
-
-            const allValid = Array.from(document.querySelectorAll('.password-rules .invalid')).length === 0;
-
-            if (email && password && allValid) {
-                alert("Account created successfully!");
-                showLogin();
-            } else {
-                alert("Please fill out all fields and ensure password meets all requirements.");
-            }
+        function resetPassword() {
+            alert("Reset functionality will be implemented later.");
         }
     </script>
 
