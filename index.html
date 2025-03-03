@@ -91,12 +91,6 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
-        #reset-checkmark {
-            display: none;
-            font-size: 30px;
-            color: grey;
-        }
-
         #reset-message {
             margin-top: 10px;
             font-size: 14px;
@@ -147,7 +141,6 @@
         <input type="email" id="reset-email" placeholder="Enter Email">
         <button onclick="resetPassword()">Submit</button>
         <p id="reset-message"></p>
-        <div id="reset-checkmark">✅</div>
     </div>
 
     <!-- Intro Animation -->
@@ -180,13 +173,11 @@
             document.getElementById("reset-popup").style.display = "block";
             document.getElementById("reset-email").style.display = "block";
             document.getElementById("reset-message").innerText = "";
-            document.getElementById("reset-checkmark").style.display = "none";
         }
 
         function resetPassword() {
             const resetEmail = document.getElementById("reset-email").value;
             const resetMessage = document.getElementById("reset-message");
-            const checkmark = document.getElementById("reset-checkmark");
 
             if (!resetEmail) {
                 resetMessage.innerText = "Please enter your email.";
@@ -195,9 +186,7 @@
 
             firebase.auth().sendPasswordResetEmail(resetEmail)
                 .finally(() => {
-                    resetMessage.innerText = "Check Your Inbox";
-                    checkmark.style.display = "block";
-                    document.getElementById("reset-email").style.display = "none";
+                    resetMessage.innerText = "Check your inbox for reset instructions.";
                     setTimeout(() => {
                         document.getElementById("reset-popup").style.display = "none";
                     }, 2000);
