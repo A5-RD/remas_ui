@@ -3,111 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | REMAS</title>
+    <title>Login - REMAS</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
     <style>
-        body, html {
+        * {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
+            box-sizing: border-box;
             font-family: 'Roboto', sans-serif;
+        }
+        
+        body {
             display: flex;
             justify-content: center;
             align-items: center;
+            height: 100vh;
+            background: white;
         }
 
         .container {
-            background: grey;
+            background: #ccc;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
             text-align: center;
             width: 320px;
         }
 
         h2 {
+            margin-bottom: 20px;
             font-weight: 100;
-            color: white;
         }
 
         input {
-            width: 90%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .btn {
             width: 100%;
             padding: 10px;
-            margin-top: 10px;
-            border: none;
-            background: darkgrey;
-            color: white;
-            cursor: pointer;
-            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #bbb;
+            border-radius: 5px;
             font-size: 14px;
         }
 
-        .btn:hover {
-            background: #a8a8a8;
+        button {
+            width: 100%;
+            padding: 10px;
+            background: black;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #444;
         }
 
         #forgot-password {
-            cursor: pointer;
+            margin-top: 15px;
             font-size: 12px;
-            color: white;
+            color: black;
+            cursor: pointer;
             text-decoration: underline;
-            margin-top: 5px;
         }
 
-        .popup {
+        #reset-popup {
             display: none;
             position: fixed;
-            background: white;
-            padding: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            text-align: center;
-            width: 300px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            background: #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .popup input {
-            width: 90%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        .popup h3 {
+            font-weight: 100;
+            margin-bottom: 10px;
         }
-
+        
         .popup button {
-            padding: 8px 15px;
-            margin: 5px;
-            border: none;
-            background: grey;
-            color: white;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .popup button:hover {
-            background: darkgrey;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Enter Email">
         <input type="password" id="password" placeholder="Enter Password">
-        <button class="btn" onclick="login()">Login</button>
+        <button onclick="login()">Login</button>
         <p id="forgot-password" onclick="showResetPopup()">Forgot Password?</p>
     </div>
 
@@ -115,14 +105,12 @@
     <div id="reset-popup" class="popup">
         <h3>Reset Password</h3>
         <input type="email" id="reset-email" placeholder="Enter your email">
-        <button onclick="sendResetRequest()">Submit</button>
+        <button onclick="resetPassword()">Submit</button>
         <button onclick="closeResetPopup()">Cancel</button>
     </div>
 
     <script type="module" src="auth.js"></script>
     <script>
-        const auth = firebase.auth(); // Initialize Firebase Auth
-
         function showResetPopup() {
             document.getElementById("reset-popup").style.display = "block";
         }
@@ -130,64 +118,7 @@
         function closeResetPopup() {
             document.getElementById("reset-popup").style.display = "none";
         }
-
-        function sendResetRequest() {
-            const email = document.getElementById("reset-email").value;
-            if (!email) {
-                alert("Please enter your email.");
-                return;
-            }
-
-            // Send password reset email
-            auth.sendPasswordResetEmail(email).then(() => {
-                // Once the reset email is sent, notify the admin by sending a message to the help email
-                const resetInfo = {
-                    subject: "Password Reset Request",
-                    body: `User with email: ${email} has requested a password reset.`,
-                    to: 'help@atom5engineering.com'
-                };
-
-                // Call the function to send an email to help@atom5engineering.com
-                sendToHelpEmail(resetInfo);
-
-                alert("Password reset request sent. Please check your inbox.");
-                closeResetPopup();
-            }).catch((error) => {
-                console.error("Error resetting password: ", error);
-                alert("Error: " + error.message);
-            });
-        }
-
-        // Function to send email to help@atom5engineering.com (to inform about reset request)
-        function sendToHelpEmail({ subject, body, to }) {
-            // Firebase can't send emails directly like this, so we would need to use a serverless function
-            // or third-party service to send the email automatically. You can set up an email service (e.g., SendGrid)
-            // and call it from Firebase functions, or another server.
-            console.log(`Sending email to ${to}: ${subject}\n${body}`);
-            // Replace this with actual email-sending service logic (Firebase function or another service).
-        }
-
-        function login() {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-
-            if (!email || !password) {
-                alert("Please fill in both fields.");
-                return;
-            }
-
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    console.log("Logged in:", user);
-                    alert("Login successful!");
-                    // After successful login, you can redirect the user to their dashboard or the intro animation page.
-                })
-                .catch((error) => {
-                    console.error("Error logging in:", error);
-                    alert("Login failed: " + error.message);
-                });
-        }
     </script>
+
 </body>
 </html>
