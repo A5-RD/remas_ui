@@ -185,8 +185,8 @@
       }
       auth.signInWithEmailAndPassword(email, password)
         .then(function(userCredential) {
-          playIntroAnimation();
-          document.getElementById("login-container").style.display = "none";
+          // Login successful – redirect to simulation page
+          window.location.href = "simulation.html";
         })
         .catch(function(error) {
           errorDiv.textContent = "Invalid email or password.";
@@ -209,6 +209,7 @@
         resetMsg.textContent = "Please enter your email.";
         return;
       }
+      
       auth.sendPasswordResetEmail(resetEmail)
         .then(function() {
           // Hide the input and button
