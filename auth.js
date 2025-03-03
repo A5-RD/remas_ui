@@ -1,3 +1,5 @@
+
+
 // Import Firebase SDK
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
@@ -30,13 +32,10 @@ window.login = function() {
 
     signInWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
-            // Successful login
-            console.log("Login successful:", userCredential.user);
-            errorMessage.innerText = ""; // Clear any previous errors
+            errorMessage.innerText = ""; // Clear errors
             playIntroAnimation();
         })
         .catch((error) => {
-            console.error("Login failed:", error.message);
             errorMessage.innerText = "Invalid email or password. Please try again.";
         });
 };
@@ -44,7 +43,9 @@ window.login = function() {
 // Function to reset password
 window.resetPassword = function() {
     const resetEmail = document.getElementById("reset-email").value;
+    const resetPopup = document.getElementById("reset-popup");
     const resetMessage = document.getElementById("reset-message");
+    const checkmark = document.getElementById("reset-checkmark");
 
     if (!resetEmail) {
         resetMessage.innerText = "Please enter your email.";
@@ -53,18 +54,22 @@ window.resetPassword = function() {
 
     sendPasswordResetEmail(auth, resetEmail)
         .then(() => {
-            resetMessage.innerText = "Password reset email sent. Check your inbox.";
+            resetMessage.style.display = "none";
+            checkmark.style.display = "block";
+            setTimeout(() => {
+                resetPopup.style.display = "none"; // Close popup
+            }, 2000);
         })
         .catch((error) => {
-            console.error("Password reset failed:", error.message);
-            resetMessage.innerText = "Error sending reset email. Please try again.";
+            resetMessage.innerText = "No account found with that email.";
         });
 };
 
-// Function to play intro animation (replace this with actual animation logic)
+// Function to show fading logo animation
 function playIntroAnimation() {
     document.body.innerHTML = `
-        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; font-weight: bold;">
-            Intro Animation Playing...
-        </div>`;
+        <div class="intro-animation">
+            <img src="your-logo.png" alt="Logo">
+        </div>
+    `;
 }
