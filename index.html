@@ -168,16 +168,19 @@
       setTimeout(function () {
           logo.style.opacity = "0";
   
-          // Wait for fade out to complete, then hide and redirect
+          // Wait for the logo fade-out to fully complete
           setTimeout(function () {
               introContainer.style.display = "none";
   
-              // Now fade out the login page before switching to simulation
+              // Now fade out the login page BEFORE switching
+              document.body.style.transition = "opacity 1s ease-out";
               document.body.style.opacity = "0";
+  
+              // Redirect after the fade-out completes
               setTimeout(function () {
                   window.location.href = "simulation.html";
               }, 1000); // Wait 1 sec before redirecting
-          }, 2000); // Wait for logo fade-out to complete
+          }, 2000); // Ensures the full fade-out animation finishes before moving on
       }, 3500);
   }
 
