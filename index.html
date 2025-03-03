@@ -14,6 +14,7 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            position: relative;
         }
 
         .container {
@@ -22,6 +23,7 @@
             border-radius: 10px;
             width: 300px;
             text-align: center;
+            display: none; /* Start with hiding the main content */
         }
 
         .input-container {
@@ -104,7 +106,7 @@
 <body>
     <!-- Intro Animation -->
     <div class="intro-container" id="intro-container">
-        <img src="logo.png" alt="Logo" id="logo">
+        <img src="logo.png" alt="Logo" id="logo" onerror="handleLogoError()">
     </div>
 
     <!-- Main Content -->
@@ -156,9 +158,15 @@
                 document.getElementById("logo").style.opacity = "0"; // Fade out the logo
                 setTimeout(() => {
                     document.getElementById("intro-container").style.display = "none"; // Hide intro
+                    document.getElementById("login-container").style.display = "block"; // Show login
                 }, 3000);
             }, 4500);
         };
+
+        // Handle logo error (if the image doesn't load)
+        function handleLogoError() {
+            console.error("Logo not found. Ensure logo.png is in the same directory as this HTML file.");
+        }
 
         // Login button action
         document.getElementById('login-btn').onclick = () => {
