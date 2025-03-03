@@ -19,3 +19,26 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+function showResetPopup() {
+    document.getElementById("reset-popup").style.display = "block";
+}
+
+function closeResetPopup() {
+    document.getElementById("reset-popup").style.display = "none";
+}
+
+function sendResetRequest() {
+    const email = document.getElementById("reset-email").value;
+
+    if (!email) {
+        alert("Please enter your email.");
+        return;
+    }
+
+    const mailtoLink = `mailto:help@atom5engineering.com?subject=Password Reset Request&body=User email: ${email}`;
+    window.location.href = mailtoLink;
+
+    alert("Your request has been sent. We will contact you shortly.");
+    closeResetPopup();
+}
