@@ -6,7 +6,7 @@
   <title>Login - REMAS</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet" />
   
-  <!-- Firebase Compat SDKs (load these first) -->
+  <!-- Firebase Compat SDKs (loaded first) -->
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
   
@@ -108,7 +108,7 @@
       z-index: 9999;
     }
     #logo {
-      width: 100px; /* Smaller logo */
+      width: 80px; /* Smaller logo */
       opacity: 0;
       transition: opacity 3s ease-in-out;
     }
@@ -164,10 +164,10 @@
       // Fade out the logo after 3.5 seconds
       setTimeout(function() {
         logo.style.opacity = "0";
-        // Hide the intro container after an additional 2 seconds
+        // Hide the intro container after fade out completes (after another 2 seconds)
         setTimeout(function() {
           introContainer.style.display = "none";
-          // For demonstration, reload page or redirect to main content
+          // For demo purposes, reload the page (or redirect)
           window.location.reload();
         }, 2000);
       }, 3500);
@@ -198,6 +198,7 @@
       document.getElementById("reset-popup").style.display = "block";
       document.getElementById("reset-message").textContent = "";
       document.getElementById("reset-email").style.display = "block";
+      document.getElementById("submit-reset").style.display = "block";
     };
 
     // Reset Password functionality
@@ -210,19 +211,19 @@
       }
       auth.sendPasswordResetEmail(resetEmail)
         .then(function() {
-          // Always show the same confirmation message
-          resetMsg.textContent = "Check your inbox for reset instructions.";
-          // Hide the email input
+          // Hide the input and button
           document.getElementById("reset-email").style.display = "none";
-          // Close the popup after 2 seconds
+          document.getElementById("submit-reset").style.display = "none";
+          resetMsg.textContent = "Check your inbox for reset instructions.";
           setTimeout(function() {
             document.getElementById("reset-popup").style.display = "none";
           }, 2000);
         })
         .catch(function(error) {
-          // On error, still show same message (to avoid disclosing account existence)
-          resetMsg.textContent = "Check your inbox for reset instructions.";
+          // Regardless of error, do not reveal account information
           document.getElementById("reset-email").style.display = "none";
+          document.getElementById("submit-reset").style.display = "none";
+          resetMsg.textContent = "Check your inbox for reset instructions.";
           setTimeout(function() {
             document.getElementById("reset-popup").style.display = "none";
           }, 2000);
