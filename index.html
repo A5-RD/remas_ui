@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap');
         
@@ -62,6 +67,13 @@
             background: darkgrey;
         }
 
+        #error-message {
+            color: red;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+
         #logo {
             display: none;
             margin-top: 20px;
@@ -81,22 +93,61 @@
             <button onclick="login()">Login</button>
             <button onclick="resetPassword()">Reset</button>
         </div>
+        <p id="error-message"></p>
     </div>
 
     <img id="logo" src="logo.png" alt="ATOM 5 Logo">
 
     <script>
+        // Firebase Configuration for atom5engineering (Replace with your actual Firebase Config)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "atom5engineering.firebaseapp.com",
+            projectId: "atom5engineering",
+            storageBucket: "atom5engineering.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
         function login() {
-            // Simulate authentication success
-            document.getElementById("login-container").style.display = "none"; 
-            let logo = document.getElementById("logo");
-            logo.style.display = "block";
-            setTimeout(() => { logo.style.opacity = "1"; }, 500); // Fade in
-            setTimeout(() => { logo.style.opacity = "0"; }, 4500); // Fade out
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const errorMessage = document.getElementById("error-message");
+
+            if (email === "" || password === "") {
+                errorMessage.innerText = "Email and password cannot be empty.";
+                errorMessage.style.display = "block";
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById("login-container").style.display = "none";
+                    let logo = document.getElementById("logo");
+                    logo.style.display = "block";
+                    setTimeout(() => { logo.style.opacity = "1"; }, 500);
+                    setTimeout(() => { logo.style.opacity = "0"; }, 4500);
+                })
+                .catch(error => {
+                    errorMessage.innerText = error.message;
+                    errorMessage.style.display = "block";
+                });
         }
 
         function resetPassword() {
-            alert("Reset functionality will be implemented later.");
+            const email = document.getElementById("email").value;
+            if (!email) {
+                alert("Please enter your email to reset your password.");
+                return;
+            }
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => alert("Password reset email sent. Check your inbox."))
+                .catch(error => alert(error.message));
         }
     </script>
 
