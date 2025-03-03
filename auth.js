@@ -1,6 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -42,3 +43,29 @@ function sendResetRequest() {
     alert("Your request has been sent. We will contact you shortly.");
     closeResetPopup();
 }
+
+
+// Initialize Firebase Authentication
+const auth = getAuth();
+
+// Function to handle password reset
+function resetPassword() {
+    const email = document.getElementById("reset-email").value;
+
+    if (!email) {
+        alert("Please enter your email.");
+        return;
+    }
+
+    sendPasswordResetEmail(auth, email)
+        .then(() => {
+            alert("A password reset email has been sent. Check your inbox.");
+        })
+        .catch((error) => {
+            console.error("Error resetting password: ", error);
+            alert("Error: " + error.message);
+        });
+}
+
+// Expose function to global scope
+window.resetPassword = resetPassword;
