@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - REMAS</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap"
-    rel="stylesheet"
-  />
-  <script type="module" src="auth.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet" />
+  
+  <!-- Firebase Compat SDKs (load these first) -->
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+  
   <style>
     * {
       margin: 0;
@@ -24,7 +25,7 @@
       align-items: center;
       position: relative;
     }
-    /* Login Form */
+    /* Login Form Container */
     .container {
       background: #ccc;
       padding: 30px;
@@ -86,6 +87,7 @@
       text-align: center;
       width: 320px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
     }
     #reset-message {
       margin-top: 10px;
@@ -118,110 +120,114 @@
     <h2>Login</h2>
     <input type="email" id="email" placeholder="Enter Email" />
     <input type="password" id="password" placeholder="Enter Password" />
-    <button onclick="login()">Login</button>
-    <p id="error-message"></p>
-    <p id="forgot-password" onclick="openResetPopup()">Forgot Password?</p>
+    <button id="login-btn">Login</button>
+    <div id="error-message"></div>
+    <p id="forgot-password">Forgot Password?</p>
   </div>
 
   <!-- Reset Password Popup -->
   <div id="reset-popup">
     <h2>Reset Password</h2>
     <input type="email" id="reset-email" placeholder="Enter your email" />
-    <button onclick="resetPassword()">Submit</button>
-    <p id="reset-message"></p>
+    <button id="submit-reset">Submit</button>
+    <div id="reset-message"></div>
   </div>
 
   <!-- Intro Animation Container -->
   <div class="intro-container" id="intro-animation">
-    <img id="logo" src="logo.png" alt="Logo" onerror="console.error('logo.png not found!')" />
+    <img id="logo" src="logo.png" alt="Logo" onerror="console.error('logo.png not found');" />
   </div>
 
   <script>
-    // Login Functionality
-    function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const errorMessage = document.getElementById("error-message");
+    // Initialize Firebase using compat
+    var firebaseConfig = {
+      apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+      authDomain: "atom5engineering.firebaseapp.com",
+      projectId: "atom5engineering",
+      storageBucket: "atom5engineering.firebasestorage.app",
+      messagingSenderId: "956458197323",
+      appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
+      measurementId: "G-X7H184TN54"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
 
-      if (!email || !password) {
-        errorMessage.innerText = "Please enter both email and password.";
-        return;
-      }
-
-      firebase
-        .auth()
-        .signInWithEmailAndPassword(email, password)
-        .then(() => {
-          errorMessage.innerText = "";
-          document.getElementById("login-container").style.display = "none";
-          // Trigger intro animation after successful login
-          playIntroAnimation();
-        })
-        .catch(() => {
-          errorMessage.innerText = "Invalid email or password.";
-        });
-    }
-
-    // Reset Password Popup Functions
-    function openResetPopup() {
-      document.getElementById("reset-popup").style.display = "block";
-      document.getElementById("reset-message").innerText = "";
-      document.getElementById("reset-email").style.display = "block";
-    }
-
-    function resetPassword() {
-      const resetEmail = document.getElementById("reset-email").value;
-      const resetMessage = document.getElementById("reset-message");
-
-      if (!resetEmail) {
-        resetMessage.innerText = "Please enter your email.";
-        return;
-      }
-
-      firebase
-        .auth()
-        .sendPasswordResetEmail(resetEmail)
-        .then(() => {
-          resetMessage.innerText = "Check your inbox for reset instructions.";
-          document.getElementById("reset-email").style.display = "none";
-          setTimeout(() => {
-            document.getElementById("reset-popup").style.display = "none";
-          }, 2000);
-        })
-        .catch(() => {
-          // Always show same message regardless of error
-          resetMessage.innerText = "Check your inbox for reset instructions.";
-          document.getElementById("reset-email").style.display = "none";
-          setTimeout(() => {
-            document.getElementById("reset-popup").style.display = "none";
-          }, 2000);
-        });
-    }
-
-    // Intro Animation Function (Triggered after successful login)
+    // Intro Animation: Triggered after successful login
     function playIntroAnimation() {
-      const introContainer = document.getElementById("intro-animation");
-      const logo = document.getElementById("logo");
+      var introContainer = document.getElementById("intro-animation");
+      var logo = document.getElementById("logo");
       introContainer.style.display = "flex";
       // Fade in the logo after 500ms
-      setTimeout(() => {
+      setTimeout(function() {
         logo.style.opacity = "1";
       }, 500);
       // Fade out the logo after 3.5 seconds
-      setTimeout(() => {
+      setTimeout(function() {
         logo.style.opacity = "0";
-        // Hide the intro animation after fade out completes (after another 2 seconds)
-        setTimeout(() => {
+        // Hide the intro container after an additional 2 seconds
+        setTimeout(function() {
           introContainer.style.display = "none";
-          // Redirect or load main content here; for demo, reload the page
+          // For demonstration, reload page or redirect to main content
           window.location.reload();
         }, 2000);
       }, 3500);
     }
-  </script>
 
-  <!-- Firebase Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    // Login functionality
+    document.getElementById("login-btn").onclick = function() {
+      var email = document.getElementById("email").value;
+      var password = document.getElementById("password").value;
+      var errorDiv = document.getElementById("error-message");
+      errorDiv.textContent = "";
+      if (!email || !password) {
+        errorDiv.textContent = "Please enter both email and password.";
+        return;
+      }
+      auth.signInWithEmailAndPassword(email, password)
+        .then(function(userCredential) {
+          playIntroAnimation();
+          document.getElementById("login-container").style.display = "none";
+        })
+        .catch(function(error) {
+          errorDiv.textContent = "Invalid email or password.";
+        });
+    };
+
+    // Open Reset Password Popup
+    document.getElementById("forgot-password").onclick = function() {
+      document.getElementById("reset-popup").style.display = "block";
+      document.getElementById("reset-message").textContent = "";
+      document.getElementById("reset-email").style.display = "block";
+    };
+
+    // Reset Password functionality
+    document.getElementById("submit-reset").onclick = function() {
+      var resetEmail = document.getElementById("reset-email").value;
+      var resetMsg = document.getElementById("reset-message");
+      if (!resetEmail) {
+        resetMsg.textContent = "Please enter your email.";
+        return;
+      }
+      auth.sendPasswordResetEmail(resetEmail)
+        .then(function() {
+          // Always show the same confirmation message
+          resetMsg.textContent = "Check your inbox for reset instructions.";
+          // Hide the email input
+          document.getElementById("reset-email").style.display = "none";
+          // Close the popup after 2 seconds
+          setTimeout(function() {
+            document.getElementById("reset-popup").style.display = "none";
+          }, 2000);
+        })
+        .catch(function(error) {
+          // On error, still show same message (to avoid disclosing account existence)
+          resetMsg.textContent = "Check your inbox for reset instructions.";
+          document.getElementById("reset-email").style.display = "none";
+          setTimeout(function() {
+            document.getElementById("reset-popup").style.display = "none";
+          }, 2000);
+        });
+    };
+  </script>
 </body>
 </html>
