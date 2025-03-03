@@ -185,8 +185,10 @@
       }
       auth.signInWithEmailAndPassword(email, password)
         .then(function(userCredential) {
-          // Login successful – redirect to simulation page
-          window.location.href = "simulation.html";
+          playIntroAnimation(); // Plays the intro animation
+          setTimeout(function() {
+            window.location.href = "simulation.html";
+          }, 5000); // Redirects after 5 seconds (adjust as needed)
         })
         .catch(function(error) {
           errorDiv.textContent = "Invalid email or password.";
