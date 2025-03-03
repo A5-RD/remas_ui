@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulation - REMAS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Roboto', sans-serif;
+    }
+    body, html {
+      height: 100%;
+      background: white;
+    }
+    /* Header */
+    .header {
+      background: #444;
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+    }
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      background: #ddd;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 100;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-bottom: none;
+    }
+    .tab.active {
+      background: white;
+      font-weight: bold;
+    }
+    /* Main layout */
+    .main {
+      display: flex;
+      height: calc(100% - 100px); /* Adjust based on header and tabs height */
+    }
+    .sidebar {
+      width: 250px;
+      background: #f0f0f0;
+      border-right: 1px solid #ccc;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .content {
+      flex: 1;
+      padding: 20px;
+    }
+    .file-system p {
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>REMAS Simulation</h1>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" id="tab-psi" onclick="switchTab('psi')">ψ</div>
+    <div class="tab" id="tab-sigma" onclick="switchTab('sigma')">σ</div>
+  </div>
+  
+  <div class="main">
+    <!-- Sidebar: File System -->
+    <div class="sidebar">
+      <h3>File System</h3>
+      <div class="file-system">
+        <!-- Placeholder: Simulated file list -->
+        <p>file1.txt</p>
+        <p>file2.png</p>
+        <p>document.pdf</p>
+        <p>image.jpg</p>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="content">
+      <div id="content-psi">
+        <h2>Tab ψ Content</h2>
+        <p>This is the content for tab ψ.</p>
+      </div>
+      <div id="content-sigma" style="display: none;">
+        <h2>Tab σ Content</h2>
+        <p>This is the content for tab σ.</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function switchTab(tabName) {
+      const contentPsi = document.getElementById('content-psi');
+      const contentSigma = document.getElementById('content-sigma');
+      const tabPsi = document.getElementById('tab-psi');
+      const tabSigma = document.getElementById('tab-sigma');
+
+      if (tabName === 'psi') {
+        contentPsi.style.display = 'block';
+        contentSigma.style.display = 'none';
+        tabPsi.classList.add('active');
+        tabSigma.classList.remove('active');
+      } else {
+        contentPsi.style.display = 'none';
+        contentSigma.style.display = 'block';
+        tabSigma.classList.add('active');
+        tabPsi.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>
