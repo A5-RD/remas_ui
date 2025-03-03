@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - REMAS</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
+    <script type="module" src="auth.js"></script>
     <style>
         * {
             margin: 0;
@@ -12,7 +13,7 @@
             box-sizing: border-box;
             font-family: 'Roboto', sans-serif;
         }
-        
+
         body {
             display: flex;
             justify-content: center;
@@ -27,6 +28,7 @@
             border-radius: 10px;
             text-align: center;
             width: 320px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         h2 {
@@ -41,6 +43,7 @@
             border: 1px solid #bbb;
             border-radius: 5px;
             font-size: 14px;
+            background: white;
         }
 
         button {
@@ -67,6 +70,13 @@
             text-decoration: underline;
         }
 
+        #error-message {
+            color: red;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        /* Reset Password Popup */
         #reset-popup {
             display: none;
             position: fixed;
@@ -77,56 +87,57 @@
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            width: 300px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .popup h3 {
-            font-weight: 100;
-            margin-bottom: 10px;
-        }
-        
-        .popup button {
-            margin-top: 10px;
+        #reset-checkmark {
+            display: none;
+            font-size: 30px;
+            color: green;
         }
 
-        #error-message, #reset-message {
-            color: red;
-            font-size: 12px;
-            margin-top: 10px;
+        /* Intro Animation */
+        .intro-animation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: white;
+        }
+
+        .intro-animation img {
+            width: 150px;
+            opacity: 0;
+            animation: fadeInOut 5s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <!-- Login Form -->
+    <div class="container" id="login-container">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Enter Email">
         <input type="password" id="password" placeholder="Enter Password">
         <button onclick="login()">Login</button>
         <p id="error-message"></p>
-        <p id="forgot-password" onclick="showResetPopup()">Forgot Password?</p>
+        <p id="forgot-password" onclick="openResetPopup()">Forgot Password?</p>
     </div>
 
-    <!-- Password Reset Popup -->
-    <div id="reset-popup" class="popup">
-        <h3>Reset Password</h3>
-        <input type="email" id="reset-email" placeholder="Enter your email">
+    <!-- Reset Password Popup -->
+    <div id="reset-popup">
+        <h2>Reset Password</h2>
+        <input type="email" id="reset-email" placeholder="Enter Email">
         <button onclick="resetPassword()">Submit</button>
-        <button onclick="closeResetPopup()">Cancel</button>
         <p id="reset-message"></p>
+        <div id="reset-checkmark">✅</div>
     </div>
-
-    <script type="module" src="auth.js"></script>
-    <script>
-        function showResetPopup() {
-            document.getElementById("reset-popup").style.display = "block";
-        }
-
-        function closeResetPopup() {
-            document.getElementById("reset-popup").style.display = "none";
-        }
-    </script>
 
 </body>
 </html>
