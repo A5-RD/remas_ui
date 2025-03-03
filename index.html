@@ -97,15 +97,19 @@
         }
 
         /* Intro Animation */
-        .intro-animation {
-            display: flex;
+        .intro-container {
+            display: none;
             justify-content: center;
             align-items: center;
             height: 100vh;
             background: white;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
         }
 
-        .intro-animation img {
+        #logo {
             width: 150px;
             opacity: 0;
             animation: fadeInOut 5s ease-in-out;
@@ -138,6 +142,60 @@
         <p id="reset-message"></p>
         <div id="reset-checkmark">✅</div>
     </div>
+
+    <!-- Intro Animation -->
+    <div class="intro-container" id="intro-animation">
+        <img id="logo" src="logo.png" alt="Logo">
+    </div>
+
+    <script>
+        function login() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const errorMessage = document.getElementById("error-message");
+
+            if (!email || !password) {
+                errorMessage.innerText = "Please enter both email and password.";
+                return;
+            }
+
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById("login-container").style.display = "none";
+                    document.getElementById("intro-animation").style.display = "flex";
+                })
+                .catch((error) => {
+                    errorMessage.innerText = "Invalid email or password.";
+                });
+        }
+
+        function openResetPopup() {
+            document.getElementById("reset-popup").style.display = "block";
+        }
+
+        function resetPassword() {
+            const resetEmail = document.getElementById("reset-email").value;
+            const resetMessage = document.getElementById("reset-message");
+            const checkmark = document.getElementById("reset-checkmark");
+
+            if (!resetEmail) {
+                resetMessage.innerText = "Please enter your email.";
+                return;
+            }
+
+            firebase.auth().sendPasswordResetEmail(resetEmail)
+                .then(() => {
+                    resetMessage.innerText = "";
+                    checkmark.style.display = "block";
+                    setTimeout(() => {
+                        document.getElementById("reset-popup").style.display = "none";
+                    }, 2000);
+                })
+                .catch(() => {
+                    resetMessage.innerText = "Email not found.";
+                });
+        }
+    </script>
 
 </body>
 </html>
