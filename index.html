@@ -153,36 +153,32 @@
     var auth = firebase.auth();
 
     // Intro Animation: Triggered after successful login
-    function playIntroAnimation() {
+    function playIntroAnimation(callback) {
       var introContainer = document.getElementById("intro-animation");
       var logo = document.getElementById("logo");
-  
+    
       introContainer.style.display = "flex";
-  
-      // Fade in the logo after 500ms
-      setTimeout(function () {
-          logo.style.opacity = "1";
+      
+      // Fade in the logo
+      setTimeout(function() {
+        logo.style.opacity = "1";
       }, 500);
-  
-      // Fade out the logo after 3.5 seconds
-      setTimeout(function () {
-          logo.style.opacity = "0";
-  
-          // Wait for the logo fade-out to fully complete
-          setTimeout(function () {
-              introContainer.style.display = "none";
-  
-              // Now fade out the login page BEFORE switching
-              document.body.style.transition = "opacity 1s ease-out";
-              document.body.style.opacity = "0";
-  
-              // Redirect after the fade-out completes
-              setTimeout(function () {
-                  window.location.href = "simulation.html";
-              }, 1000); // Wait 1 sec before redirecting
-          }, 2000); // Ensures the full fade-out animation finishes before moving on
+    
+      // Fade out the logo
+      setTimeout(function() {
+        logo.style.opacity = "0";
+    
+        // Hide intro container after fade-out completes
+        setTimeout(function() {
+          introContainer.style.display = "none";
+          
+          // Execute the callback to transition to the simulation page
+          if (callback) callback();
+          
+        }, 2000); // Ensure this timing matches the fade-out duration
       }, 3500);
-  }
+    }
+
 
     // Login functionality
     document.getElementById("login-btn").onclick = function() {
