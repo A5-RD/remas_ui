@@ -3,163 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    
-    <!-- Google Fonts -->
+    <title>Login | REMAS</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
-    
     <style>
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
+            background: white;
+            font-family: 'Roboto', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: 'Roboto', sans-serif;
-            background-color: white;
         }
-        
-        #login-container {
-            background: #ddd;
-            padding: 20px;
+
+        .container {
+            background: grey;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 300px;
+            width: 320px;
         }
 
         h2 {
-            margin-bottom: 20px;
             font-weight: 100;
+            color: white;
         }
 
         input {
             width: 90%;
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #bbb;
-            border-radius: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
             font-size: 14px;
         }
 
-        .button-container {
-            display: flex;
-            justify-content: space-between;
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            background: darkgrey;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
         }
 
-        button {
-            width: 48%;
-            padding: 10px;
-            border: none;
+        .btn:hover {
+            background: #a8a8a8;
+        }
+
+        #forgot-password {
+            cursor: pointer;
+            font-size: 12px;
+            color: white;
+            text-decoration: underline;
+            margin-top: 5px;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            background: white;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
+            text-align: center;
+            width: 300px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .popup input {
+            width: 90%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .popup button {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
             background: grey;
             color: white;
             cursor: pointer;
-            font-size: 14px;
+            border-radius: 4px;
         }
 
-        button:hover {
+        .popup button:hover {
             background: darkgrey;
-        }
-
-        #error-message {
-            color: red;
-            font-size: 12px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        #logo {
-            display: none;
-            margin-top: 20px;
-            width: 50px;
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
         }
     </style>
 </head>
 <body>
-
-    <div id="login-container">
+    <div class="container">
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Enter Email">
         <input type="password" id="password" placeholder="Enter Password">
-        <div class="button-container">
-            <button onclick="login()">Login</button>
-            <button onclick="resetPassword()">Reset</button>
-        </div>
-        <p id="error-message"></p>
+        <button class="btn" onclick="login()">Login</button>
+        <p id="forgot-password" onclick="showResetPopup()">Forgot Password?</p>
     </div>
 
-    <img id="logo" src="logo.png" alt="ATOM 5 Logo">
+    <!-- Password Reset Popup -->
+    <div id="reset-popup" class="popup">
+        <h3>Reset Password</h3>
+        <input type="email" id="reset-email" placeholder="Enter your email">
+        <button onclick="sendResetRequest()">Submit</button>
+        <button onclick="closeResetPopup()">Cancel</button>
+    </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-            authDomain: "atom5engineering.firebaseapp.com",
-            projectId: "atom5engineering",
-            storageBucket: "atom5engineering.appspot.com",
-            messagingSenderId: "956458197323",
-            appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-            measurementId: "G-X7H184TN54"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        // Login Function
-        function login() {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-            const errorMessage = document.getElementById("error-message");
-
-            if (email === "" || password === "") {
-                errorMessage.innerText = "Email and password cannot be empty.";
-                errorMessage.style.display = "block";
-                return;
-            }
-
-            signInWithEmailAndPassword(auth, email, password)
-                .then(() => {
-                    document.getElementById("login-container").style.display = "none";
-                    let logo = document.getElementById("logo");
-                    logo.style.display = "block";
-                    setTimeout(() => { logo.style.opacity = "1"; }, 500);
-                    setTimeout(() => { logo.style.opacity = "0"; }, 4500);
-                })
-                .catch(error => {
-                    errorMessage.innerText = error.message;
-                    errorMessage.style.display = "block";
-                });
-        }
-
-        // Reset Password Function
-        function resetPassword() {
-            const email = document.getElementById("email").value;
-            if (!email) {
-                alert("Please enter your email to reset your password.");
-                return;
-            }
-
-            sendPasswordResetEmail(auth, email)
-                .then(() => alert("Password reset email sent. Check your inbox."))
-                .catch(error => alert(error.message));
-        }
-
-        // Expose functions to window scope
-        window.login = login;
-        window.resetPassword = resetPassword;
-    </script>
     <script type="module" src="auth.js"></script>
+    <script>
+        function showResetPopup() {
+            document.getElementById("reset-popup").style.display = "block";
+        }
 
+        function closeResetPopup() {
+            document.getElementById("reset-popup").style.display = "none";
+        }
+
+        function sendResetRequest() {
+            const email = document.getElementById("reset-email").value;
+            if (!email) {
+                alert("Please enter your email.");
+                return;
+            }
+            const mailtoLink = `mailto:help@atom5engineering.com?subject=Password Reset Request&body=User email: ${email}`;
+            window.location.href = mailtoLink;
+            alert("Your request has been sent. We will contact you shortly.");
+            closeResetPopup();
+        }
+    </script>
 </body>
 </html>
