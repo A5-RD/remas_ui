@@ -87,13 +87,20 @@
             padding: 20px;
             border-radius: 10px;
             text-align: center;
+            width: 320px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         #reset-checkmark {
             display: none;
             font-size: 30px;
-            color: green;
+            color: grey;
+        }
+
+        #reset-message {
+            margin-top: 10px;
+            font-size: 14px;
+            color: black;
         }
 
         /* Intro Animation */
@@ -112,7 +119,7 @@
         #logo {
             width: 150px;
             opacity: 0;
-            animation: fadeInOut 5s ease-in-out;
+            animation: fadeInOut 5s ease-in-out infinite;
         }
 
         @keyframes fadeInOut {
@@ -164,13 +171,16 @@
                     document.getElementById("login-container").style.display = "none";
                     document.getElementById("intro-animation").style.display = "flex";
                 })
-                .catch((error) => {
+                .catch(() => {
                     errorMessage.innerText = "Invalid email or password.";
                 });
         }
 
         function openResetPopup() {
             document.getElementById("reset-popup").style.display = "block";
+            document.getElementById("reset-email").style.display = "block";
+            document.getElementById("reset-message").innerText = "";
+            document.getElementById("reset-checkmark").style.display = "none";
         }
 
         function resetPassword() {
@@ -184,15 +194,13 @@
             }
 
             firebase.auth().sendPasswordResetEmail(resetEmail)
-                .then(() => {
-                    resetMessage.innerText = "";
+                .finally(() => {
+                    resetMessage.innerText = "Check Your Inbox";
                     checkmark.style.display = "block";
+                    document.getElementById("reset-email").style.display = "none";
                     setTimeout(() => {
                         document.getElementById("reset-popup").style.display = "none";
                     }, 2000);
-                })
-                .catch(() => {
-                    resetMessage.innerText = "Email not found.";
                 });
         }
     </script>
