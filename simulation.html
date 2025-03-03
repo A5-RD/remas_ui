@@ -5,33 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation</title>
     <link rel="stylesheet" href="styles.css">
-    <script defer src="simulation.js"></script>
 </head>
 <body>
-
-    <div id="simulation-container" class="fade-in">
-        <!-- Right Toolbar for File Access -->
-        <div id="file-toolbar">
-            <h3>Your Files</h3>
-            <ul id="file-list">
-                <li class="file-item">ExampleFile1.json</li>
-                <li class="file-item">ExampleFile2.json</li>
-                <li class="file-item">ExampleFile3.json</li>
-            </ul>
+    <div id="simulation-container">
+        <!-- File Explorer (Movable & Minimizable) -->
+        <div id="file-explorer">
+            <div class="toolbar">
+                <span>File Explorer</span>
+                <button id="minimize-explorer">−</button>
+            </div>
+            <ul id="file-list">Loading files...</ul>
         </div>
 
-        <!-- Main Simulation Area -->
+        <!-- Main Simulation Canvas -->
         <div id="simulation-area">
-            <canvas id="simulationCanvas"></canvas>
+            <canvas id="simulation-canvas"></canvas>
         </div>
 
-        <!-- Bottom Right Control Panel -->
-        <div id="control-panel">
-            <button class="tab-button" onclick="selectTab('psi')">Ψ</button>
-            <button class="tab-button" onclick="selectTab('sigma')">Σ</button>
-            <button id="fullscreen-toggle" onclick="toggleFullscreen()">⛶</button>
+        <!-- Bottom Right Tabs -->
+        <div id="tabs">
+            <button class="tab-button" id="psi-tab">Ψ</button>
+            <button class="tab-button" id="sigma-tab">Σ</button>
+            <button class="tab-button" id="fullscreen-btn">⛶</button>
         </div>
     </div>
 
+    <script src="simulation.js"></script>
 </body>
 </html>
