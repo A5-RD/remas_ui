@@ -156,20 +156,26 @@
     function playIntroAnimation() {
       var introContainer = document.getElementById("intro-animation");
       var logo = document.getElementById("logo");
+    
+      // Make the logo smaller
+      logo.style.width = "80px"; // Adjust to your desired size
+    
       introContainer.style.display = "flex";
+    
       // Fade in the logo after 500ms
       setTimeout(function() {
         logo.style.opacity = "1";
       }, 500);
+    
       // Fade out the logo after 3.5 seconds
       setTimeout(function() {
         logo.style.opacity = "0";
-        // Hide the intro container after fade out completes (after another 2 seconds)
+    
+        // Wait for the fade-out transition to complete, then redirect
         setTimeout(function() {
           introContainer.style.display = "none";
-          // For demo purposes, reload the page (or redirect)
-          window.location.reload();
-        }, 2000);
+          window.location.href = "simulation.html";
+        }, 2000); // Adjust delay as needed to ensure full fade-out
       }, 3500);
     }
 
