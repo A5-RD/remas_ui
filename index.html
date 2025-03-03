@@ -89,6 +89,12 @@
         .popup button {
             margin-top: 10px;
         }
+
+        #error-message, #reset-message {
+            color: red;
+            font-size: 12px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +104,7 @@
         <input type="email" id="email" placeholder="Enter Email">
         <input type="password" id="password" placeholder="Enter Password">
         <button onclick="login()">Login</button>
+        <p id="error-message"></p>
         <p id="forgot-password" onclick="showResetPopup()">Forgot Password?</p>
     </div>
 
@@ -107,6 +114,7 @@
         <input type="email" id="reset-email" placeholder="Enter your email">
         <button onclick="resetPassword()">Submit</button>
         <button onclick="closeResetPopup()">Cancel</button>
+        <p id="reset-message"></p>
     </div>
 
     <script type="module" src="auth.js"></script>
