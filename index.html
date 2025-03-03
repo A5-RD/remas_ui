@@ -154,29 +154,31 @@
 
     // Intro Animation: Triggered after successful login
     function playIntroAnimation() {
-      var introContainer = document.getElementById("intro-animation");
-      var logo = document.getElementById("logo");
+        var introContainer = document.getElementById("intro-animation");
+        var logo = document.getElementById("logo");
     
-      // Make the logo smaller
-      logo.style.width = "80px"; // Adjust to your desired size
+        introContainer.style.display = "flex";
     
-      introContainer.style.display = "flex";
+        // Fade in the logo after 500ms
+        setTimeout(function () {
+            logo.style.opacity = "1";
+        }, 500);
     
-      // Fade in the logo after 500ms
-      setTimeout(function() {
-        logo.style.opacity = "1";
-      }, 500);
+        // Fade out the logo after 3.5 seconds
+        setTimeout(function () {
+            logo.style.opacity = "0";
     
-      // Fade out the logo after 3.5 seconds
-      setTimeout(function() {
-        logo.style.opacity = "0";
+            // Wait for fade out to complete, then hide and redirect
+            setTimeout(function () {
+                introContainer.style.display = "none";
     
-        // Wait for the fade-out transition to complete, then redirect
-        setTimeout(function() {
-          introContainer.style.display = "none";
-          window.location.href = "simulation.html";
-        }, 2000); // Adjust delay as needed to ensure full fade-out
-      }, 3500);
+                // Now fade out the login page before switching to simulation
+                document.body.style.opacity = "0";
+                setTimeout(function () {
+                    window.location.href = "simulation.html";
+                }, 1000); // Wait 1 sec before redirecting
+            }, 2000); // Wait for logo fade-out to complete
+        }, 3500);
     }
 
     // Login functionality
