@@ -4,115 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation</title>
-    
-    <style>
-        /* Fade-in effect for the page */
-        body {
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out;
-            margin: 0;
-            font-family: "Roboto", sans-serif;
-        }
-
-        /* Layout styles */
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* Sidebar on the left */
-        .sidebar {
-            width: 250px;
-            background-color: #f4f4f4;
-            padding: 20px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 20px;
-            padding: 10px;
-            background-color: #ddd;
-        }
-
-        .tab {
-            cursor: pointer;
-            padding: 10px 20px;
-            border-radius: 5px;
-            background-color: #bbb;
-        }
-
-        .tab.active {
-            background-color: #888;
-            color: white;
-        }
-
-        /* Main simulation area */
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* File system display */
-        .file-system {
-            flex-grow: 1;
-            padding: 20px;
-            background-color: #fff;
-            overflow-y: auto;
-        }
-
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="simulation.js"></script>
 </head>
 <body>
 
-    <!-- Sidebar for tools -->
-    <div class="container">
-        <div class="sidebar">
-            <h3>Tools</h3>
-            <!-- More toolbar options can be added later -->
+    <div id="simulation-container" class="fade-in">
+        <!-- Right Toolbar for File Access -->
+        <div id="file-toolbar">
+            <h3>Your Files</h3>
+            <ul id="file-list">
+                <li class="file-item">ExampleFile1.json</li>
+                <li class="file-item">ExampleFile2.json</li>
+                <li class="file-item">ExampleFile3.json</li>
+            </ul>
         </div>
 
-        <!-- Main content area -->
-        <div class="main-content">
-            <!-- Tabs for switching between modes -->
-            <div class="tabs">
-                <div class="tab active" onclick="switchTab('psi')">Ψ</div>
-                <div class="tab" onclick="switchTab('sigma')">Σ</div>
-            </div>
+        <!-- Main Simulation Area -->
+        <div id="simulation-area">
+            <canvas id="simulationCanvas"></canvas>
+        </div>
 
-            <!-- File system view -->
-            <div class="file-system" id="file-system">
-                <h3>User's File System</h3>
-                <p>Here you will see files stored in the user's bucket.</p>
-            </div>
+        <!-- Bottom Right Control Panel -->
+        <div id="control-panel">
+            <button class="tab-button" onclick="selectTab('psi')">Ψ</button>
+            <button class="tab-button" onclick="selectTab('sigma')">Σ</button>
+            <button id="fullscreen-toggle" onclick="toggleFullscreen()">⛶</button>
         </div>
     </div>
-
-    <script>
-        // Fade-in effect on page load
-        document.addEventListener("DOMContentLoaded", function () {
-            document.body.style.opacity = "1";
-        });
-
-        // Function to switch tabs
-        function switchTab(tabName) {
-            const tabs = document.querySelectorAll(".tab");
-            tabs.forEach(tab => tab.classList.remove("active"));
-
-            if (tabName === "psi") {
-                tabs[0].classList.add("active");
-            } else if (tabName === "sigma") {
-                tabs[1].classList.add("active");
-            }
-
-            // Update the file system view (this can later be modified)
-            document.getElementById("file-system").innerHTML = 
-                `<h3>${tabName === "psi" ? "Ψ Mode" : "Σ Mode"} File System</h3>
-                <p>Here you will see files stored in the user's bucket.</p>`;
-        }
-    </script>
 
 </body>
 </html>
