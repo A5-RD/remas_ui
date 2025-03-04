@@ -193,15 +193,16 @@
       }
       auth.signInWithEmailAndPassword(email, password)
         .then(function(userCredential) {
-          playIntroAnimation(); // Plays the intro animation
-          setTimeout(function() {
-            window.location.href = "simulation.html";
-          }, 5000); // Redirects after 5 seconds (adjust as needed)
+          playIntroAnimation(function() {
+            // Redirect only after animation completes
+            setTimeout(function() {
+              window.location.href = "simulation.html";
+            }, 100); // Small delay to ensure smooth transition
+          });
         })
         .catch(function(error) {
           errorDiv.textContent = "Invalid email or password.";
         });
-    };
 
     // Open Reset Password Popup
     document.getElementById("forgot-password").onclick = function() {
