@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     listItem.textContent = fileRef.name;
                     listItem.addEventListener("click", () => {
                         console.log("Selected file:", fileRef.name);
-                        // TODO: Load file into simulation
+                        // TODO: Load file into simulation (implement your logic here)
                     });
                     fileList.appendChild(listItem);
                 });
@@ -57,32 +57,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Fullscreen Toggle
     document.getElementById("fullscreen-btn").onclick = function() {
-      const simulationContainer = document.getElementById("simulation-container");
-      
-      // Check if the document is in fullscreen
-      if (!document.fullscreenElement) {
-        // Enter fullscreen mode
-        if (simulationContainer.requestFullscreen) {
-          simulationContainer.requestFullscreen();
-        } else if (simulationContainer.mozRequestFullScreen) { // Firefox
-          simulationContainer.mozRequestFullScreen();
-        } else if (simulationContainer.webkitRequestFullscreen) { // Chrome, Safari
-          simulationContainer.webkitRequestFullscreen();
-        } else if (simulationContainer.msRequestFullscreen) { // IE/Edge
-          simulationContainer.msRequestFullscreen();
-        }
-      } else {
-        // Exit fullscreen mode
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.mozCancelFullScreen) { // Firefox
-          document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) { // Chrome, Safari
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) { // IE/Edge
-          document.msExitFullscreen();
-        }
-      }
-    };
+        const simulationContainer = document.getElementById("simulation-container");
 
+        // Check if the document is in fullscreen
+        if (!document.fullscreenElement) {
+            // Enter fullscreen mode
+            if (simulationContainer.requestFullscreen) {
+                simulationContainer.requestFullscreen();
+            } else if (simulationContainer.mozRequestFullScreen) { // Firefox
+                simulationContainer.mozRequestFullScreen();
+            } else if (simulationContainer.webkitRequestFullscreen) { // Chrome, Safari
+                simulationContainer.webkitRequestFullscreen();
+            } else if (simulationContainer.msRequestFullscreen) { // IE/Edge
+                simulationContainer.msRequestFullscreen();
+            }
+        } else {
+            // Exit fullscreen mode
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) { // Firefox
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) { // Chrome, Safari
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { // IE/Edge
+                document.msExitFullscreen();
+            }
+        }
+    };
 });
