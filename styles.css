@@ -88,6 +88,11 @@ body {
     background: #666;
 }
 
+#login-container {
+  display: none; /* Hide login initially */
+}
+
+
 #fullscreen-btn {
     font-size: 20px;
     padding: 10px;
