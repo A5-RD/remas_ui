@@ -56,6 +56,43 @@ body {
     background: #555;
 }
 
+/* File Explorer Styles */
+#file-explorer {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: #fff;
+  padding: 20px;
+  width: 250px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  z-index: 100;
+}
+
+#file-explorer .toolbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+#file-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+#file-list li {
+  margin: 5px 0;
+  cursor: pointer;
+  padding: 5px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+}
+
+#file-list li:hover {
+  background-color: #e0e0e0;
+}
+
+
 /* Main Simulation Area */
 #simulation-area {
     flex-grow: 1;
