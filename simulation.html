@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation</title>
     <link rel="stylesheet" href="styles.css">
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    <script>
+      var firebaseConfig = {
+        apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+        authDomain: "atom5engineering.firebaseapp.com",
+        projectId: "atom5engineering",
+        storageBucket: "atom5engineering.firebasestorage.app",
+        messagingSenderId: "956458197323",
+        appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
+        measurementId: "G-X7H184TN54"
+      };
+      firebase.initializeApp(firebaseConfig);
+      var auth = firebase.auth();
+    
+      // Check if user is logged in
+      auth.onAuthStateChanged(function(user) {
+        if (!user) {
+          // Redirect to login page if not authenticated
+          window.location.href = "index.html";
+        }
+      });
+    </script>
+
 </head>
 <body>
     <div id="simulation-container">
