@@ -158,7 +158,8 @@
       var logo = document.getElementById("logo");
     
       introContainer.style.display = "flex";
-      
+      logo.style.opacity = "0"; // Ensure it's fully transparent at the start
+    
       // Fade in the logo
       setTimeout(function() {
         logo.style.opacity = "1";
@@ -172,10 +173,10 @@
         setTimeout(function() {
           introContainer.style.display = "none";
           
-          // Execute the callback to transition to the simulation page
+          // Callback ensures the next action happens only after animation is complete
           if (callback) callback();
           
-        }, 2000); // Ensure this timing matches the fade-out duration
+        }, 2000); // Wait for fade-out to complete before hiding
       }, 3500);
     }
 
