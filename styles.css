@@ -74,23 +74,35 @@ body {
     gap: 10px;
 }
 
-.tab-button {
-    padding: 10px;
-    border: none;
-    background: #444;
-    color: white;
-    cursor: pointer;
-    font-size: 18px;
-    border-radius: 5px;
-}
-
-.tab-button:hover {
-    background: #666;
-}
 
 #fullscreen-btn {
     font-size: 20px;
     padding: 10px;
     background: #444;
     border-radius: 5px;
+}
+
+/* Style for the bottom right tabs */
+#tabs {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tab-button {
+  font-size: 14px; /* Smaller font size for the tabs */
+  padding: 8px 12px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.tab-button:hover {
+  background-color: #444;
 }
