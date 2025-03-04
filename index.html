@@ -112,9 +112,6 @@
       opacity: 0;
       transition: opacity 3s ease-in-out;
     }
-    #login-container {
-      display: none; /* Hide login initially */
-    }
   </style>
 </head>
 <body>
@@ -160,21 +157,32 @@
     function playIntroAnimation(callback) {
       var introContainer = document.getElementById("intro-animation");
       var logo = document.getElementById("logo");
-      var loginContainer = document.getElementById("login-container");
+      var loginContainer = document.getElementById("login-container"); 
     
+      loginContainer.style.display = "none"; // Hide login before animation starts
       introContainer.style.display = "flex";
-      logo.style.opacity = "0";
-      loginContainer.style.display = "none"; // Hide login initially
+      logo.style.opacity = "0"; // Ensure it's fully transparent at the start
     
-      setTimeout(() => { logo.style.opacity = "1"; }, 500);
-      setTimeout(() => { logo.style.opacity = "0"; }, 3500);
+      // Fade in the logo
+      setTimeout(function() {
+        logo.style.opacity = "1";
+      }, 500);
     
-      setTimeout(() => {
-        introContainer.style.display = "none";
-        loginContainer.style.display = "block"; // Show login after animation
-        if (callback) callback();
-      }, 5500);
+      // Fade out the logo
+      setTimeout(function() {
+        logo.style.opacity = "0";
+    
+        // Hide intro container after fade-out completes
+        setTimeout(function() {
+          introContainer.style.display = "none";
+    
+          // Callback ensures the next action happens only after animation is complete
+          if (callback) callback();
+          
+        }, 2000); // Wait for fade-out to complete before hiding
+      }, 3500);
     }
+
 
 
     // Login
