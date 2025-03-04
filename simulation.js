@@ -56,14 +56,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Fullscreen Toggle
-    document.getElementById("fullscreen-btn").addEventListener("click", function () {
-        const simContainer = document.getElementById("simulation-container");
-        if (!document.fullscreenElement) {
-            simContainer.requestFullscreen().catch(err => {
-                console.error("Fullscreen error:", err);
-            });
-        } else {
-            document.exitFullscreen();
+    document.getElementById("fullscreen-btn").onclick = function() {
+      const simulationContainer = document.getElementById("simulation-container");
+      
+      // Check if the document is in fullscreen
+      if (!document.fullscreenElement) {
+        // Enter fullscreen mode
+        if (simulationContainer.requestFullscreen) {
+          simulationContainer.requestFullscreen();
+        } else if (simulationContainer.mozRequestFullScreen) { // Firefox
+          simulationContainer.mozRequestFullScreen();
+        } else if (simulationContainer.webkitRequestFullscreen) { // Chrome, Safari
+          simulationContainer.webkitRequestFullscreen();
+        } else if (simulationContainer.msRequestFullscreen) { // IE/Edge
+          simulationContainer.msRequestFullscreen();
         }
-    });
+      } else {
+        // Exit fullscreen mode
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) { // Firefox
+          document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) { // Chrome, Safari
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { // IE/Edge
+          document.msExitFullscreen();
+        }
+      }
+    };
+
 });
