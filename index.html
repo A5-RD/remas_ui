@@ -112,6 +112,9 @@
       opacity: 0;
       transition: opacity 3s ease-in-out;
     }
+    #login-container {
+      display: none; /* Hide login initially */
+    }
   </style>
 </head>
 <body>
@@ -157,18 +160,22 @@
     function playIntroAnimation(callback) {
       var introContainer = document.getElementById("intro-animation");
       var logo = document.getElementById("logo");
-
+      var loginContainer = document.getElementById("login-container");
+    
       introContainer.style.display = "flex";
       logo.style.opacity = "0";
-
+      loginContainer.style.display = "none"; // Hide login initially
+    
       setTimeout(() => { logo.style.opacity = "1"; }, 500);
       setTimeout(() => { logo.style.opacity = "0"; }, 3500);
-      
+    
       setTimeout(() => {
         introContainer.style.display = "none";
+        loginContainer.style.display = "block"; // Show login after animation
         if (callback) callback();
-      }, 5500); // Ensuring full fade-out before redirect
+      }, 5500);
     }
+
 
     // Login
     document.getElementById("login-btn").onclick = function() {
