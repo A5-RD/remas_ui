@@ -1,186 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Modal Styles */
-    .modal {
-      display: none; 
-      position: fixed;
-      z-index: 1; 
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0, 0, 0, 0.5); 
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <style>
+        /* Simulation page styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: white;
+        }
 
-    .modal-content {
-      background-color: #fefefe;
-      margin: 15% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 900px;
-      color: #333;
-      border-radius: 8px;
-      position: relative;
-    }
+        /* Bottom-right tabs (Psi and Sigma) */
+        #tabsContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .close-btn {
-      color: #aaa;
-      font-size: 28px;
-      font-weight: bold;
-      position: absolute;
-      right: 10px;
-      top: 5px;
-    }
+        .tabButton {
+            background-color: #444;
+            border: 1px solid #555;
+            color: white;
+            margin: 5px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
 
-    .close-btn:hover,
-    .close-btn:focus {
-      color: black;
-      text-decoration: none;
-      cursor: pointer;
-    }
+        .tabButton:hover {
+            background-color: #555;
+        }
 
-    .section-image {
-      max-width: 300px;
-      margin: 10px;
-      display: inline-block;
-      vertical-align: top;
-    }
+        /* File explorer on the top-right */
+        #fileExplorer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            height: 400px;
+            background-color: #444;
+            border: 1px solid #555;
+            display: none;
+        }
 
-    @media (max-width: 768px) {
-      .section-image {
-        max-width: 100%;
-        display: block;
-        margin: 10px auto;
-      }
-    }
+        #fileExplorer .closeBtn {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
 
-    /* Button Styles */
-    #openModalBtn {
-      background-color: #4CAF50; 
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-      font-size: 16px;
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-    }
+        /* Info popup styling */
+        #infoPopup {
+            position: fixed;
+            top: 20%;
+            left: 30%;
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            display: none;
+            width: 40%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
 
-    #openModalBtn:hover {
-      background-color: #45a049;
-    }
-
-    /* Layout Styles */
-    #fileLoader {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 10;
-    }
-
-    #simulationArea {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 80%;
-      height: 80%;
-      background-color: #333;
-      padding: 20px;
-      border-radius: 8px;
-    }
-
-    #simulationArea h1 {
-      color: white;
-    }
-  </style>
+        /* Hide elements */
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
+    <div id="simulationArea">
+        <!-- Simulation content here -->
 
-  <!-- File Loader on Top Left -->
-  <div id="fileLoader">
-    <h3>File Loader</h3>
-    <input type="file" id="fileInput">
-  </div>
+        <!-- File Explorer Button -->
+        <button onclick="toggleFileExplorer()">File Explorer</button>
 
-  <!-- Simulation Area -->
-  <div id="simulationArea">
-    <h1>Simulation Page</h1>
-    <!-- Button to Open the Modal -->
-    <button id="openModalBtn">Info</button>
-  </div>
-
-  <!-- The Modal -->
-  <div id="carbonSiliconModal" class="modal">
-    <div class="modal-content">
-      <span class="close-btn">&times;</span>
-      <h1>Carbon and Silicon</h1>
-      
-      <!-- Introduction Section -->
-      <section class="intro">
-        <h2>The evolution of human understanding and technological emulation of the brain</h2>
-        <p>
-          The evolution of human understanding and technological emulation of the brain traces back to key developments in connectionist models and Von Neumann machine models...
-        </p>
-        <img src="images/path_to_image1.jpg" alt="Carbon and Silicon Illustration" class="section-image">
-      </section>
-      
-      <!-- Architecture Section -->
-      <section class="architecture">
-        <h2>The Architecture</h2>
-        <p>
-          Our architecture is grounded in two core components: the Map and the Thought objects. Maps are dynamic, multi-layered gradients that represent various internal and external variables...
-        </p>
-        <img src="images/path_to_image2.jpg" alt="AI Architecture" class="section-image">
-      </section>
-      
-      <!-- From Mazes to Music Section -->
-      <section class="mazes-to-music">
-        <h2>From Mazes to Music: Building Cognitive and Emotional Complexity</h2>
-        <p>
-          Ava’s development began with a proof of concept focused on solving mazes. This task was chosen due to its minimal dependence on external concepts, making it manageable for the initial stages...
-        </p>
-        <img src="images/path_to_image3.jpg" alt="From Mazes to Music" class="section-image">
-      </section>
+        <!-- Info Button -->
+        <button id="infoBtn" class="tabButton">Info</button>
     </div>
-  </div>
 
-  <script>
-    // Get the modal
-    var modal = document.getElementById("carbonSiliconModal");
+    <!-- File Explorer -->
+    <div id="fileExplorer">
+        <button class="closeBtn" onclick="toggleFileExplorer()">Close</button>
+        <!-- Add your file explorer content here -->
+        <p>File Explorer content goes here</p>
+    </div>
 
-    // Get the button that opens the modal
-    var btn = document.getElementById("openModalBtn");
+    <!-- Info Popup -->
+    <div id="infoPopup">
+        <h2>Carbon and Silicon</h2>
+        <p>The relationship between carbon and silicon elements in the context of artificial and biological cognition...</p>
+        <button onclick="closeInfoPopup()">Close</button>
+    </div>
 
-    // Get the <span> element that closes the modal
-    var span = document.getElementsByClassName("close-btn")[0];
+    <!-- Bottom-right Tabs: Psi and Sigma -->
+    <div id="tabsContainer">
+        <button class="tabButton" id="psiTab">Ψ (Psi)</button>
+        <button class="tabButton" id="sigmaTab">Σ (Sigma)</button>
+    </div>
 
-    // When the user clicks the button, open the modal
-    btn.onclick = function() {
-      modal.style.display = "block";
-    }
+    <script>
+        // Toggle file explorer visibility
+        function toggleFileExplorer() {
+            var fileExplorer = document.getElementById("fileExplorer");
+            if (fileExplorer.style.display === "none" || fileExplorer.style.display === "") {
+                fileExplorer.style.display = "block";
+            } else {
+                fileExplorer.style.display = "none";
+            }
+        }
 
-    // When the user clicks on <span> (x), close the modal
-    span.onclick = function() {
-      modal.style.display = "none";
-    }
+        // Show the info popup
+        document.getElementById("infoBtn").addEventListener("click", function() {
+            document.getElementById("infoPopup").style.display = "block";
+        });
 
-    // When the user clicks anywhere outside of the modal, close it
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = "none";
-      }
-    }
-  </script>
+        // Close the info popup
+        function closeInfoPopup() {
+            document.getElementById("infoPopup").style.display = "none";
+        }
 
+        // Authentication logic (if needed for restricting access)
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                // User is logged in
+                document.getElementById("simulationArea").style.display = "block";
+            } else {
+                // User is not logged in, redirect to login page
+                window.location.href = "login.html";  // Replace with your login page URL
+            }
+        });
+    </script>
 </body>
 </html>
