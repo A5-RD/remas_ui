@@ -7,20 +7,18 @@
   <link rel="stylesheet" href="styles.css">
   <style>
     /* Modal Styles */
-    /* The Modal (background) */
     .modal {
-      display: none; /* Hidden by default */
+      display: none; 
       position: fixed;
-      z-index: 1; /* Sit on top */
+      z-index: 1; 
       left: 0;
       top: 0;
       width: 100%;
       height: 100%;
       overflow: auto;
-      background-color: rgba(0, 0, 0, 0.5); /* Dimmed background */
+      background-color: rgba(0, 0, 0, 0.5); 
     }
 
-    /* Modal Content */
     .modal-content {
       background-color: #fefefe;
       margin: 15% auto;
@@ -33,7 +31,6 @@
       position: relative;
     }
 
-    /* Close Button */
     .close-btn {
       color: #aaa;
       font-size: 28px;
@@ -67,26 +64,60 @@
 
     /* Button Styles */
     #openModalBtn {
-      background-color: #4CAF50; /* Green */
+      background-color: #4CAF50; 
       color: white;
       padding: 10px 20px;
       border: none;
       cursor: pointer;
       border-radius: 5px;
       font-size: 16px;
-      margin: 20px;
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
     }
 
     #openModalBtn:hover {
       background-color: #45a049;
     }
+
+    /* Layout Styles */
+    #fileLoader {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+    }
+
+    #simulationArea {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 80%;
+      height: 80%;
+      background-color: #333;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    #simulationArea h1 {
+      color: white;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Simulation Page</h1>
-  <!-- Button to Open the Modal -->
-  <button id="openModalBtn">Info</button>
+  <!-- File Loader on Top Left -->
+  <div id="fileLoader">
+    <h3>File Loader</h3>
+    <input type="file" id="fileInput">
+  </div>
+
+  <!-- Simulation Area -->
+  <div id="simulationArea">
+    <h1>Simulation Page</h1>
+    <!-- Button to Open the Modal -->
+    <button id="openModalBtn">Info</button>
+  </div>
 
   <!-- The Modal -->
   <div id="carbonSiliconModal" class="modal">
