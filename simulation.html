@@ -34,27 +34,29 @@
 
       // Load files from user's bucket
       function loadFiles(user) {
-        // Use sanitized email to construct the correct path to user's folder
-        const userBucketPath = `users/${user.email.replace('@', '_at_').replace('.', '_dot_')}/files/`;
-        const storageRef = storage.ref(userBucketPath);
-        const fileList = document.getElementById("file-list");
+          const sanitizedEmail = user.email.replace(/[^a-zA-Z0-9]/g, '_');
+          const userBucketPath = `users/${sanitizedEmail}/files/`;
+          const storageRef = storage.ref(userBucketPath);
+          const fileList = document.getElementById("file-list");
+        
+          storageRef.listAll().then((result) => {
+            if (result.items.length === 0) {
+              fileList.innerHTML = "<li>No files found.</li>";
+            } else {
+              fileList.innerHTML = ""; // Clear existing list
+              result.items.forEach((fileRef) => {
+                const li = document.createElement("li");
+                li.textContent = fileRef.name;
+                li.onclick = () => openFile(fileRef);
+                fileList.appendChild(li);
+              });
+            }
+          }).catch((error) => {
+            console.error("Error loading files:", error);
+            fileList.innerHTML = "<li>Error loading files. Check console for details.</li>";
+          });
+        }
 
-        storageRef.listAll().then((result) => {
-          if (result.items.length === 0) {
-            fileList.innerHTML = "<li>No files found.</li>";
-          } else {
-            result.items.forEach((fileRef) => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => openFile(fileRef);
-              fileList.appendChild(li);
-            });
-          }
-        }).catch((error) => {
-          console.error("Error loading files:", error);
-          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-        });
-      }
 
       function openFile(fileRef) {
         fileRef.getDownloadURL().then((url) => {
