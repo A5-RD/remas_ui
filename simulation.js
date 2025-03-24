@@ -1,87 +1,75 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const fileExplorer = document.getElementById("file-explorer");
-    const minimizeButton = document.getElementById("minimize-explorer");
+// Firebase Initialization
+const firebaseConfig = {
+    apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+    authDomain: "atom5engineering.firebaseapp.com",
+    projectId: "atom5engineering",
+    storageBucket: "atom5engineering.appspot.com", // Use your actual Firebase Storage bucket here
+    messagingSenderId: "956458197323",
+    appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
+    measurementId: "G-X7H184TN54"
+};
+firebase.initializeApp(firebaseConfig);
+
+const storage = firebase.storage();
+const auth = firebase.auth();
+
+// Ensure the user is authenticated
+auth.onAuthStateChanged(function(user) {
+    if (user) {
+        // User is logged in, now fetch their files from Firebase Storage
+        loadFiles(user);
+    } else {
+        // Redirect to login page if not authenticated
+        window.location.href = "index.html";
+    }
+});
+
+// Function to load files from Firebase Storage
+function loadFiles(user) {
+    const userBucketPath = `users/${user.uid}/files/`; // Adjust path as needed
     const fileList = document.getElementById("file-list");
 
-    // Minimize/Expand File Explorer
-    minimizeButton.addEventListener("click", function () {
-        if (fileExplorer.classList.contains("minimized")) {
-            fileExplorer.classList.remove("minimized");
-            minimizeButton.textContent = "−";
-        } else {
-            fileExplorer.classList.add("minimized");
-            minimizeButton.textContent = "+";
-        }
+    // Get reference to the user's folder in Firebase Storage
+    const filesRef = storage.ref(userBucketPath);
+
+    // List all the files in the user's folder
+    filesRef.listAll().then((result) => {
+        result.items.forEach((fileRef) => {
+            // For each file, create a list item
+            const li = document.createElement("li");
+            li.textContent = fileRef.name;  // Display file name
+            li.onclick = function() {
+                // Handle file click (e.g., open and load JSON file)
+                openFile(fileRef);
+            };
+            fileList.appendChild(li);
+        });
+    }).catch((error) => {
+        console.error("Error loading files:", error);
+        fileList.innerHTML = "Failed to load files.";
     });
+}
 
-    // Fetch user files from Firebase Storage
-    async function loadUserFiles() {
-        fileList.innerHTML = "<li>Loading...</li>";
-
-        try {
-            const user = firebase.auth().currentUser;
-            if (!user) {
-                fileList.innerHTML = "<li>Please log in.</li>";
-                return;
-            }
-
-            const storageRef = firebase.storage().ref(`users/${user.uid}/`);
-            const files = await storageRef.listAll();
-
-            fileList.innerHTML = "";
-            if (files.items.length === 0) {
-                fileList.innerHTML = "<li>No files found.</li>";
-            } else {
-                files.items.forEach(fileRef => {
-                    const listItem = document.createElement("li");
-                    listItem.textContent = fileRef.name;
-                    listItem.addEventListener("click", () => {
-                        console.log("Selected file:", fileRef.name);
-                        // TODO: Load file into simulation (implement your logic here)
-                    });
-                    fileList.appendChild(listItem);
-                });
-            }
-        } catch (error) {
-            console.error("Error loading files:", error);
-            fileList.innerHTML = "<li>Error loading files.</li>";
-        }
-    }
-
-    // Ensure Firebase Auth is ready before fetching files
-    firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-            loadUserFiles();
-        }
+// Function to open and manipulate a clicked file (e.g., JSON)
+function openFile(fileRef) {
+    fileRef.getDownloadURL().then((url) => {
+        // Fetch the file content (JSON) from the URL
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log("File Content:", data);
+                // Process the file content as needed, e.g., send to API for manipulation
+                // You can also display it in the simulation area, if needed
+            })
+            .catch((error) => {
+                console.error("Error fetching file:", error);
+            });
+    }).catch((error) => {
+        console.error("Error getting file URL:", error);
     });
+}
 
-    // Fullscreen Toggle
-    document.getElementById("fullscreen-btn").onclick = function() {
-        const simulationContainer = document.getElementById("simulation-container");
-
-        // Check if the document is in fullscreen
-        if (!document.fullscreenElement) {
-            // Enter fullscreen mode
-            if (simulationContainer.requestFullscreen) {
-                simulationContainer.requestFullscreen();
-            } else if (simulationContainer.mozRequestFullScreen) { // Firefox
-                simulationContainer.mozRequestFullScreen();
-            } else if (simulationContainer.webkitRequestFullscreen) { // Chrome, Safari
-                simulationContainer.webkitRequestFullscreen();
-            } else if (simulationContainer.msRequestFullscreen) { // IE/Edge
-                simulationContainer.msRequestFullscreen();
-            }
-        } else {
-            // Exit fullscreen mode
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) { // Firefox
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) { // Chrome, Safari
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) { // IE/Edge
-                document.msExitFullscreen();
-            }
-        }
-    };
+// Minimize or close file explorer functionality (as you had before)
+document.getElementById("minimize-explorer").addEventListener("click", function() {
+    document.getElementById("file-explorer").classList.toggle("minimized");
 });
