@@ -8,28 +8,62 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
     <script>
       var firebaseConfig = {
         apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
         authDomain: "atom5engineering.firebaseapp.com",
         projectId: "atom5engineering",
-        storageBucket: "atom5engineering.firebasestorage.app",
+        storageBucket: "atom5engineering.appspot.com",
         messagingSenderId: "956458197323",
         appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
         measurementId: "G-X7H184TN54"
       };
       firebase.initializeApp(firebaseConfig);
       var auth = firebase.auth();
-    
+      var storage = firebase.storage();
+
       // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
-          // Redirect to login page if not authenticated
           window.location.href = "index.html";
+        } else {
+          loadFiles(user);
         }
       });
-    </script>
 
+      // Load files from user's bucket
+      function loadFiles(user) {
+        const userBucketPath = `users/${user.uid}/files/`;
+        const storageRef = storage.ref(userBucketPath);
+        const fileList = document.getElementById("file-list");
+
+        storageRef.listAll().then((result) => {
+          if (result.items.length === 0) {
+            fileList.innerHTML = "<li>No files found.</li>";
+          } else {
+            result.items.forEach((fileRef) => {
+              const li = document.createElement("li");
+              li.textContent = fileRef.name;
+              li.onclick = () => openFile(fileRef);
+              fileList.appendChild(li);
+            });
+          }
+        }).catch((error) => {
+          console.error("Error loading files:", error);
+          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+        });
+      }
+
+      function openFile(fileRef) {
+        fileRef.getDownloadURL().then((url) => {
+          fetch(url)
+            .then(response => response.json())
+            .then(data => console.log("File data:", data))
+            .catch(error => console.error("Error reading file:", error));
+        }).catch(error => console.error("Error getting file URL:", error));
+      }
+    </script>
 </head>
 <body>
     <div id="simulation-container">
