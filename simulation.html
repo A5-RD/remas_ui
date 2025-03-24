@@ -26,16 +26,17 @@
       // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
-          window.location.href = "index.html";  // Redirect to login page if not authenticated
+          window.location.href = "index.html";
         } else {
           loadFiles(user);
         }
       });
 
-      // Load files from user's specific bucket (folder)
+      // Load files from user's bucket
       function loadFiles(user) {
-        const userBucketPath = `users/${user.uid}/files/`;  // Path specific to the user
-        const storageRef = storage.ref(userBucketPath);  // Reference to the user's storage folder
+        // Use sanitized email to construct the correct path to user's folder
+        const userBucketPath = `users/${user.email.replace('@', '_at_').replace('.', '_dot_')}/files/`;
+        const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
 
         storageRef.listAll().then((result) => {
