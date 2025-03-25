@@ -34,27 +34,28 @@
 
       // Load files from user's bucket
       function loadFiles(user) {
-        const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
-        const userBucketPath = `users/${sanitizedEmail}/files/`;
-        const storageRef = storage.ref(userBucketPath);
-        const fileList = document.getElementById("file-list");
+          const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
+          const userBucketPath = `users/${sanitizedEmail}/files/`;
+          const storageRef = storage.ref(userBucketPath);
+          const fileList = document.getElementById("file-list");
+        
+          storageRef.listAll().then((result) => {
+            if (result.items.length === 0) {
+              fileList.innerHTML = "<li>No files found.</li>";
+            } else {
+              result.items.forEach((fileRef) => {
+                const li = document.createElement("li");
+                li.textContent = fileRef.name;
+                li.onclick = () => openFile(fileRef);
+                fileList.appendChild(li);
+              });
+            }
+          }).catch((error) => {
+            console.error("Error loading files:", error);
+            fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+          });
+        }
 
-        storageRef.listAll().then((result) => {
-          if (result.items.length === 0) {
-            fileList.innerHTML = "<li>No files found.</li>";
-          } else {
-            result.items.forEach((fileRef) => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => openFile(fileRef);
-              fileList.appendChild(li);
-            });
-          }
-        }).catch((error) => {
-          console.error("Error loading files:", error);
-          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-        });
-      }
 
       function openFile(fileRef) {
         fileRef.getDownloadURL().then((url) => {
