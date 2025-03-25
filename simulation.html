@@ -1,97 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulation</title>
-    <link rel="stylesheet" href="styles.css">
-
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
-    <script>
-      var firebaseConfig = {
-        apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-        authDomain: "atom5engineering.firebaseapp.com",
-        projectId: "atom5engineering",
-        storageBucket: "atom5engineering.appspot.com",
-        messagingSenderId: "956458197323",
-        appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-        measurementId: "G-X7H184TN54"
-      };
-      firebase.initializeApp(firebaseConfig);
-      var auth = firebase.auth();
-      var storage = firebase.storage();
-
-      // Check if user is logged in
-      auth.onAuthStateChanged(function(user) {
-        if (!user) {
-          window.location.href = "index.html";
-        } else {
-          loadFiles(user);
-        }
-      });
-
-      // Load files from user's bucket
-      function loadFiles(user) {
-          const sanitizedEmail = user.email.replace(/[^a-zA-Z0-9]/g, '_');
-          const userBucketPath = `users/${sanitizedEmail}/files/`;
-          const storageRef = storage.ref(userBucketPath);
-          const fileList = document.getElementById("file-list");
-        
-          storageRef.listAll().then((result) => {
-            if (result.items.length === 0) {
-              fileList.innerHTML = "<li>No files found.</li>";
-            } else {
-              fileList.innerHTML = ""; // Clear existing list
-              result.items.forEach((fileRef) => {
-                const li = document.createElement("li");
-                li.textContent = fileRef.name;
-                li.onclick = () => openFile(fileRef);
-                fileList.appendChild(li);
-              });
-            }
-          }).catch((error) => {
-            console.error("Error loading files:", error);
-            fileList.innerHTML = "<li>Error loading files. Check console for details.</li>";
-          });
-        }
-
-
-      function openFile(fileRef) {
-        fileRef.getDownloadURL().then((url) => {
-          fetch(url)
-            .then(response => response.json())
-            .then(data => console.log("File data:", data))
-            .catch(error => console.error("Error reading file:", error));
-        }).catch(error => console.error("Error getting file URL:", error));
-      }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Portal</title>
+  <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-storage.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-functions.js"></script>
+  <style>
+    /* Styling for your page */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #2c2f38;
+      color: white;
+      padding: 20px;
+    }
+    .files-list {
+      margin-top: 20px;
+    }
+    .file-item {
+      margin: 10px 0;
+      background-color: #444;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
-    <div id="simulation-container">
-        <!-- File Explorer (Movable & Minimizable) -->
-        <div id="file-explorer">
-            <div class="toolbar">
-                <span>File Explorer</span>
-                <button id="minimize-explorer">−</button>
-            </div>
-            <ul id="file-list">Loading files...</ul>
-        </div>
 
-        <!-- Main Simulation Canvas -->
-        <div id="simulation-area">
-            <canvas id="simulation-canvas"></canvas>
-        </div>
+<h1>Welcome to the Simulation Portal</h1>
 
-        <!-- Bottom Right Tabs -->
-        <div id="tabs">
-            <button class="tab-button" id="psi-tab">Ψ</button>
-            <button class="tab-button" id="sigma-tab">Σ</button>
-            <button class="tab-button" id="fullscreen-btn">⛶</button>
-        </div>
-    </div>
+<div id="file-upload">
+  <input type="file" id="file-input" />
+  <button onclick="uploadFile()">Upload File</button>
+</div>
 
-    <script src="simulation.js"></script>
+<div id="file-list" class="files-list">
+  <h3>Your Files</h3>
+  <div id="files-container"></div>
+</div>
+
+<script>
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-auth-domain",
+  projectId: "your-project-id",
+  storageBucket: "your-storage-bucket",
+  messagingSenderId: "your-sender-id",
+  appId: "your-app-id",
+  measurementId: "your-measurement-id"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+const auth = firebase.auth();
+
+// Sanitize email to match Firebase Storage path
+function sanitizeEmail(email) {
+  return email.replace('@', '_at_').replace('.', '_');
+}
+
+// Upload a file to Firebase Storage
+function uploadFile() {
+  const fileInput = document.getElementById('file-input');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Please select a file to upload.');
+    return;
+  }
+
+  // Ensure user is logged in
+  const user = auth.currentUser;
+  if (!user) {
+    alert('You must be logged in to upload files.');
+    return;
+  }
+
+  const sanitizedEmail = sanitizeEmail(user.email);
+  const userFilesRef = storage.ref(`users/${sanitizedEmail}/files/${file.name}`);
+
+  // Upload the file
+  userFilesRef.put(file).then(() => {
+    console.log('File uploaded successfully');
+    listFiles(); // Refresh the file list
+  }).catch((error) => {
+    console.error('Error uploading file:', error);
+  });
+}
+
+// List all files for the logged-in user
+function listFiles() {
+  const user = auth.currentUser;
+  if (!user) {
+    alert('You must be logged in to see your files.');
+    return;
+  }
+
+  const sanitizedEmail = sanitizeEmail(user.email);
+  const userFilesRef = storage.ref(`users/${sanitizedEmail}/files/`);
+
+  // Clear existing files
+  const filesContainer = document.getElementById('files-container');
+  filesContainer.innerHTML = '';
+
+  // Get a list of files
+  userFilesRef.listAll().then((result) => {
+    result.items.forEach((itemRef) => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-item';
+      fileItem.innerText = itemRef.name;
+
+      // Add a download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = itemRef.getDownloadURL();
+      downloadLink.innerText = 'Download';
+      downloadLink.target = '_blank';
+
+      fileItem.appendChild(downloadLink);
+      filesContainer.appendChild(fileItem);
+    });
+  }).catch((error) => {
+    console.error('Error listing files:', error);
+  });
+}
+
+// Firebase authentication
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    console.log('User logged in:', user.email);
+    listFiles(); // List files when the user logs in
+  } else {
+    console.log('User not logged in');
+    alert('Please log in to access your files.');
+  }
+});
+
+// Sign in function
+function signIn() {
+  const email = prompt('Enter your email:');
+  const password = prompt('Enter your password:');
+  
+  auth.signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      console.log('Logged in:', userCredential.user.email);
+      listFiles();
+    })
+    .catch((error) => {
+      console.error('Login error:', error);
+    });
+}
+
+// Example sign-out function
+function signOut() {
+  auth.signOut().then(() => {
+    console.log('User signed out');
+    listFiles();
+  }).catch((error) => {
+    console.error('Sign out error:', error);
+  });
+}
+
+// Add event listeners for login and logout
+document.getElementById('sign-in').addEventListener('click', signIn);
+document.getElementById('sign-out').addEventListener('click', signOut);
+
+</script>
+
 </body>
 </html>
