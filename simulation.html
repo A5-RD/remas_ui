@@ -6,19 +6,24 @@
     <title>Simulation</title>
     <link rel="stylesheet" href="styles.css">
 
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
+
     <script>
+      // Firebase Configuration
       var firebaseConfig = {
         apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
         authDomain: "atom5engineering.firebaseapp.com",
         projectId: "atom5engineering",
-        storageBucket: "atom5engineering.firebasestorage.app", 
+        storageBucket: "atom5engineering.firebasestorage.app",
         messagingSenderId: "956458197323",
         appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
         measurementId: "G-X7H184TN54"
       };
+
+      // Initialize Firebase
       firebase.initializeApp(firebaseConfig);
       var auth = firebase.auth();
       var storage = firebase.storage();
@@ -26,42 +31,46 @@
       // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
-          window.location.href = "index.html";
+          window.location.href = "index.html";  // Redirect to login page
         } else {
-          loadFiles(user);
+          loadFiles(user);  // Proceed with file loading
         }
       });
 
-      // Load files from user's bucket
+      // Load files from user's Firebase Storage bucket
       function loadFiles(user) {
-          const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
-          const userBucketPath = `users/${sanitizedEmail}/files/`;
-          const storageRef = storage.ref(userBucketPath);
-          const fileList = document.getElementById("file-list");
-        
-          storageRef.listAll().then((result) => {
-            if (result.items.length === 0) {
-              fileList.innerHTML = "<li>No files found.</li>";
-            } else {
-              result.items.forEach((fileRef) => {
-                const li = document.createElement("li");
-                li.textContent = fileRef.name;
-                li.onclick = () => openFile(fileRef);
-                fileList.appendChild(li);
-              });
-            }
-          }).catch((error) => {
-            console.error("Error loading files:", error);
-            fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-          });
-        }
+        const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
+        const userBucketPath = `users/${sanitizedEmail}/files/`;
+        const storageRef = storage.ref(userBucketPath);
+        const fileList = document.getElementById("file-list");
 
+        // List files in user's directory
+        storageRef.listAll().then((result) => {
+          if (result.items.length === 0) {
+            fileList.innerHTML = "<li>No files found.</li>";
+          } else {
+            result.items.forEach((fileRef) => {
+              const li = document.createElement("li");
+              li.textContent = fileRef.name;
+              li.onclick = () => openFile(fileRef);  // Open file on click
+              fileList.appendChild(li);
+            });
+          }
+        }).catch((error) => {
+          console.error("Error loading files:", error);
+          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+        });
+      }
 
+      // Open and read the file from Firebase Storage
       function openFile(fileRef) {
         fileRef.getDownloadURL().then((url) => {
           fetch(url)
             .then(response => response.json())
-            .then(data => console.log("File data:", data))
+            .then(data => {
+              console.log("File data:", data);
+              // Implement logic to load or use data in the simulation canvas
+            })
             .catch(error => console.error("Error reading file:", error));
         }).catch(error => console.error("Error getting file URL:", error));
       }
