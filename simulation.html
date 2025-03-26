@@ -61,19 +61,24 @@
           fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
         });
       }
-
+    
       // Open and read the file from Firebase Storage
       function openFile(fileRef) {
-        fileRef.getDownloadURL().then((url) => {
-          fetch(url)
-            .then(response => response.json())
-            .then(data => {
-              console.log("File data:", data);
-              // Implement logic to load or use data in the simulation canvas
-            })
-            .catch(error => console.error("Error reading file:", error));
-        }).catch(error => console.error("Error getting file URL:", error));
-      }
+          fileRef.getDownloadURL().then((url) => {
+            console.log("Download URL:", url); // Check if this URL is correct
+            fetch(url)
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+              })
+              .then(data => {
+                console.log("File data:", data);
+              })
+              .catch(error => console.error("Error reading file:", error));
+          }).catch(error => console.error("Error getting file URL:", error));
+        }
     </script>
 </head>
 <body>
