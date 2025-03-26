@@ -17,9 +17,12 @@ const storage = firebase.storage();
 const auth = firebase.auth();
 
 // Ensure the user is authenticated
-auth.onAuthStateChanged(function(user) {
+auth.onAuthStateChanged(async function(user) {
   if (user) {
     console.log("User authenticated:", user.email);
+    const token = await user.getIdTokenResult();
+    console.log("User token claims:", token.claims);
+
     loadFiles(user);
   } else {
     console.log("User not authenticated. Redirecting to login.");
