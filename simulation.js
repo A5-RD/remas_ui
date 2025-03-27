@@ -1,3 +1,5 @@
+
+// Firebase Initialization
 const firebaseConfig = {
   apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
   authDomain: "atom5engineering.firebaseapp.com",
