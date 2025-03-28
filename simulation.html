@@ -40,11 +40,11 @@
       // Load files from user's Firebase Storage bucket
       function loadFiles(user) {
         const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
-        console.log(sanitizedEmail)
         const userBucketPath = `users/${sanitizedEmail}/files/`;
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
-
+        console.log(sanitizedEmail)
+        
         // List files in user's directory
         storageRef.listAll().then((result) => {
           if (result.items.length === 0) {
@@ -57,11 +57,10 @@
               fileList.appendChild(li);
             });
           }
-        })
-        //                          .catch((error) => {
-        //   console.error("Error loading files:", error);
-        //   fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-        // });
+        }).catch((error) => {
+          console.error("Error loading files:", error);
+          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+        });
       }
     
       // Open and read the file from Firebase Storage
