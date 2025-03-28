@@ -40,6 +40,7 @@
       // Load files from user's Firebase Storage bucket
       function loadFiles(user) {
         const sanitizedEmail = user.email.replace(/\./g, '_').replace(/@/g, '_at_');
+        console.log(sanitizedEmail)
         const userBucketPath = `users/${sanitizedEmail}/files/`;
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
