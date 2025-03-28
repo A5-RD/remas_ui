@@ -31,8 +31,7 @@
       // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
-          loadFiles(user);
-          //window.location.href = "index.html";  // Redirect to login page
+          window.location.href = "index.html";  // Redirect to login page
         } else {
           loadFiles(user);  // Proceed with file loading
         }
@@ -57,10 +56,11 @@
               fileList.appendChild(li);
             });
           }
-        }).catch((error) => {
-          console.error("Error loading files:", error);
-          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-        });
+        }
+        //                          ).catch((error) => {
+        //   console.error("Error loading files:", error);
+        //   fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+        // });
       }
     
       // Open and read the file from Firebase Storage
