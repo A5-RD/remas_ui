@@ -28,6 +28,14 @@
       var auth = firebase.auth();
       var storage = firebase.storage();
 
+      firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+          console.log("User authenticated:", user.email);
+         } else {
+          console.log("No user authenticated.");
+         }
+       });
+
       // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
