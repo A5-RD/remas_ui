@@ -44,6 +44,7 @@
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
         console.log("Sanatized Email: ", sanitizedEmail)
+        console.log("Storage Ref: ", storageRef.listAll())
         
         // List files in user's directory
         storageRef.listAll().then((result) => {
