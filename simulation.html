@@ -43,13 +43,15 @@
         const userBucketPath = `users/${sanitizedEmail}/files/`;
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
-        console.log(sanitizedEmail)
+        console.log("Sanatized Email: ", sanitizedEmail)
         
         // List files in user's directory
         storageRef.listAll().then((result) => {
           if (result.items.length === 0) {
+            console.log("No Files")
             fileList.innerHTML = "<li>No files found.</li>";
           } else {
+            console.log("Files Present")
             result.items.forEach((fileRef) => {
               const li = document.createElement("li");
               li.textContent = fileRef.name;
