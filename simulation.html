@@ -47,20 +47,22 @@
 
       // Load files from user's Firebase Storage bucket
       function loadFiles(user) {
-        const sanitizedEmail = user.email
-        const userBucketPath = `users/${sanitizedEmail}/files/`;
+        const sanitizedEmail = user.email; // No need to sanitize as folder is named exactly like email
+        const userBucketPath = `users/${sanitizedEmail}/files/`; // Using user's email as folder name
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
-        console.log("Sanatized Email: ", sanitizedEmail)
-        console.log("Storage Ref: ", storageRef.listAll())
-        
+        const toolbarTitle = document.querySelector("#file-explorer .toolbar span");
+
+        // Show "Loading files..."
+        toolbarTitle.textContent = "Loading files...";
+
         // List files in user's directory
         storageRef.listAll().then((result) => {
           if (result.items.length === 0) {
-            console.log("No Files")
+            console.log("No Files");
             fileList.innerHTML = "<li>No files found.</li>";
           } else {
-            console.log("Files Present")
+            console.log("Files Present");
             result.items.forEach((fileRef) => {
               const li = document.createElement("li");
               li.textContent = fileRef.name;
@@ -68,29 +70,62 @@
               fileList.appendChild(li);
             });
           }
+          
+          // Update toolbar once files are loaded
+          toolbarTitle.textContent = "File Explorer";
         }).catch((error) => {
           console.error("Error loading files:", error);
           fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+          toolbarTitle.textContent = "File Explorer"; // Reset the toolbar title
         });
       }
     
       // Open and read the file from Firebase Storage
       function openFile(fileRef) {
-          fileRef.getDownloadURL().then((url) => {
-            console.log("Download URL:", url); // Check if this URL is correct
-            fetch(url)
-              .then(response => {
-                if (!response.ok) {
-                  throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-              })
-              .then(data => {
-                console.log("File data:", data);
-              })
-              .catch(error => console.error("Error reading file:", error));
-          }).catch(error => console.error("Error getting file URL:", error));
+        fileRef.getDownloadURL().then((url) => {
+          console.log("Download URL:", url); // Check if this URL is correct
+          fetch(url)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log("File data:", data);
+            })
+            .catch(error => console.error("Error reading file:", error));
+        }).catch(error => console.error("Error getting file URL:", error));
+      }
+
+      // Minimize or Restore file explorer
+      function toggleFileExplorer() {
+        const fileExplorer = document.getElementById("file-explorer");
+        const minimizeButton = document.getElementById("minimize-explorer");
+        
+        if (fileExplorer.style.display === "none") {
+          fileExplorer.style.display = "block";  // Restore the file explorer
+          minimizeButton.textContent = "−";  // Change button to minimize
+        } else {
+          fileExplorer.style.display = "none";  // Minimize the file explorer
+          minimizeButton.textContent = "+";  // Change button to maximize
         }
+      }
+
+      // Fullscreen functionality
+      function toggleFullScreen() {
+        const canvas = document.getElementById("simulation-canvas");
+        
+        if (canvas.requestFullscreen) {
+          canvas.requestFullscreen();
+        } else if (canvas.mozRequestFullScreen) { // Firefox
+          canvas.mozRequestFullScreen();
+        } else if (canvas.webkitRequestFullscreen) { // Chrome, Safari and Opera
+          canvas.webkitRequestFullscreen();
+        } else if (canvas.msRequestFullscreen) { // IE/Edge
+          canvas.msRequestFullscreen();
+        }
+      }
     </script>
 </head>
 <body>
@@ -98,8 +133,8 @@
         <!-- File Explorer (Movable & Minimizable) -->
         <div id="file-explorer">
             <div class="toolbar">
-                <span>File Explorer</span>
-                <button id="minimize-explorer">−</button>
+                <span>Loading files...</span>  <!-- Default text while loading -->
+                <button id="minimize-explorer" onclick="toggleFileExplorer()">−</button>
             </div>
             <ul id="file-list">Loading files...</ul>
         </div>
@@ -113,7 +148,7 @@
         <div id="tabs">
             <button class="tab-button" id="psi-tab">Ψ</button>
             <button class="tab-button" id="sigma-tab">Σ</button>
-            <button class="tab-button" id="fullscreen-btn">⛶</button>
+            <button class="tab-button" id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
         </div>
     </div>
 
