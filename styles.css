@@ -1,111 +1,126 @@
-// Firebase Initialization
-const firebaseConfig = {
-    apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-    authDomain: "atom5engineering.firebaseapp.com",
-    projectId: "atom5engineering",
-    storageBucket: "atom5engineering.firebasestorage.app",
-    messagingSenderId: "956458197323",
-    appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-    measurementId: "G-X7H184TN54"
-};
-firebase.initializeApp(firebaseConfig);
-
-const storage = firebase.storage();
-const auth = firebase.auth();
-
-// Ensure the user is authenticated
-auth.onAuthStateChanged(function(user) {
-    if (user) {
-        loadFiles(user);
-    } else {
-        window.location.href = "index.html";
-    }
-});
-
-// Load Files
-function loadFiles(user) {
-    const sanitizedEmail = user.email;
-    const userBucketPath = `users/${sanitizedEmail}/files/`;
-    const storageRef = storage.ref(userBucketPath);
-    const fileList = document.getElementById("file-list");
-    fileList.innerHTML = "Loading files...";
-
-    storageRef.listAll().then((result) => {
-        if (result.items.length === 0) {
-            fileList.innerHTML = "<li>No files found.</li>";
-        } else {
-            fileList.innerHTML = ""; // Clear loading message
-            result.items.forEach((fileRef) => {
-                const li = document.createElement("li");
-                li.textContent = fileRef.name;
-                li.onclick = function() {
-                    openFile(fileRef);
-                };
-                fileList.appendChild(li);
-            });
-        }
-    }).catch((error) => {
-        console.error("Error loading files:", error);
-        fileList.innerHTML = "<li>Error loading files.</li>";
-    });
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
 }
 
-// Open File
-function openFile(fileRef) {
-    fileRef.getDownloadURL().then((url) => {
-        fetch(url)
-            .then(response => response.json())
-            .then(data => console.log("File Content:", data))
-            .catch((error) => console.error("Error fetching file:", error));
-    }).catch((error) => console.error("Error getting file URL:", error));
+#simulation-container {
+  display: flex;
+  height: 100vh;
 }
 
-// Resize and Minimize Functionality
-let isResizing = false;
-let isVerticalResizing = false;
-const rightPanel = document.getElementById('file-explorer');
-const minimizeBtn = document.getElementById('minimize-explorer');
+#file-explorer {
+  background-color: rgba(50, 50, 50, 0.8);
+  color: white;
+  width: 250px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 2px solid rgba(100, 100, 100, 0.6);
+  transition: width 0.3s;
+}
 
-// Minimize or Restore Panel
-minimizeBtn.addEventListener('click', () => {
-    const toolbar = rightPanel.querySelector('.toolbar');
-    if (rightPanel.classList.contains('minimized')) {
-        rightPanel.classList.remove('minimized');
-        minimizeBtn.textContent = '−';
-    } else {
-        rightPanel.classList.add('minimized');
-        minimizeBtn.textContent = '+';
-    }
-});
+#file-explorer.minimized {
+  width: 30px;
+}
 
-// Drag to Resize - Horizontal
-rightPanel.addEventListener('mousedown', (e) => {
-    if (e.offsetX > rightPanel.offsetWidth - 10) {
-        isResizing = true;
-        document.body.style.cursor = 'ew-resize';
-    }
-});
+#file-explorer.minimized .toolbar span {
+  display: none;
+}
 
-// Drag to Resize - Vertical (File Explorer)
-document.getElementById('file-list').addEventListener('mousedown', (e) => {
-    if (e.offsetY > document.getElementById('file-list').offsetHeight - 10) {
-        isVerticalResizing = true;
-        document.body.style.cursor = 'ns-resize';
-    }
-});
+.toolbar {
+  background-color: rgba(30, 30, 30, 0.9);
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
 
-// Resize Logic
-document.addEventListener('mousemove', (e) => {
-    if (isResizing) {
-        rightPanel.style.width = `${e.clientX}px`;
-    }
-    if (isVerticalResizing) {
-        document.getElementById('file-list').style.height = `${e.clientY - rightPanel.getBoundingClientRect().top}px`;
-    }
-});
+#file-list {
+  flex-grow: 1;
+  overflow-y: auto;
+}
 
-document.addEventListener('mouseup', () => {
-    isResizing = false;
-    isVerticalResizing = false;
-    document.body.style.cursor = '';
-});
+button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  color: #ccc;
+}
+
+#simulation-area {
+  flex-grow: 1;
+  background-color: #1e1e1e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#tabs {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+}
+
+.tab-button {
+  background-color: rgba(80, 80, 80, 0.8);
+  margin-left: 10px;
+  padding: 8px 12px;
+  border-radius: 5px;
+}
+
+#fullscreen-btn {
+  font-size: 18px;
+}
+
+/* Cursor for resizing */
+#file-explorer-resizer {
+  width: 5px;
+  cursor: ew-resize;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+#file-explorer-resizer:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+#bottom-resizer {
+  height: 5px;
+  cursor: ns-resize;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+#bottom-resizer:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Scrollbar styling */
+#file-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#file-list::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 120, 0.7);
+  border-radius: 10px;
+}
+
+#file-list::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(150, 150, 150, 0.9);
+}
+
+#file-list::-webkit-scrollbar-track {
+  background-color: rgba(30, 30, 30, 0.8);
+}
