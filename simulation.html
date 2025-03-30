@@ -99,18 +99,27 @@
       }
 
       // Minimize or Restore file explorer
-      function toggleFileExplorer() {
-        const fileExplorer = document.getElementById("file-explorer");
-        const minimizeButton = document.getElementById("minimize-explorer");
+      // Minimize or Restore file explorer
+        // Minimize or Restore file explorer
+        function toggleFileExplorer() {
+            const fileExplorer = document.getElementById("file-explorer");
+            const minimizeButton = document.getElementById("minimize-explorer");
+            const fileList = document.getElementById("file-list");
         
-        if (fileExplorer.style.display === "none") {
-          fileExplorer.style.display = "block";  // Restore the file explorer
-          minimizeButton.textContent = "−";  // Change button to minimize
-        } else {
-          fileExplorer.style.display = "none";  // Minimize the file explorer
-          minimizeButton.textContent = "+";  // Change button to maximize
+            if (fileExplorer.classList.contains("minimized")) {
+                // Restore the file explorer
+                fileExplorer.classList.remove("minimized");
+                fileList.style.display = "block";  // Show the file list again
+                minimizeButton.textContent = "−";  // Change button to minimize
+            } else {
+                // Minimize the file explorer
+                fileExplorer.classList.add("minimized");
+                fileList.style.display = "none";  // Hide the file list
+                minimizeButton.textContent = "+";  // Change button to maximize
+            }
         }
-      }
+
+
 
       // Fullscreen functionality
       function toggleFullScreen() {
