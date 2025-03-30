@@ -14,24 +14,30 @@ body {
 }
 
 /* File Explorer */
+/* General file explorer styles */
 #file-explorer {
     width: 300px;
     height: 400px;
     position: fixed;
     top: 50px;
     right: 10px;
-    background-color: #333;
+    background-color: rgba(50, 50, 50, 0.7); /* Semi-transparent grey */
     color: white;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    transition: height 0.3s ease;
-    overflow: hidden;
+    overflow: hidden; /* Hide overflow content by default */
+    resize: both; /* Allow resizing in both directions */
+    overflow: auto; /* Add scrollbars when content overflows */
+    transition: all 0.3s ease; /* Smooth resizing */
+    font-family: 'Roboto', sans-serif;
 }
 
+/* When minimized, only the toolbar is visible */
 #file-explorer.minimized {
-    height: 50px;  /* Only the top bar will be visible */
+    height: 50px; /* Only show the top bar */
 }
 
+/* Toolbar at the top of the file explorer */
 #file-explorer .toolbar {
     padding: 10px;
     font-size: 16px;
@@ -39,22 +45,42 @@ body {
     border-radius: 10px 10px 0 0;
     display: flex;
     justify-content: space-between;
+    cursor: pointer;
+    font-weight: 300; /* Roboto Thin */
 }
 
+/* Styles for the file list */
 #file-explorer ul {
     list-style-type: none;
     padding: 0;
     margin: 0;
+    max-height: 100%; /* Ensure it doesn't exceed the container */
+    overflow-y: auto; /* Add a vertical scrollbar if needed */
 }
 
+/* Each file in the list */
 #file-explorer ul li {
     padding: 10px;
     cursor: pointer;
+    white-space: nowrap; /* Prevent text from wrapping */
 }
 
+/* Hover effect for files */
 #file-explorer ul li:hover {
     background-color: #555;
 }
+
+/* Full height file list when file explorer is not minimized */
+#file-explorer .file-list-visible {
+    display: block;
+}
+
+/* Font styles */
+body, #file-explorer, #file-explorer .toolbar {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 300; /* Thin version of Roboto */
+}
+
 
 
 /* Main Simulation Area */
