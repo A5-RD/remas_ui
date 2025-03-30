@@ -1,131 +1,111 @@
-body {
-    margin: 0;
-    padding: 0;
-    background-color: #2a2a2a;
-    color: white;
-    font-family: "Roboto", sans-serif;
+// Firebase Initialization
+const firebaseConfig = {
+    apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+    authDomain: "atom5engineering.firebaseapp.com",
+    projectId: "atom5engineering",
+    storageBucket: "atom5engineering.firebasestorage.app",
+    messagingSenderId: "956458197323",
+    appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
+    measurementId: "G-X7H184TN54"
+};
+firebase.initializeApp(firebaseConfig);
+
+const storage = firebase.storage();
+const auth = firebase.auth();
+
+// Ensure the user is authenticated
+auth.onAuthStateChanged(function(user) {
+    if (user) {
+        loadFiles(user);
+    } else {
+        window.location.href = "index.html";
+    }
+});
+
+// Load Files
+function loadFiles(user) {
+    const sanitizedEmail = user.email;
+    const userBucketPath = `users/${sanitizedEmail}/files/`;
+    const storageRef = storage.ref(userBucketPath);
+    const fileList = document.getElementById("file-list");
+    fileList.innerHTML = "Loading files...";
+
+    storageRef.listAll().then((result) => {
+        if (result.items.length === 0) {
+            fileList.innerHTML = "<li>No files found.</li>";
+        } else {
+            fileList.innerHTML = ""; // Clear loading message
+            result.items.forEach((fileRef) => {
+                const li = document.createElement("li");
+                li.textContent = fileRef.name;
+                li.onclick = function() {
+                    openFile(fileRef);
+                };
+                fileList.appendChild(li);
+            });
+        }
+    }).catch((error) => {
+        console.error("Error loading files:", error);
+        fileList.innerHTML = "<li>Error loading files.</li>";
+    });
 }
 
-/* Simulation Container */
-#simulation-container {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
+// Open File
+function openFile(fileRef) {
+    fileRef.getDownloadURL().then((url) => {
+        fetch(url)
+            .then(response => response.json())
+            .then(data => console.log("File Content:", data))
+            .catch((error) => console.error("Error fetching file:", error));
+    }).catch((error) => console.error("Error getting file URL:", error));
 }
 
-/* File Explorer */
-/* General file explorer styles */
-#file-explorer {
-    width: 300px;
-    height: 400px;
-    position: fixed;
-    top: 50px;
-    right: 10px;
-    background-color: rgba(50, 50, 50, 0.7); /* Semi-transparent grey */
-    color: white;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    overflow: hidden; /* Hide overflow content by default */
-    resize: both; /* Allow resizing in both directions */
-    overflow: auto; /* Add scrollbars when content overflows */
-    transition: all 0.3s ease; /* Smooth resizing */
-    font-family: 'Roboto', sans-serif;
-}
+// Resize and Minimize Functionality
+let isResizing = false;
+let isVerticalResizing = false;
+const rightPanel = document.getElementById('file-explorer');
+const minimizeBtn = document.getElementById('minimize-explorer');
 
-/* When minimized, only the toolbar is visible */
-#file-explorer.minimized {
-    height: 50px; /* Only show the top bar */
-}
+// Minimize or Restore Panel
+minimizeBtn.addEventListener('click', () => {
+    const toolbar = rightPanel.querySelector('.toolbar');
+    if (rightPanel.classList.contains('minimized')) {
+        rightPanel.classList.remove('minimized');
+        minimizeBtn.textContent = '−';
+    } else {
+        rightPanel.classList.add('minimized');
+        minimizeBtn.textContent = '+';
+    }
+});
 
-/* Toolbar at the top of the file explorer */
-#file-explorer .toolbar {
-    padding: 10px;
-    font-size: 16px;
-    background-color: #444;
-    border-radius: 10px 10px 0 0;
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
-    font-weight: 300; /* Roboto Thin */
-}
+// Drag to Resize - Horizontal
+rightPanel.addEventListener('mousedown', (e) => {
+    if (e.offsetX > rightPanel.offsetWidth - 10) {
+        isResizing = true;
+        document.body.style.cursor = 'ew-resize';
+    }
+});
 
-/* Styles for the file list */
-#file-explorer ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    max-height: 100%; /* Ensure it doesn't exceed the container */
-    overflow-y: auto; /* Add a vertical scrollbar if needed */
-}
+// Drag to Resize - Vertical (File Explorer)
+document.getElementById('file-list').addEventListener('mousedown', (e) => {
+    if (e.offsetY > document.getElementById('file-list').offsetHeight - 10) {
+        isVerticalResizing = true;
+        document.body.style.cursor = 'ns-resize';
+    }
+});
 
-/* Each file in the list */
-#file-explorer ul li {
-    padding: 10px;
-    cursor: pointer;
-    white-space: nowrap; /* Prevent text from wrapping */
-}
+// Resize Logic
+document.addEventListener('mousemove', (e) => {
+    if (isResizing) {
+        rightPanel.style.width = `${e.clientX}px`;
+    }
+    if (isVerticalResizing) {
+        document.getElementById('file-list').style.height = `${e.clientY - rightPanel.getBoundingClientRect().top}px`;
+    }
+});
 
-/* Hover effect for files */
-#file-explorer ul li:hover {
-    background-color: #555;
-}
-
-/* Full height file list when file explorer is not minimized */
-#file-explorer .file-list-visible {
-    display: block;
-}
-
-/* Font styles */
-body, #file-explorer, #file-explorer .toolbar {
-    font-family: 'Roboto', sans-serif;
-    font-weight: 300; /* Thin version of Roboto */
-}
-
-
-
-/* Main Simulation Area */
-#simulation-area {
-    flex-grow: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: black;
-}
-
-/* Tabs at Bottom Right */
-#tabs {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    display: flex;
-    gap: 10px;
-}
-
-.tab-button {
-    font-size: 20px;
-    padding: 10px;
-    background: #444;
-    border-radius: 5px;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-.tab-button:hover {
-    background: #555;
-}
-
-/* Fullscreen Button */
-#fullscreen-btn {
-    font-size: 20px;
-    padding: 10px;
-    background: #444;
-    border-radius: 5px;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-#fullscreen-btn:hover {
-    background: #555;
-}
+document.addEventListener('mouseup', () => {
+    isResizing = false;
+    isVerticalResizing = false;
+    document.body.style.cursor = '';
+});
