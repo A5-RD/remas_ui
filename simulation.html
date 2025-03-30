@@ -1,166 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulation</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulation</title>
+  <link rel="stylesheet" href="styles.css" />
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
 
-    <script>
-      // Firebase Configuration
-      var firebaseConfig = {
-        apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-        authDomain: "atom5engineering.firebaseapp.com",
-        projectId: "atom5engineering",
-        storageBucket: "atom5engineering.firebasestorage.app",
-        messagingSenderId: "956458197323",
-        appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-        measurementId: "G-X7H184TN54"
-      };
+  <script>
+    // Firebase Configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+      authDomain: "atom5engineering.firebaseapp.com",
+      projectId: "atom5engineering",
+      storageBucket: "atom5engineering.firebasestorage.app",
+      messagingSenderId: "956458197323",
+      appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
+      measurementId: "G-X7H184TN54"
+    };
 
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      var auth = firebase.auth();
-      var storage = firebase.storage();
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var storage = firebase.storage();
 
-      firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-          console.log("User authenticated:", user.email);
-         } else {
-          console.log("No user authenticated.");
-         }
-       });
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        console.log("User authenticated:", user.email);
+      } else {
+        console.log("No user authenticated.");
+      }
+    });
 
-      // Check if user is logged in
-      auth.onAuthStateChanged(function(user) {
-        if (!user) {
-          window.location.href = "index.html";  // Redirect to login page
+    // Check if user is logged in
+    auth.onAuthStateChanged(function (user) {
+      if (!user) {
+        window.location.href = "index.html"; // Redirect to login page
+      } else {
+        loadFiles(user); // Proceed with file loading
+      }
+    });
+
+    // Load files from user's Firebase Storage bucket
+    function loadFiles(user) {
+      const sanitizedEmail = user.email;
+      const userBucketPath = `users/${sanitizedEmail}/files/`;
+      const storageRef = storage.ref(userBucketPath);
+      const fileList = document.getElementById("file-list");
+
+      console.log("Sanitized Email:", sanitizedEmail);
+      console.log("Storage Ref:", storageRef.listAll());
+
+      // Show loading message
+      fileList.innerHTML = "<li>Loading files...</li>";
+
+      storageRef.listAll().then((result) => {
+        fileList.innerHTML = ""; // Clear loading message
+
+        if (result.items.length === 0) {
+          console.log("No Files");
+          fileList.innerHTML = "<li>No files found.</li>";
         } else {
-          loadFiles(user);  // Proceed with file loading
+          console.log("Files Present");
+          result.items.forEach((fileRef) => {
+            const li = document.createElement("li");
+            li.textContent = fileRef.name;
+            li.onclick = () => openFile(fileRef);
+            fileList.appendChild(li);
+          });
         }
+      }).catch((error) => {
+        console.error("Error loading files:", error);
+        fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
       });
+    }
 
-      // Load files from user's Firebase Storage bucket
-      function loadFiles(user) {
-        const sanitizedEmail = user.email; // No need to sanitize as folder is named exactly like email
-        const userBucketPath = `users/${sanitizedEmail}/files/`; // Using user's email as folder name
-        const storageRef = storage.ref(userBucketPath);
-        const fileList = document.getElementById("file-list");
-        const toolbarTitle = document.querySelector("#file-explorer .toolbar span");
-
-        // Show "Loading files..."
-        toolbarTitle.textContent = "Loading files...";
-
-        // List files in user's directory
-        storageRef.listAll().then((result) => {
-          if (result.items.length === 0) {
-            console.log("No Files");
-            fileList.innerHTML = "<li>No files found.</li>";
-          } else {
-            console.log("Files Present");
-            result.items.forEach((fileRef) => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => openFile(fileRef);  // Open file on click
-              fileList.appendChild(li);
-            });
-          }
-          
-          // Update toolbar once files are loaded
-          toolbarTitle.textContent = "File Explorer";
-        }).catch((error) => {
-          console.error("Error loading files:", error);
-          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-          toolbarTitle.textContent = "File Explorer"; // Reset the toolbar title
-        });
-      }
-    
-      // Open and read the file from Firebase Storage
-      function openFile(fileRef) {
-        fileRef.getDownloadURL().then((url) => {
-          console.log("Download URL:", url); // Check if this URL is correct
-          fetch(url)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-              }
-              return response.json();
-            })
-            .then(data => {
-              console.log("File data:", data);
-            })
-            .catch(error => console.error("Error reading file:", error));
-        }).catch(error => console.error("Error getting file URL:", error));
-      }
-
-      // Minimize or Restore file explorer
-      // Minimize or Restore file explorer
-        // Minimize or Restore file explorer
-        function toggleFileExplorer() {
-            const fileExplorer = document.getElementById("file-explorer");
-            const minimizeButton = document.getElementById("minimize-explorer");
-            const fileList = document.getElementById("file-list");
-        
-            if (fileExplorer.classList.contains("minimized")) {
-                // Restore the file explorer
-                fileExplorer.classList.remove("minimized");
-                fileList.style.display = "block";  // Show the file list again
-                minimizeButton.textContent = "−";  // Change button to minimize
-            } else {
-                // Minimize the file explorer
-                fileExplorer.classList.add("minimized");
-                fileList.style.display = "none";  // Hide the file list
-                minimizeButton.textContent = "+";  // Change button to maximize
+    // Open and read the file from Firebase Storage
+    function openFile(fileRef) {
+      fileRef.getDownloadURL().then((url) => {
+        console.log("Download URL:", url);
+        fetch(url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
             }
-        }
-
-
-
-      // Fullscreen functionality
-      function toggleFullScreen() {
-        const canvas = document.getElementById("simulation-canvas");
-        
-        if (canvas.requestFullscreen) {
-          canvas.requestFullscreen();
-        } else if (canvas.mozRequestFullScreen) { // Firefox
-          canvas.mozRequestFullScreen();
-        } else if (canvas.webkitRequestFullscreen) { // Chrome, Safari and Opera
-          canvas.webkitRequestFullscreen();
-        } else if (canvas.msRequestFullscreen) { // IE/Edge
-          canvas.msRequestFullscreen();
-        }
-      }
-    </script>
+            return response.json();
+          })
+          .then(data => {
+            console.log("File data:", data);
+          })
+          .catch(error => console.error("Error reading file:", error));
+      }).catch(error => console.error("Error getting file URL:", error));
+    }
+  </script>
 </head>
 <body>
-    <div id="simulation-container">
-        <!-- File Explorer (Movable & Minimizable) -->
-        <div id="file-explorer">
-            <div class="toolbar">
-                <span>Loading files...</span>  <!-- Default text while loading -->
-                <button id="minimize-explorer" onclick="toggleFileExplorer()">−</button>
-            </div>
-            <ul id="file-list">Loading files...</ul>
+  <div id="simulation-container">
+    <!-- Right Panel (Adjustable and Minimizable) -->
+    <div id="right-panel">
+      <!-- File Explorer -->
+      <div id="file-explorer">
+        <div class="toolbar" onclick="toggleFileExplorer()">
+          <span>File Explorer</span>
+          <button id="minimize-explorer">−</button>
         </div>
-
-        <!-- Main Simulation Canvas -->
-        <div id="simulation-area">
-            <canvas id="simulation-canvas"></canvas>
-        </div>
-
-        <!-- Bottom Right Tabs -->
-        <div id="tabs">
-            <button class="tab-button" id="psi-tab">Ψ</button>
-            <button class="tab-button" id="sigma-tab">Σ</button>
-            <button class="tab-button" id="fullscreen-btn" onclick="toggleFullScreen()">⛶</button>
-        </div>
+        <ul id="file-list"></ul>
+      </div>
     </div>
 
-    <script src="simulation.js"></script>
+    <!-- Main Simulation Canvas -->
+    <div id="simulation-area">
+      <canvas id="simulation-canvas"></canvas>
+    </div>
+
+    <!-- Bottom Right Tabs -->
+    <div id="tabs">
+      <button class="tab-button" id="psi-tab">Ψ</button>
+      <button class="tab-button" id="sigma-tab">Σ</button>
+      <button class="tab-button" id="fullscreen-btn">⛶</button>
+    </div>
+  </div>
+
+  <script src="simulation.js"></script>
 </body>
 </html>
