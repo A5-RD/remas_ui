@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
 
     <script>
-      // Firebase Configuration
       var firebaseConfig = {
         apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
         authDomain: "atom5engineering.firebaseapp.com",
@@ -23,7 +22,6 @@
         measurementId: "G-X7H184TN54"
       };
 
-      // Initialize Firebase
       firebase.initializeApp(firebaseConfig);
       var auth = firebase.auth();
       var storage = firebase.storage();
@@ -36,36 +34,31 @@
         }
       });
 
-      // Check if user is logged in
       auth.onAuthStateChanged(function(user) {
         if (!user) {
-          window.location.href = "index.html";  // Redirect to login page
+          window.location.href = "index.html";
         } else {
-          loadFiles(user);  // Proceed with file loading
+          loadFiles(user);
         }
       });
 
-      // Load files from user's Firebase Storage bucket
       function loadFiles(user) {
         const sanitizedEmail = user.email;
         const userBucketPath = `users/${sanitizedEmail}/files/`;
         const storageRef = storage.ref(userBucketPath);
         const fileList = document.getElementById("file-list");
+
         fileList.innerHTML = "<li>Loading files...</li>";
 
-        console.log("Sanitized Email:", sanitizedEmail);
-        console.log("Storage Ref:", storageRef.listAll());
-        
-        // List files in user's directory
         storageRef.listAll().then((result) => {
-          fileList.innerHTML = ""; // Clear loading text
+          fileList.innerHTML = "";
           if (result.items.length === 0) {
             fileList.innerHTML = "<li>No files found.</li>";
           } else {
             result.items.forEach((fileRef) => {
               const li = document.createElement("li");
               li.textContent = fileRef.name;
-              li.onclick = () => openFile(fileRef);  // Open file on click
+              li.onclick = () => openFile(fileRef);
               fileList.appendChild(li);
             });
           }
@@ -75,7 +68,6 @@
         });
       }
 
-      // Open and read the file from Firebase Storage
       function openFile(fileRef) {
         fileRef.getDownloadURL().then((url) => {
           console.log("Download URL:", url);
@@ -96,13 +88,15 @@
 </head>
 <body>
     <div id="simulation-container">
-        <!-- File Explorer (Movable & Minimizable) -->
-        <div id="file-explorer" class="minimized">
-            <div class="toolbar" onclick="toggleExplorer()">
+        <!-- Right Panel (Movable & Minimizable) -->
+        <div id="right-panel">
+            <div class="toolbar">
                 <span>File Explorer</span>
-                <button id="minimize-explorer">+</button>
+                <button id="minimize-explorer">−</button>
             </div>
-            <ul id="file-list">Loading files...</ul>
+            <div id="file-explorer">
+                <ul id="file-list">Loading files...</ul>
+            </div>
         </div>
 
         <!-- Main Simulation Canvas -->
