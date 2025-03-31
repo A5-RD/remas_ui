@@ -1,126 +1,164 @@
-body {
-  margin: 0;
-  overflow: hidden;
-  font-family: 'Roboto', sans-serif;
-  font-size: 12px;
+/* General Styles */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Roboto', sans-serif;
+    background-color: #1e1e1e;
+    color: #ffffff;
 }
 
+/* Simulation Container */
 #simulation-container {
-  display: flex;
-  height: 100vh;
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
 }
 
-#file-explorer {
-  background-color: rgba(50, 50, 50, 0.8);
-  color: white;
-  width: 250px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-left: 2px solid rgba(100, 100, 100, 0.6);
-  transition: width 0.3s;
-}
-
-#file-explorer.minimized {
-  width: 30px;
-}
-
-#file-explorer.minimized .toolbar span {
-  display: none;
-}
-
-.toolbar {
-  background-color: rgba(30, 30, 30, 0.9);
-  padding: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-
-#file-list {
-  flex-grow: 1;
-  overflow-y: auto;
-}
-
-button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-button:hover {
-  color: #ccc;
-}
-
+/* Main Simulation Area */
 #simulation-area {
-  flex-grow: 1;
-  background-color: #1e1e1e;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    flex-grow: 1;
+    background-color: #2e2e2e;
 }
 
 canvas {
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
-#tabs {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  display: flex;
+/* Right Panel Styles */
+#file-explorer {
+    width: 300px;
+    height: 100%;
+    background-color: rgba(50, 50, 50, 0.8);
+    overflow: hidden;
+    position: relative;
+    border-left: 1px solid #444;
+    resize: horizontal;
+    min-width: 200px;
+    max-width: 600px;
 }
 
-.tab-button {
-  background-color: rgba(80, 80, 80, 0.8);
-  margin-left: 10px;
-  padding: 8px 12px;
-  border-radius: 5px;
+/* Toolbar */
+.toolbar {
+    background-color: rgba(30, 30, 30, 0.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    font-size: 14px;
+    border-bottom: 1px solid #555;
+    cursor: pointer;
 }
 
-#fullscreen-btn {
-  font-size: 18px;
+#file-list {
+    padding: 10px;
+    height: calc(100% - 40px);
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    font-size: 12px;
 }
 
-/* Cursor for resizing */
-#file-explorer-resizer {
-  width: 5px;
-  cursor: ew-resize;
-  background-color: rgba(255, 255, 255, 0.2);
+#file-list li {
+    padding: 8px;
+    background-color: rgba(70, 70, 70, 0.8);
+    margin-bottom: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-#file-explorer-resizer:hover {
-  background-color: rgba(255, 255, 255, 0.5);
+#file-list li:hover {
+    background-color: rgba(90, 90, 90, 0.9);
 }
 
-#bottom-resizer {
-  height: 5px;
-  cursor: ns-resize;
-  background-color: rgba(255, 255, 255, 0.2);
+/* Minimized State */
+#file-explorer.minimized {
+    width: 40px;
+    overflow: hidden;
 }
 
-#bottom-resizer:hover {
-  background-color: rgba(255, 255, 255, 0.5);
+#file-explorer.minimized .toolbar span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
 }
 
-/* Scrollbar styling */
 #file-list::-webkit-scrollbar {
-  width: 8px;
+    width: 8px;
 }
 
 #file-list::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 120, 120, 0.7);
-  border-radius: 10px;
-}
-
-#file-list::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(150, 150, 150, 0.9);
+    background-color: #555;
+    border-radius: 4px;
 }
 
 #file-list::-webkit-scrollbar-track {
-  background-color: rgba(30, 30, 30, 0.8);
+    background-color: #333;
+}
+
+/* Resizable Feature */
+#file-explorer::after {
+    content: "";
+    width: 8px;
+    height: 100%;
+    background-color: transparent;
+    cursor: ew-resize;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+/* Tabs and Fullscreen Button */
+#tabs {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+.tab-button, #fullscreen-btn {
+    background-color: #3a3a3a;
+    border: none;
+    color: white;
+    font-size: 14px;
+    margin: 0 5px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.tab-button:hover, #fullscreen-btn:hover {
+    background-color: #555;
+}
+
+/* File Explorer Resizing */
+#resize-handle {
+    width: 100%;
+    height: 8px;
+    background-color: #555;
+    cursor: ns-resize;
+    position: relative;
+}
+
+#resize-handle:hover {
+    background-color: #777;
+}
+
+/* Adjustments for Font Size */
+body {
+    font-size: 14px;
+}
+.toolbar, #file-list li, .tab-button, #fullscreen-btn {
+    font-size: 12px;
+}
+
+/* Debugging Border */
+#simulation-area {
+    border: 1px solid #000;
 }
