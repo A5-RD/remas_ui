@@ -22,6 +22,7 @@ body, html {
 #simulation-area {
     flex-grow: 1;
     background-color: #2e2e2e;
+    position: relative;
 }
 
 canvas {
@@ -31,21 +32,26 @@ canvas {
 }
 
 /* Right Panel Styles */
-#file-explorer {
+#right-panel {
     width: 300px;
     height: 100%;
     background-color: rgba(50, 50, 50, 0.8);
     overflow: hidden;
-    position: relative;
+    position: absolute;
+    right: 0;
+    top: 0;
     border-left: 1px solid #444;
     resize: horizontal;
     min-width: 200px;
     max-width: 600px;
+    transition: width 0.3s;
 }
 
-/* Toolbar */
-.toolbar {
-    background-color: rgba(30, 30, 30, 0.9);
+#right-panel.minimized {
+    width: 40px;
+}
+
+#right-panel .toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -53,6 +59,24 @@ canvas {
     font-size: 14px;
     border-bottom: 1px solid #555;
     cursor: pointer;
+}
+
+/* File Explorer Styles */
+#file-explorer {
+    width: 100%;
+    height: 300px;
+    background-color: rgba(50, 50, 50, 0.8);
+    overflow: hidden;
+    position: relative;
+    border-top: 1px solid #444;
+    resize: vertical;
+    min-height: 150px;
+    max-height: 600px;
+    transition: height 0.3s;
+}
+
+#file-explorer.minimized {
+    height: 40px;
 }
 
 #file-list {
@@ -77,41 +101,27 @@ canvas {
     background-color: rgba(90, 90, 90, 0.9);
 }
 
-/* Minimized State */
-#file-explorer.minimized {
-    width: 40px;
-    overflow: hidden;
-}
-
-#file-explorer.minimized .toolbar span {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    white-space: nowrap;
-}
-
-#file-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-#file-list::-webkit-scrollbar-thumb {
-    background-color: #555;
-    border-radius: 4px;
-}
-
-#file-list::-webkit-scrollbar-track {
-    background-color: #333;
-}
-
-/* Resizable Feature */
-#file-explorer::after {
+/* Resizable Handles */
+#right-panel::after {
     content: "";
     width: 8px;
     height: 100%;
     background-color: transparent;
     cursor: ew-resize;
     position: absolute;
-    right: 0;
+    left: -4px;
     top: 0;
+}
+
+#file-explorer::after {
+    content: "";
+    width: 100%;
+    height: 8px;
+    background-color: transparent;
+    cursor: ns-resize;
+    position: absolute;
+    top: -4px;
+    left: 0;
 }
 
 /* Tabs and Fullscreen Button */
@@ -125,7 +135,7 @@ canvas {
     background-color: #3a3a3a;
     border: none;
     color: white;
-    font-size: 14px;
+    font-size: 12px;
     margin: 0 5px;
     padding: 10px 15px;
     border-radius: 8px;
@@ -137,28 +147,10 @@ canvas {
     background-color: #555;
 }
 
-/* File Explorer Resizing */
-#resize-handle {
-    width: 100%;
-    height: 8px;
-    background-color: #555;
-    cursor: ns-resize;
-    position: relative;
-}
-
-#resize-handle:hover {
-    background-color: #777;
-}
-
 /* Adjustments for Font Size */
 body {
     font-size: 14px;
 }
 .toolbar, #file-list li, .tab-button, #fullscreen-btn {
     font-size: 12px;
-}
-
-/* Debugging Border */
-#simulation-area {
-    border: 1px solid #000;
 }
