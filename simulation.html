@@ -11,9 +11,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js" defer></script>
   
-  <!-- Inline Script: Initialize Firebase & Enforce Auth -->
+  <!-- Inline Script: Initialize Firebase & Enforce Authentication -->
   <script defer>
-    // Firebase Configuration – replace placeholders with your actual config values
+    // Firebase Configuration – replace these with your actual values.
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -22,35 +22,31 @@
       messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
       appId: "YOUR_APP_ID"
     };
-    
-    // Initialize Firebase
+
+    // Initialize Firebase (ensure it's only initialized once)
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-    
     const auth = firebase.auth();
     const storage = firebase.storage();
-    
-    // Wait until DOM is loaded
+
+    // Hide the simulation container until authentication is confirmed
     document.addEventListener("DOMContentLoaded", function() {
-      // Hide the simulation container initially
       const simContainer = document.getElementById("simulation-container");
-      simContainer.style.display = "none";
-      
-      // Enforce authentication
+      simContainer.style.display = "none"; // Initially hide the content
+
       auth.onAuthStateChanged(function(user) {
         if (!user) {
           // Redirect to index.html if not authenticated
           window.location.href = "index.html";
         } else {
           console.log("User authenticated:", user.email);
-          // Show simulation container and load files
-          simContainer.style.display = "flex";
+          simContainer.style.display = "flex"; // Show simulation content
           loadUserFiles(user.email);
         }
       });
     });
-    
+
     // Function to load files from Firebase Storage for the authenticated user
     function loadUserFiles(email) {
       const storageRef = storage.ref(`users/${email}/files`);
@@ -82,7 +78,6 @@
   </script>
 </head>
 <body>
-  <!-- Simulation Container (hidden by default) -->
   <div id="simulation-container">
     <!-- Main Simulation Area -->
     <div id="simulation-area">
@@ -113,7 +108,6 @@
     <button class="tab-button" id="fullscreen-btn">⛶</button>
   </div>
   
-  <!-- simulation.js handles additional UI interactions -->
   <script src="simulation.js" defer></script>
 </body>
 </html>
