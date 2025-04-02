@@ -11,12 +11,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js" defer></script>
   
-  <!-- Inline Script: Initialize Firebase & Enforce Authentication -->
+  <!-- Inline Script: Initialize Firebase & Enforce Auth -->
   <script defer>
-    // Hide the entire document until auth check is complete
-    document.documentElement.style.display = "none";
-    
-    // Firebase Configuration – replace with your actual config values
+    // Firebase Configuration – replace placeholders with your actual config values
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -26,7 +23,7 @@
       appId: "YOUR_APP_ID"
     };
     
-    // Initialize Firebase (only if not already initialized)
+    // Initialize Firebase
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
@@ -34,16 +31,24 @@
     const auth = firebase.auth();
     const storage = firebase.storage();
     
-    // Enforce authentication: if not authenticated, redirect to index.html
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        console.log("User authenticated:", user.email);
-        // Show the content now that authentication is confirmed
-        document.documentElement.style.display = "block";
-        loadUserFiles(user.email);
-      }
+    // Wait until DOM is loaded
+    document.addEventListener("DOMContentLoaded", function() {
+      // Hide the simulation container initially
+      const simContainer = document.getElementById("simulation-container");
+      simContainer.style.display = "none";
+      
+      // Enforce authentication
+      auth.onAuthStateChanged(function(user) {
+        if (!user) {
+          // Redirect to index.html if not authenticated
+          window.location.href = "index.html";
+        } else {
+          console.log("User authenticated:", user.email);
+          // Show simulation container and load files
+          simContainer.style.display = "flex";
+          loadUserFiles(user.email);
+        }
+      });
     });
     
     // Function to load files from Firebase Storage for the authenticated user
@@ -77,6 +82,7 @@
   </script>
 </head>
 <body>
+  <!-- Simulation Container (hidden by default) -->
   <div id="simulation-container">
     <!-- Main Simulation Area -->
     <div id="simulation-area">
@@ -86,14 +92,11 @@
     <!-- Right Panel -->
     <div id="right-panel">
       <div class="toolbar">
-        <!-- Only a minimize button (symbol) for the panel -->
         <button id="minimize-panel">➖</button>
       </div>
-      
       <!-- File Explorer -->
       <div id="file-explorer">
         <div class="explorer-toolbar">
-          <!-- Minimize button for the file explorer -->
           <button id="minimize-explorer">➖</button>
         </div>
         <ul id="file-list">
@@ -110,7 +113,7 @@
     <button class="tab-button" id="fullscreen-btn">⛶</button>
   </div>
   
-  <!-- simulation.js will handle additional UI interactions (minimizing panels, resizing, fullscreen, etc.) -->
+  <!-- simulation.js handles additional UI interactions -->
   <script src="simulation.js" defer></script>
 </body>
 </html>
