@@ -1,113 +1,72 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const rightPanel = document.getElementById("right-panel");
-    const fileExplorer = document.getElementById("file-explorer");
-    const minimizePanelBtn = document.getElementById("minimize-panel");
-    const minimizeExplorerBtn = document.getElementById("minimize-explorer");
+    // Full-Screen Toggle
     const fullscreenBtn = document.getElementById("fullscreen-btn");
-    let isFullscreen = false;
+    fullscreenBtn.addEventListener("click", function () {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Error attempting full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
 
-    // Minimize or restore the right panel
+    // Minimize Right Panel
+    const rightPanel = document.getElementById("right-panel");
+    const minimizePanelBtn = document.getElementById("minimize-panel");
+
     minimizePanelBtn.addEventListener("click", function () {
         if (rightPanel.classList.contains("minimized")) {
             rightPanel.classList.remove("minimized");
-            minimizePanelBtn.textContent = "−"; // Change to minus when expanded
         } else {
             rightPanel.classList.add("minimized");
-            minimizePanelBtn.textContent = "+"; // Change to plus when minimized
         }
+        adjustLayout();
     });
 
-    // Minimize or restore the file explorer within the panel
-    minimizeExplorerBtn.addEventListener("click", function () {
+    // Minimize File Explorer
+    const fileExplorer = document.getElementById("file-explorer");
+    const fileExplorerToggle = document.createElement("button");
+    fileExplorerToggle.innerText = "▼"; // Collapse/Expand Icon
+    fileExplorerToggle.id = "toggle-file-explorer";
+    fileExplorerToggle.onclick = function () {
         if (fileExplorer.classList.contains("minimized")) {
             fileExplorer.classList.remove("minimized");
-            minimizeExplorerBtn.textContent = "−";
+            fileExplorer.style.height = "300px";
+            fileExplorerToggle.innerText = "▼";
         } else {
             fileExplorer.classList.add("minimized");
-            minimizeExplorerBtn.textContent = "+";
+            fileExplorer.style.height = "40px";
+            fileExplorerToggle.innerText = "▲";
         }
-    });
+    };
+    fileExplorer.prepend(fileExplorerToggle);
 
-    // Fullscreen Toggle
-    fullscreenBtn.addEventListener("click", function () {
-        if (!isFullscreen) {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            } else if (document.documentElement.mozRequestFullScreen) {
-                document.documentElement.mozRequestFullScreen();
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen();
-            } else if (document.documentElement.msRequestFullscreen) {
-                document.documentElement.msRequestFullscreen();
-            }
-            isFullscreen = true;
+    // Adjust Layout When Panel is Minimized
+    function adjustLayout() {
+        if (rightPanel.classList.contains("minimized")) {
+            rightPanel.style.width = "0px";
+            document.getElementById("simulation-area").style.width = "100vw";
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-            isFullscreen = false;
-        }
-    });
-
-    // Resizable Right Panel
-    rightPanel.addEventListener("mousedown", function (e) {
-        if (e.offsetX < 8) { // Check if mouse is near the left edge of the panel
-            e.preventDefault();
-            document.addEventListener("mousemove", resizeRightPanel);
-            document.addEventListener("mouseup", stopResizing);
-        }
-    });
-
-    function resizeRightPanel(e) {
-        const newWidth = window.innerWidth - e.clientX;
-        if (newWidth >= 200 && newWidth <= 600) {
-            rightPanel.style.width = newWidth + "px";
+            rightPanel.style.width = "300px";
+            document.getElementById("simulation-area").style.width = "calc(100vw - 300px)";
         }
     }
 
-    function stopResizing() {
-        document.removeEventListener("mousemove", resizeRightPanel);
-        document.removeEventListener("mouseup", stopResizing);
-    }
+    // Load Files into File Explorer
+    function loadFiles() {
+        const fileList = document.getElementById("file-list");
+        fileList.innerHTML = ""; // Clear previous files
+        const files = ["file1.txt", "file2.json", "script.py"]; // Example file names
 
-    // Resizable File Explorer
-    fileExplorer.addEventListener("mousedown", function (e) {
-        if (e.offsetY < 8) { // Check if mouse is near the top edge of the file explorer
-            e.preventDefault();
-            document.addEventListener("mousemove", resizeFileExplorer);
-            document.addEventListener("mouseup", stopResizingFileExplorer);
-        }
-    });
-
-    function resizeFileExplorer(e) {
-        const newHeight = window.innerHeight - e.clientY;
-        if (newHeight >= 150 && newHeight <= 600) {
-            fileExplorer.style.height = newHeight + "px";
-        }
-    }
-
-    function stopResizingFileExplorer() {
-        document.removeEventListener("mousemove", resizeFileExplorer);
-        document.removeEventListener("mouseup", stopResizingFileExplorer);
-    }
-
-    // Simulate File Loading Process
-    const fileList = document.getElementById("file-list");
-    fileList.innerHTML = "<p>Loading files...</p>";
-
-    setTimeout(() => {
-        fileList.innerHTML = "";
-        const files = ["file1.txt", "file2.txt", "file3.txt"];
         files.forEach(file => {
             const li = document.createElement("li");
             li.textContent = file;
+            li.onclick = () => alert(`Opening ${file}`);
             fileList.appendChild(li);
         });
-    }, 2000);
+    }
+
+    loadFiles();
+    adjustLayout();
 });
