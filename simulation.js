@@ -1,10 +1,20 @@
 document.addEventListener("DOMContentLoaded", function () {
+    // Firebase Config & Authentication
+    firebase.auth().onAuthStateChanged(user => {
+        if (!user) {
+            window.location.href = "login.html"; // Redirect if not logged in
+        } else {
+            loadUserFiles(user.email);
+        }
+    });
+
     // Full-Screen Toggle
     const fullscreenBtn = document.getElementById("fullscreen-btn");
+    fullscreenBtn.innerHTML = "⛶"; // Fullscreen icon only
     fullscreenBtn.addEventListener("click", function () {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Error attempting full-screen mode: ${err.message}`);
+                console.log(`Error entering full-screen: ${err.message}`);
             });
         } else {
             document.exitFullscreen();
@@ -14,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Minimize Right Panel
     const rightPanel = document.getElementById("right-panel");
     const minimizePanelBtn = document.getElementById("minimize-panel");
+    minimizePanelBtn.innerHTML = "➖"; // Only a minus symbol
 
     minimizePanelBtn.addEventListener("click", function () {
         if (rightPanel.classList.contains("minimized")) {
@@ -24,23 +35,25 @@ document.addEventListener("DOMContentLoaded", function () {
         adjustLayout();
     });
 
-    // Minimize File Explorer
-    const fileExplorer = document.getElementById("file-explorer");
-    const fileExplorerToggle = document.createElement("button");
-    fileExplorerToggle.innerText = "▼"; // Collapse/Expand Icon
-    fileExplorerToggle.id = "toggle-file-explorer";
-    fileExplorerToggle.onclick = function () {
-        if (fileExplorer.classList.contains("minimized")) {
-            fileExplorer.classList.remove("minimized");
-            fileExplorer.style.height = "300px";
-            fileExplorerToggle.innerText = "▼";
-        } else {
-            fileExplorer.classList.add("minimized");
-            fileExplorer.style.height = "40px";
-            fileExplorerToggle.innerText = "▲";
-        }
-    };
-    fileExplorer.prepend(fileExplorerToggle);
+    // Load Files from Firebase Storage
+    function loadUserFiles(email) {
+        const storageRef = firebase.storage().ref(`users/${email}/files`);
+        const fileList = document.getElementById("file-list");
+        fileList.innerHTML = ""; // Clear previous entries
+
+        storageRef.listAll()
+            .then(result => {
+                result.items.forEach(fileRef => {
+                    fileRef.getDownloadURL().then(url => {
+                        const li = document.createElement("li");
+                        li.textContent = fileRef.name;
+                        li.onclick = () => window.open(url, "_blank");
+                        fileList.appendChild(li);
+                    });
+                });
+            })
+            .catch(error => console.log("Error fetching files:", error));
+    }
 
     // Adjust Layout When Panel is Minimized
     function adjustLayout() {
@@ -53,20 +66,5 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Load Files into File Explorer
-    function loadFiles() {
-        const fileList = document.getElementById("file-list");
-        fileList.innerHTML = ""; // Clear previous files
-        const files = ["file1.txt", "file2.json", "script.py"]; // Example file names
-
-        files.forEach(file => {
-            const li = document.createElement("li");
-            li.textContent = file;
-            li.onclick = () => alert(`Opening ${file}`);
-            fileList.appendChild(li);
-        });
-    }
-
-    loadFiles();
     adjustLayout();
 });
