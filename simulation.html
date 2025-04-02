@@ -32,7 +32,7 @@
     <button id="fullscreen-btn">⛶</button>
 
     <script>
-        // Firebase Configuration
+        // Firebase Configuration (Ensure you replace with your real credentials)
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -43,7 +43,7 @@
         };
         firebase.initializeApp(firebaseConfig);
 
-        // Authentication Check
+        // Redirect to login if not authenticated
         firebase.auth().onAuthStateChanged(user => {
             if (!user) {
                 window.location.href = "login.html"; // Redirect if not authenticated
@@ -76,14 +76,10 @@
         const rightPanel = document.getElementById("right-panel");
         const minimizePanelBtn = document.getElementById("minimize-panel");
         minimizePanelBtn.addEventListener("click", function () {
-            if (rightPanel.classList.contains("minimized")) {
-                rightPanel.classList.remove("minimized");
-            } else {
-                rightPanel.classList.add("minimized");
-            }
+            rightPanel.classList.toggle("minimized");
         });
 
-        // Full-Screen Toggle
+        // Fullscreen Toggle
         const fullscreenBtn = document.getElementById("fullscreen-btn");
         fullscreenBtn.addEventListener("click", function () {
             if (!document.fullscreenElement) {
