@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Simulation</title>
   <link rel="stylesheet" href="styles.css" />
+  
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js" defer></script>
-  <!-- Our simulation JS file -->
-  <script src="simulation.js" defer></script>
+  
+  <!-- Inline Script: Initialize Firebase & Enforce Auth -->
   <script defer>
-    // Firebase Configuration (update with your actual configuration)
+    // Firebase Configuration – replace placeholders with your actual values.
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -22,28 +23,56 @@
       appId: "YOUR_APP_ID"
     };
     
-    // Initialize Firebase only once
+    // Initialize Firebase (only once)
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
     
-    // Hide simulation container until authentication is confirmed
+    // Hide the simulation container until authentication is confirmed
     document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("simulation-container").style.display = "none";
       
       firebase.auth().onAuthStateChanged(function (user) {
         if (!user) {
-          window.location.href = "login.html"; // Redirect if not authenticated
+          // If not authenticated, redirect to index.html
+          window.location.href = "index.html";
         } else {
           console.log("User authenticated:", user.email);
-          // Show simulation container now that the user is authenticated
+          // Show the simulation container and load files
           document.getElementById("simulation-container").style.display = "flex";
           loadUserFiles(user.email);
         }
       });
     });
     
-    // Function to load files will be defined in simulation.js
+    // Function to load files from Firebase Storage
+    function loadUserFiles(email) {
+      const storageRef = firebase.storage().ref(`users/${email}/files`);
+      const fileList = document.getElementById("file-list");
+      fileList.innerHTML = "<li>Loading files...</li>";
+      
+      console.log("Loading files from: users/" + email + "/files");
+      storageRef.listAll()
+        .then(result => {
+          if (result.items.length === 0) {
+            fileList.innerHTML = "<li>No files found.</li>";
+          } else {
+            fileList.innerHTML = "";
+            result.items.forEach(fileRef => {
+              fileRef.getDownloadURL().then(url => {
+                const li = document.createElement("li");
+                li.textContent = fileRef.name;
+                li.onclick = () => window.open(url, "_blank");
+                fileList.appendChild(li);
+              });
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Error loading files:", error);
+          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+        });
+    }
   </script>
 </head>
 <body>
@@ -56,13 +85,10 @@
     <!-- Right Panel -->
     <div id="right-panel">
       <div class="toolbar">
-        <!-- Only a minimize button; no title text -->
         <button id="minimize-panel">➖</button>
       </div>
-      
-      <!-- File Explorer within the right panel -->
+      <!-- File Explorer (without title) -->
       <div id="file-explorer">
-        <!-- A small toolbar for minimizing the file explorer -->
         <div class="explorer-toolbar">
           <button id="minimize-explorer">➖</button>
         </div>
@@ -79,5 +105,8 @@
     <button class="tab-button" id="sigma-tab">Σ</button>
     <button class="tab-button" id="fullscreen-btn">⛶</button>
   </div>
+  
+  <!-- simulation.js will handle additional UI interactions -->
+  <script src="simulation.js" defer></script>
 </body>
 </html>
