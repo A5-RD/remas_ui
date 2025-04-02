@@ -1,179 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simulation</title>
-  <style>
-    /* General Styles */
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      font-family: 'Roboto Thin', sans-serif;
-      background-color: #1e1e1e;
-      color: #ffffff;
-      overflow: hidden;
-    }
-    /* Container */
-    #simulation-container {
-      position: relative;
-      width: 100%;
-      height: 100%;
-    }
-    /* Main Simulation Area (Canvas) */
-    #simulation-area {
-      position: absolute;
-      left: 0;
-      top: 0;
-      right: 300px; /* Leave space for right panel */
-      bottom: 0;
-      background-color: #2e2e2e;
-    }
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    /* Right Panel */
-    #right-panel {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 300px;
-      height: 100%;
-      background-color: rgba(50, 50, 50, 0.8);
-      border-left: 1px solid #444;
-      resize: horizontal;
-      overflow: hidden;
-      transition: width 0.3s;
-    }
-    /* When minimized, right panel shrinks to a tab */
-    #right-panel.minimized {
-      width: 40px;
-    }
-    /* Right Panel Toolbar (for panel minimize/restore) */
-    #right-panel .toolbar {
-      background-color: #444;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    #right-panel .toolbar button {
-      background-color: #666;
-      color: #fff;
-      border: none;
-      padding: 4px 8px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    /* File Explorer within the Right Panel */
-    #file-explorer {
-      width: 100%;
-      height: 300px;
-      background-color: rgba(50, 50, 50, 0.8);
-      border-top: 1px solid #444;
-      resize: vertical;
-      overflow-y: auto;
-      transition: height 0.3s;
-    }
-    /* When minimized, file explorer shows only its toolbar */
-    #file-explorer.minimized {
-      height: 40px;
-    }
-    /* File Explorer Toolbar (for explorer minimize/restore) */
-    #minimize-explorer-toolbar {
-      background-color: #555;
-      padding: 6px 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    #minimize-explorer-toolbar button {
-      background-color: #777;
-      border: none;
-      color: #fff;
-      padding: 2px 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    /* File List */
-    #file-list {
-      list-style: none;
-      margin: 0;
-      padding: 10px;
-      font-size: 12px;
-      overflow-y: auto;
-    }
-    #file-list li {
-      padding: 8px;
-      background-color: rgba(70, 70, 70, 0.8);
-      margin-bottom: 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      white-space: nowrap;
-    }
-    #file-list li:hover {
-      background-color: rgba(90, 90, 90, 0.9);
-    }
-    /* Tabs and Fullscreen Button */
-    #tabs {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-    }
-    .tab-button, #fullscreen-btn {
-      background-color: #3a3a3a;
-      border: none;
-      color: #fff;
-      font-size: 12px;
-      margin: 5px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    .tab-button:hover, #fullscreen-btn:hover {
-      background-color: #555;
-    }
-  </style>
-  <script src="simulation.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
 </head>
 <body>
-  <div id="simulation-container">
-    <!-- Main Simulation Area -->
-    <div id="simulation-area">
-      <canvas id="simulation-canvas"></canvas>
-    </div>
-    <!-- Right Panel -->
-    <div id="right-panel">
-      <div class="toolbar" id="minimize-panel">
-        <span>File Explorer</span>
-        <button id="toggle-panel">−</button>
-      </div>
-      <!-- File Explorer within the Right Panel -->
-      <div id="file-explorer">
-        <div class="toolbar" id="minimize-explorer-toolbar">
-          <span>Files</span>
-          <button id="toggle-explorer">−</button>
+    <div id="simulation-container">
+        <div id="simulation-area">
+            <canvas id="simulation-canvas"></canvas>
         </div>
-        <ul id="file-list">
-          <li>Loading files...</li>
-        </ul>
-      </div>
+
+        <!-- Right Panel -->
+        <div id="right-panel">
+            <div class="toolbar">
+                <button id="minimize-panel">➖</button>
+            </div>
+
+            <!-- File Explorer (No Title) -->
+            <div id="file-explorer">
+                <ul id="file-list"></ul>
+            </div>
+        </div>
     </div>
-    <!-- Bottom Right Tabs -->
-    <div id="tabs">
-      <button class="tab-button">Ψ</button>
-      <button class="tab-button">Σ</button>
-      <button id="fullscreen-btn">Fullscreen</button>
-    </div>
-  </div>
+
+    <!-- Fullscreen Button -->
+    <button id="fullscreen-btn">⛶</button>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Authentication Check
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = "login.html"; // Redirect if not authenticated
+            } else {
+                loadUserFiles(user.email);
+            }
+        });
+
+        // Load Files from Firebase Storage
+        function loadUserFiles(email) {
+            const storageRef = firebase.storage().ref(`users/${email}/files`);
+            const fileList = document.getElementById("file-list");
+            fileList.innerHTML = ""; // Clear previous entries
+
+            storageRef.listAll()
+                .then(result => {
+                    result.items.forEach(fileRef => {
+                        fileRef.getDownloadURL().then(url => {
+                            const li = document.createElement("li");
+                            li.textContent = fileRef.name;
+                            li.onclick = () => window.open(url, "_blank");
+                            fileList.appendChild(li);
+                        });
+                    });
+                })
+                .catch(error => console.log("Error fetching files:", error));
+        }
+
+        // Minimize Right Panel
+        const rightPanel = document.getElementById("right-panel");
+        const minimizePanelBtn = document.getElementById("minimize-panel");
+        minimizePanelBtn.addEventListener("click", function () {
+            if (rightPanel.classList.contains("minimized")) {
+                rightPanel.classList.remove("minimized");
+            } else {
+                rightPanel.classList.add("minimized");
+            }
+        });
+
+        // Full-Screen Toggle
+        const fullscreenBtn = document.getElementById("fullscreen-btn");
+        fullscreenBtn.addEventListener("click", function () {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    </script>
 </body>
 </html>
