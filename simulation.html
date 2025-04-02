@@ -1,117 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation</title>
-    <link rel="stylesheet" href="styles.css" />
-
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-storage-compat.js"></script>
-
-    <script>
-      var firebaseConfig = {
-        apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-        authDomain: "atom5engineering.firebaseapp.com",
-        projectId: "atom5engineering",
-        storageBucket: "atom5engineering.firebasestorage.app",
-        messagingSenderId: "956458197323",
-        appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-        measurementId: "G-X7H184TN54"
-      };
-
-      firebase.initializeApp(firebaseConfig);
-      var auth = firebase.auth();
-      var storage = firebase.storage();
-
-      firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-          console.log("User authenticated:", user.email);
-        } else {
-          console.log("No user authenticated.");
-        }
-      });
-
-      auth.onAuthStateChanged(function(user) {
-        if (!user) {
-          window.location.href = "index.html";
-        } else {
-          loadFiles(user);
-        }
-      });
-
-      function loadFiles(user) {
-        const sanitizedEmail = user.email;
-        const userBucketPath = `users/${sanitizedEmail}/files/`;
-        const storageRef = storage.ref(userBucketPath);
-        const fileList = document.getElementById("file-list");
-
-        fileList.innerHTML = "<li>Loading files...</li>";
-
-        storageRef.listAll().then((result) => {
-          fileList.innerHTML = "";
-          if (result.items.length === 0) {
-            fileList.innerHTML = "<li>No files found.</li>";
-          } else {
-            result.items.forEach((fileRef) => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => openFile(fileRef);
-              fileList.appendChild(li);
-            });
-          }
-        }).catch((error) => {
-          console.error("Error loading files:", error);
-          fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-        });
-      }
-
-      function openFile(fileRef) {
-        fileRef.getDownloadURL().then((url) => {
-          console.log("Download URL:", url);
-          fetch(url)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-              }
-              return response.json();
-            })
-            .then(data => {
-              console.log("File data:", data);
-            })
-            .catch(error => console.error("Error reading file:", error));
-        }).catch(error => console.error("Error getting file URL:", error));
-      }
-    </script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="simulation.js" defer></script>
 </head>
 <body>
     <div id="simulation-container">
-        <!-- Right Panel (Movable & Minimizable) -->
-        <div id="right-panel">
-            <div class="toolbar">
-                <span>File Explorer</span>
-                <button id="minimize-explorer">−</button>
-            </div>
-            <div id="file-explorer">
-                <ul id="file-list">Loading files...</ul>
-            </div>
-        </div>
-
-        <!-- Main Simulation Canvas -->
+        <!-- Main Simulation Area -->
         <div id="simulation-area">
             <canvas id="simulation-canvas"></canvas>
         </div>
 
-        <!-- Bottom Right Tabs -->
-        <div id="tabs">
-            <button class="tab-button" id="psi-tab">Ψ</button>
-            <button class="tab-button" id="sigma-tab">Σ</button>
-            <button class="tab-button" id="fullscreen-btn">⛶</button>
+        <!-- Right Panel -->
+        <div id="right-panel">
+            <div class="toolbar" id="minimize-panel">
+                <span>Panel</span>
+                <button id="toggle-panel">-</button>
+            </div>
+
+            <!-- File Explorer -->
+            <div id="file-explorer">
+                <div class="toolbar" id="minimize-explorer">
+                    <span>File Explorer</span>
+                    <button id="toggle-explorer">-</button>
+                </div>
+                <ul id="file-list">
+                    <li>Loading files...</li>
+                </ul>
+            </div>
         </div>
     </div>
 
-    <script src="simulation.js"></script>
+    <!-- Tabs and Fullscreen Button -->
+    <div id="tabs">
+        <button class="tab-button">Ψ</button>
+        <button class="tab-button">Σ</button>
+        <button id="fullscreen-btn">Fullscreen</button>
+    </div>
 </body>
 </html>
