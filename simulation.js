@@ -8,14 +8,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const fullscreenBtn = document.getElementById("fullscreen-btn");
 
     // Hide everything initially
-    simContainer.style.display = "none";
+    simContainer.classList.add("hidden");
 
-    // Check if user is authenticated
+    // Check if user is authenticated before loading anything
     auth.onAuthStateChanged((user) => {
         if (!user) {
-            window.location.href = "index.html";
+            window.location.href = "index.html";  // Redirect to login
         } else {
-            simContainer.style.display = "flex"; // Show simulation page
+            console.log("User authenticated:", user.email);
+            simContainer.classList.remove("hidden"); // Show simulation page
             loadUserFiles(user.email); // Load user files
         }
     });
@@ -48,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Minimize Right Panel
     minimizePanelBtn.addEventListener("click", function () {
-        rightPanel.style.display = "none";
+        rightPanel.classList.toggle("hidden");
     });
 
     // Fullscreen Toggle
