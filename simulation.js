@@ -1,33 +1,40 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // Firebase Configuration – replace placeholders with your actual config values.
-  // Fetch the Firebase config from your backend
-  fetch('https://your-backend-url.com/getFirebaseConfig')  // Replace with the correct URL for your backend
-    .then(response => response.json())
-    .then(firebaseConfig => {
-      // Initialize Firebase with the received config
-      firebase.initializeApp(firebaseConfig);
-  
-      // Now you can use Firebase services as usual
-      // For example, Firebase authentication or Firestore, etc.
-    })
-    .catch(error => {
-      console.error("Error loading Firebase config:", error);
-    });
+// Firebase Configuration – replace placeholders with your actual config values.
+// Fetch the Firebase config from your backend
+fetch('https://your-backend-url.com/getFirebaseConfig')  // Replace with the correct URL for your backend
+  .then(response => response.json())
+  .then(firebaseConfig => {
+    // Initialize Firebase with the received config
+    firebase.initializeApp(firebaseConfig);
 
-  
-  const auth = firebase.auth();
-  const storage = firebase.storage();
-
-  // Enforce authentication: if no user, redirect to login page.
-  auth.onAuthStateChanged(function (user) {
-    if (!user) {
-      window.location.href = "login.html";
-    } else {
-      console.log("User authenticated:", user.email);
-      loadUserFiles(user.email);
-    }
+    // Now you can use Firebase services as usual
+    // For example, Firebase authentication or Firestore, etc.
+  })
+  .catch(error => {
+    console.error("Error loading Firebase config:", error);
   });
 
+const auth = firebase.auth();
+const storage = firebase.storage();
+
+// Enforce authentication: if no user, redirect to login page.
+auth.onAuthStateChanged(function (user) {
+  if (!user) {
+    window.location.href = "login.html"; // Redirect to login page if not authenticated
+  } else {
+    console.log("User authenticated:", user.email);
+
+    // Hide loading screen and show the simulation content
+    simulationPage.style.display = "block";
+    loadingScreen.style.display = "none";
+
+    loadUserFiles(user.email); // Assuming this function is defined elsewhere
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  
+
+  
   // Load files from Firebase Storage under users/{email}/files
   function loadUserFiles(email) {
     const storageRef = storage.ref(`users/${email}/files`);
@@ -108,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
       rightPanel.style.width = newWidth + "px";
     }
   }
-
+  
   function stopResizingRightPanel() {
     document.removeEventListener("mousemove", resizeRightPanel);
     document.removeEventListener("mouseup", stopResizingRightPanel);
