@@ -10,6 +10,7 @@
             background-color: #000;
             color: white;
             font-family: "Roboto", sans-serif;
+            font-weight: 300;
             margin: 0;
             overflow: hidden;
         }
@@ -22,19 +23,24 @@
             top: 0;
             width: 300px;
             height: 100vh;
-            background-color: #333;
+            background-color: #222;
             color: white;
             transition: width 0.3s;
             overflow: auto;
+            display: flex;
+            flex-direction: column;
         }
         .panel-header {
             display: flex;
             justify-content: space-between;
             padding: 10px;
-            background: #222;
+            background: #111;
         }
         .collapsed {
             width: 40px;
+        }
+        #file-explorer.collapsed {
+            display: none;
         }
         #file-list li {
             list-style: none;
@@ -83,7 +89,7 @@
         </div>
         <div id="simulation-area"></div>
         <div id="control-buttons">
-            <button id="fullscreen-btn" class="control-btn">⚪</button>
+            <button id="fullscreen-btn" class="control-btn">⛶</button>
             <button id="sigma-btn" class="control-btn">Σ</button>
             <button id="psy-btn" class="control-btn">Ψ</button>
         </div>
