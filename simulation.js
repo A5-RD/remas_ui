@@ -7,17 +7,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const minimizePanelBtn = document.getElementById("minimize-panel");
     const fullscreenBtn = document.getElementById("fullscreen-btn");
 
-    // Hide simulation until authentication is confirmed
+    // Hide everything initially
     simContainer.style.display = "none";
 
+    // Check if user is authenticated
     auth.onAuthStateChanged((user) => {
         if (!user) {
-            console.log("No authenticated user. Redirecting to index.html.");
             window.location.href = "index.html";
         } else {
-            console.log("User authenticated:", user.email);
             simContainer.style.display = "flex"; // Show simulation page
-            loadUserFiles(user.email); // Load user files from Firebase Storage
+            loadUserFiles(user.email); // Load user files
         }
     });
 
@@ -27,10 +26,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         storageRef.listAll()
             .then((result) => {
+                fileList.innerHTML = "";
                 if (result.items.length === 0) {
                     fileList.innerHTML = "<li>No files found.</li>";
                 } else {
-                    fileList.innerHTML = "";
                     result.items.forEach((fileRef) => {
                         fileRef.getDownloadURL().then((url) => {
                             const li = document.createElement("li");
