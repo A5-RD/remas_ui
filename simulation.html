@@ -16,7 +16,87 @@
             margin: 0;
             overflow: hidden;
         }
-        /* Rest of your existing CSS */
+
+        /* File Explorer Panel */
+        #file-explorer {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 250px;
+            height: 90%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            display: block;
+        }
+
+        #file-explorer.collapsed {
+            width: 50px;
+        }
+
+        #file-explorer .panel-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        #file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+
+        #file-list li {
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        #file-list li:hover {
+            background-color: #444;
+        }
+
+        .control-btn {
+            background-color: #222;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        #simulation-container {
+            display: none;
+            position: relative;
+            height: 100vh;
+        }
+
+        #simulation-area {
+            width: calc(100% - 250px);
+            height: 100%;
+            background-color: #111;
+        }
+
+        #control-buttons {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #restore-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #222;
+            color: white;
+            padding: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -28,7 +108,7 @@
             </div>
             <ul id="file-list">Loading...</ul>
         </div>
-        <button id="restore-panel" class="control-btn" style="display:none; position:absolute; right:10px; top:10px;">▶</button>
+        <button id="restore-panel" class="control-btn" style="display:none;">▶</button>
         <div id="simulation-area"></div>
         <div id="control-buttons">
             <button id="psy-btn" class="control-btn">Ψ</button>
@@ -41,7 +121,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
-        // Remove firebase credentials from frontend
         const firebaseConfig = {
             authDomain: "atom5engineering.firebaseapp.com",
             projectId: "atom5engineering",
@@ -59,13 +138,13 @@
                 window.location.href = "index.html";
             } else {
                 document.getElementById("simulation-container").classList.remove("hidden");
-                loadFiles(user.email);  // Now calls backend API
+                loadFiles(user.email);  // Calls backend API to get the files
             }
         });
 
-        // Modify the loadFiles function to fetch files from your backend instead of Firebase
+        // Load files from the backend based on user email
         function loadFiles(userEmail) {
-            fetch(`/files?email=${encodeURIComponent(userEmail)}`)  // Fetch files from backend
+            fetch(`/files?email=${encodeURIComponent(userEmail)}`)  // Backend API
                 .then(response => response.json())
                 .then(urls => {
                     const fileList = document.getElementById("file-list");
@@ -84,17 +163,20 @@
                 .catch(error => console.error("Error loading files:", error));
         }
 
+        // Toggle file explorer visibility
         document.getElementById("toggle-file-explorer").addEventListener("click", () => {
             const explorer = document.getElementById("file-explorer");
             explorer.classList.toggle("collapsed");
             document.getElementById("restore-panel").style.display = explorer.classList.contains("collapsed") ? "block" : "none";
         });
 
+        // Restore file explorer when panel is clicked
         document.getElementById("restore-panel").addEventListener("click", () => {
             document.getElementById("file-explorer").classList.remove("collapsed");
             document.getElementById("restore-panel").style.display = "none";
         });
 
+        // Full-screen toggle functionality
         document.getElementById("fullscreen-btn").addEventListener("click", () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
