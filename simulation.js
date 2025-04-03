@@ -1,67 +1,133 @@
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-  authDomain: "atom5engineering.firebaseapp.com",
-  projectId: "atom5engineering",
-  storageBucket: "atom5engineering.firebasestorage.app",
-  messagingSenderId: "956458197323",
-  appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-  measurementId: "G-X7H184TN54"
-};
-
-// Initialize Firebase
-if (!firebase.apps.length) {
+document.addEventListener("DOMContentLoaded", function () {
+  // Firebase Configuration – replace placeholders with your actual config values.
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com", // Adjust if needed; ensure it matches your bucket.
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
   firebase.initializeApp(firebaseConfig);
-}
-const auth = firebase.auth();
-const storage = firebase.storage();
+  
+  const auth = firebase.auth();
+  const storage = firebase.storage();
 
-// Load user files from Firebase Storage
-function loadUserFiles(email) {
-  const storageRef = storage.ref(`users/${email}/files`);
-  const fileList = document.getElementById("file-list");
-  fileList.innerHTML = "<li>Loading files...</li>";
+  // Enforce authentication: if no user, redirect to login page.
+  auth.onAuthStateChanged(function (user) {
+    if (!user) {
+      window.location.href = "login.html";
+    } else {
+      console.log("User authenticated:", user.email);
+      loadUserFiles(user.email);
+    }
+  });
 
-  console.log("Loading files from: users/" + email + "/files");
-  storageRef.listAll()
-    .then(result => {
-      if (result.items.length === 0) {
-        fileList.innerHTML = "<li>No files found.</li>";
-      } else {
-        fileList.innerHTML = "";
-        result.items.forEach(fileRef => {
-          fileRef.getDownloadURL().then(url => {
-            const li = document.createElement("li");
-            li.textContent = fileRef.name;
-            li.onclick = () => window.open(url, "_blank");
-            fileList.appendChild(li);
+  // Load files from Firebase Storage under users/{email}/files
+  function loadUserFiles(email) {
+    const storageRef = storage.ref(`users/${email}/files`);
+    const fileList = document.getElementById("file-list");
+    fileList.innerHTML = "<li>Loading files...</li>";
+    console.log("Loading files from: users/" + email + "/files");
+
+    storageRef.listAll()
+      .then(result => {
+        if (result.items.length === 0) {
+          fileList.innerHTML = "<li>No files found.</li>";
+        } else {
+          fileList.innerHTML = "";
+          result.items.forEach(fileRef => {
+            fileRef.getDownloadURL().then(url => {
+              const li = document.createElement("li");
+              li.textContent = fileRef.name;
+              li.onclick = () => window.open(url, "_blank");
+              fileList.appendChild(li);
+            });
           });
-        });
-      }
-    })
-    .catch(error => {
-      console.error("Error loading files:", error);
-      fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
-    });
-}
+        }
+      })
+      .catch(error => {
+        console.error("Error loading files:", error);
+        fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
+      });
+  }
 
-// Minimize the right panel
-document.getElementById("minimize-panel").addEventListener("click", function() {
-  const panel = document.getElementById("right-panel");
-  panel.style.display = (panel.style.display === "none") ? "block" : "none";
-});
+  // Toggle Right Panel (minimize/restore)
+  const rightPanel = document.getElementById("right-panel");
+  const minimizePanelBtn = document.getElementById("minimize-panel");
+  minimizePanelBtn.addEventListener("click", function () {
+    if (rightPanel.classList.contains("minimized")) {
+      rightPanel.classList.remove("minimized");
+    } else {
+      rightPanel.classList.add("minimized");
+    }
+  });
 
-// Minimize the file explorer
-document.getElementById("minimize-explorer").addEventListener("click", function() {
-  const explorer = document.getElementById("file-explorer");
-  explorer.style.display = (explorer.style.display === "none") ? "block" : "none";
-});
+  // Toggle File Explorer (minimize/restore) inside the right panel
+  const fileExplorer = document.getElementById("file-explorer");
+  const minimizeExplorerBtn = document.getElementById("minimize-explorer");
+  minimizeExplorerBtn.addEventListener("click", function () {
+    if (fileExplorer.classList.contains("minimized")) {
+      fileExplorer.classList.remove("minimized");
+      minimizeExplorerBtn.textContent = "➖";
+    } else {
+      fileExplorer.classList.add("minimized");
+      minimizeExplorerBtn.textContent = "➕";
+    }
+  });
 
-// Fullscreen toggle
-document.getElementById("fullscreen-btn").addEventListener("click", function() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
+  // Fullscreen Toggle for the simulation canvas
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  fullscreenBtn.addEventListener("click", function () {
+    const canvas = document.getElementById("simulation-canvas");
+    if (!document.fullscreenElement) {
+      canvas.requestFullscreen().catch(err => console.error("Error entering fullscreen:", err));
+    } else {
+      document.exitFullscreen().catch(err => console.error("Error exiting fullscreen:", err));
+    }
+  });
+
+  // (Optional) Resizable Right Panel: Drag the left edge to adjust width
+  rightPanel.addEventListener("mousedown", function (e) {
+    // Only trigger resizing if near the left edge (e.g., within 8px)
+    if (e.offsetX < 8) {
+      e.preventDefault();
+      document.addEventListener("mousemove", resizeRightPanel);
+      document.addEventListener("mouseup", stopResizingRightPanel);
+    }
+  });
+
+  function resizeRightPanel(e) {
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth >= 200 && newWidth <= 600) {
+      rightPanel.style.width = newWidth + "px";
+    }
+  }
+
+  function stopResizingRightPanel() {
+    document.removeEventListener("mousemove", resizeRightPanel);
+    document.removeEventListener("mouseup", stopResizingRightPanel);
+  }
+
+  // (Optional) Resizable File Explorer: Drag the top edge to adjust its height
+  fileExplorer.addEventListener("mousedown", function (e) {
+    // Trigger resizing if near the top edge (e.g., within 8px)
+    if (e.offsetY < 8) {
+      e.preventDefault();
+      document.addEventListener("mousemove", resizeFileExplorer);
+      document.addEventListener("mouseup", stopResizingFileExplorer);
+    }
+  });
+
+  function resizeFileExplorer(e) {
+    const newHeight = window.innerHeight - e.clientY;
+    if (newHeight >= 150 && newHeight <= 600) {
+      fileExplorer.style.height = newHeight + "px";
+    }
+  }
+
+  function stopResizingFileExplorer() {
+    document.removeEventListener("mousemove", resizeFileExplorer);
+    document.removeEventListener("mouseup", stopResizingFileExplorer);
   }
 });
