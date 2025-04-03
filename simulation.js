@@ -18,16 +18,14 @@ const storage = firebase.storage();
 
 // Enforce authentication: if no user, redirect to login page.
 auth.onAuthStateChanged(function (user) {
+  console.log("User state changed:", user);
   if (!user) {
     window.location.href = "login.html"; // Redirect to login page if not authenticated
   } else {
     console.log("User authenticated:", user.email);
-
-    // Hide loading screen and show the simulation content
     simulationPage.style.display = "block";
     loadingScreen.style.display = "none";
-
-    loadUserFiles(user.email); // Assuming this function is defined elsewhere
+    loadUserFiles(user.email);
   }
 });
 
