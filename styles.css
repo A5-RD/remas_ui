@@ -6,8 +6,12 @@ body {
     overflow: hidden;
 }
 
+.hidden {
+    display: none !important;
+}
+
 #simulation-container {
-    display: none;
+    display: flex;
     flex-direction: row;
     width: 100vw;
     height: 100vh;
@@ -15,6 +19,9 @@ body {
 
 #simulation-area {
     flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background-color: black;
 }
 
