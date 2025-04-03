@@ -6,6 +6,7 @@
     <title>Simulation</title>
     <link rel="stylesheet" href="styles.css">
     <style>
+        /* Your existing CSS */
         body {
             background-color: #000;
             color: white;
@@ -15,68 +16,7 @@
             margin: 0;
             overflow: hidden;
         }
-        #simulation-container.hidden {
-            display: none;
-        }
-        .panel {
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 300px;
-            height: 100vh;
-            background-color: #222;
-            color: white;
-            transition: width 0.3s;
-            overflow: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            background: #111;
-        }
-        .collapsed {
-            width: 40px;
-        }
-        #file-explorer.collapsed {
-            display: none;
-        }
-        #file-list li {
-            list-style: none;
-            padding: 5px;
-            border-radius: 5px;
-            cursor: pointer;
-            background: #555;
-            margin: 5px;
-        }
-        #file-list li:hover {
-            background: #777;
-        }
-        #simulation-area {
-            width: calc(100% - 300px);
-            height: 100vh;
-        }
-        #control-buttons {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            display: flex;
-            gap: 10px;
-        }
-        .control-btn {
-            background: #444;
-            border: none;
-            color: white;
-            font-size: 20px;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .control-btn:hover {
-            background: #666;
-        }
+        /* Rest of your existing CSS */
     </style>
 </head>
 <body>
@@ -96,13 +36,13 @@
             <button id="fullscreen-btn" class="control-btn">⛶</button>
         </div>
     </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
+        // Remove firebase credentials from frontend
         const firebaseConfig = {
-            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
             authDomain: "atom5engineering.firebaseapp.com",
             projectId: "atom5engineering",
             storageBucket: "atom5engineering.appspot.com",
@@ -113,37 +53,35 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
-        const storage = getStorage();
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = "index.html";
             } else {
                 document.getElementById("simulation-container").classList.remove("hidden");
-                loadFiles(user.email);
+                loadFiles(user.email);  // Now calls backend API
             }
         });
 
+        // Modify the loadFiles function to fetch files from your backend instead of Firebase
         function loadFiles(userEmail) {
-            const userFilesRef = ref(storage, `users/${userEmail}/files/`);
-            listAll(userFilesRef).then((res) => {
-                const fileList = document.getElementById("file-list");
-                fileList.innerHTML = "";
-                if (res.items.length === 0) {
-                    fileList.innerHTML = "<li>No files found.</li>";
-                } else {
-                    res.items.forEach((itemRef) => {
-                        getDownloadURL(itemRef).then((url) => {
+            fetch(`/files?email=${encodeURIComponent(userEmail)}`)  // Fetch files from backend
+                .then(response => response.json())
+                .then(urls => {
+                    const fileList = document.getElementById("file-list");
+                    fileList.innerHTML = "";
+                    if (urls.length === 0) {
+                        fileList.innerHTML = "<li>No files found.</li>";
+                    } else {
+                        urls.forEach(url => {
                             const li = document.createElement("li");
-                            li.textContent = itemRef.name;
+                            li.textContent = url.split('/').pop(); // Just showing file name
                             li.onclick = () => window.open(url, "_blank");
                             fileList.appendChild(li);
                         });
-                    });
-                }
-            }).catch((error) => {
-                console.error("Error loading files:", error);
-            });
+                    }
+                })
+                .catch(error => console.error("Error loading files:", error));
         }
 
         document.getElementById("toggle-file-explorer").addEventListener("click", () => {
