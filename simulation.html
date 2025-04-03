@@ -5,6 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulation</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: "Roboto", sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        #simulation-container.hidden {
+            display: none;
+        }
+        .panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background-color: #333;
+            color: white;
+            transition: width 0.3s;
+            overflow: auto;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #222;
+        }
+        .collapsed {
+            width: 40px;
+        }
+        #file-list li {
+            list-style: none;
+            padding: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #555;
+            margin: 5px;
+        }
+        #file-list li:hover {
+            background: #777;
+        }
+        #simulation-area {
+            width: calc(100% - 300px);
+            height: 100vh;
+        }
+        #control-buttons {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            background: #444;
+            border: none;
+            color: white;
+            font-size: 20px;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .control-btn:hover {
+            background: #666;
+        }
+    </style>
 </head>
 <body>
     <div id="simulation-container" class="hidden">
@@ -15,13 +81,16 @@
             </div>
             <ul id="file-list">Loading...</ul>
         </div>
-        <div id="simulation-area">
-            <button id="fullscreen-btn">⚪</button>
+        <div id="simulation-area"></div>
+        <div id="control-buttons">
+            <button id="fullscreen-btn" class="control-btn">⚪</button>
+            <button id="sigma-btn" class="control-btn">Σ</button>
+            <button id="psy-btn" class="control-btn">Ψ</button>
         </div>
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -48,7 +117,7 @@
         });
 
         function loadFiles(userEmail) {
-            const userFilesRef = ref(storage, `users/${userEmail}/files`);
+            const userFilesRef = ref(storage, `users/${userEmail}/files/`);
             listAll(userFilesRef).then((res) => {
                 const fileList = document.getElementById("file-list");
                 fileList.innerHTML = "";
@@ -64,6 +133,8 @@
                         });
                     });
                 }
+            }).catch((error) => {
+                console.error("Error loading files:", error);
             });
         }
 
