@@ -11,7 +11,7 @@
             color: white;
             font-family: "Roboto", sans-serif;
             font-weight: 200;
-            font-size: 12px;
+            font-size: 13px;
             margin: 0;
             overflow: hidden;
         }
@@ -101,7 +101,7 @@
         import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
+            apiKey: process.env.FIREBASE_API_KEY,
             authDomain: "atom5engineering.firebaseapp.com",
             projectId: "atom5engineering",
             storageBucket: "atom5engineering.appspot.com",
@@ -146,7 +146,13 @@
         }
 
         document.getElementById("toggle-file-explorer").addEventListener("click", () => {
-            document.getElementById("file-explorer").classList.toggle("collapsed");
+            const explorer = document.getElementById("file-explorer");
+            explorer.classList.toggle("collapsed");
+            if (!explorer.classList.contains("collapsed")) {
+                document.getElementById("simulation-area").style.width = "calc(100% - 300px)";
+            } else {
+                document.getElementById("simulation-area").style.width = "100%";
+            }
         });
 
         document.getElementById("fullscreen-btn").addEventListener("click", () => {
