@@ -1,14 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
   // Firebase Configuration – replace placeholders with your actual config values.
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com", // Adjust if needed; ensure it matches your bucket.
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
+  // Fetch the Firebase config from your backend
+  fetch('https://your-backend-url.com/getFirebaseConfig')  // Replace with the correct URL for your backend
+    .then(response => response.json())
+    .then(firebaseConfig => {
+      // Initialize Firebase with the received config
+      firebase.initializeApp(firebaseConfig);
+  
+      // Now you can use Firebase services as usual
+      // For example, Firebase authentication or Firestore, etc.
+    })
+    .catch(error => {
+      console.error("Error loading Firebase config:", error);
+    });
+
   
   const auth = firebase.auth();
   const storage = firebase.storage();
