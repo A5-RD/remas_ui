@@ -88,6 +88,7 @@
             </div>
             <ul id="file-list">Loading...</ul>
         </div>
+        <button id="restore-panel" class="control-btn" style="display:none; position:absolute; right:10px; top:10px;">▶</button>
         <div id="simulation-area"></div>
         <div id="control-buttons">
             <button id="psy-btn" class="control-btn">Ψ</button>
@@ -101,7 +102,7 @@
         import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
         const firebaseConfig = {
-            apiKey: process.env.FIREBASE_API_KEY,
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
             authDomain: "atom5engineering.firebaseapp.com",
             projectId: "atom5engineering",
             storageBucket: "atom5engineering.appspot.com",
@@ -148,11 +149,12 @@
         document.getElementById("toggle-file-explorer").addEventListener("click", () => {
             const explorer = document.getElementById("file-explorer");
             explorer.classList.toggle("collapsed");
-            if (!explorer.classList.contains("collapsed")) {
-                document.getElementById("simulation-area").style.width = "calc(100% - 300px)";
-            } else {
-                document.getElementById("simulation-area").style.width = "100%";
-            }
+            document.getElementById("restore-panel").style.display = explorer.classList.contains("collapsed") ? "block" : "none";
+        });
+
+        document.getElementById("restore-panel").addEventListener("click", () => {
+            document.getElementById("file-explorer").classList.remove("collapsed");
+            document.getElementById("restore-panel").style.display = "none";
         });
 
         document.getElementById("fullscreen-btn").addEventListener("click", () => {
