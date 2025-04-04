@@ -80,25 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  
-  
-  // Remove the minimize button at the top of the right panel
-  const rightPanelTopMinimize = document.querySelector("#right-panel .minimize-button");
-  if (rightPanelTopMinimize) {
-      rightPanelTopMinimize.remove();
-  }
-
-  // File Explorer Minimize Button
-  const fileExplorer = document.getElementById("file-explorer");
-  const fileExplorerMinimize = document.createElement("button");
-  fileExplorerMinimize.id = "file-explorer-minimize";
-  fileExplorerMinimize.innerHTML = "−"; // Minimize symbol
-  document.getElementById("file-explorer-header").appendChild(fileExplorerMinimize);
-
-  fileExplorerMinimize.addEventListener("click", function () {
-      fileExplorer.classList.toggle("collapsed");
-  });
-
 
 
 
