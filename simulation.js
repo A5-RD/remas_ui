@@ -1,14 +1,5 @@
 
 
-// Import the initialized Firebase instance
-import { app } from './firebase.js';  // Import from firebase.js
-
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
-// Initialize Firebase Authentication
-const auth = getAuth(app);
-
-
 document.addEventListener("DOMContentLoaded", function () {
   
 
