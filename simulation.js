@@ -47,11 +47,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
   }
 
-  // Remove the minimize button at the top of the right panel
-  const rightPanelTopMinimize = document.querySelector("#right-panel .minimize-button");
-  if (rightPanelTopMinimize) {
-      rightPanelTopMinimize.remove();
-  }
 
   // File Explorer Minimize Button
   const fileExplorer = document.getElementById("file-explorer");
