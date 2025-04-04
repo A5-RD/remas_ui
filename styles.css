@@ -103,7 +103,7 @@ canvas {
 /* Minimize Button for File Explorer */
 #file-explorer-minimize {
     cursor: pointer;
-    font-size: 14px;
+    font-size: 11px;
     color: #bbb;
     background: none;
     border: none;
