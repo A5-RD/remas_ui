@@ -1,7 +1,7 @@
 // Import Firebase authentication
+import { storage } from "./firebase.js";  // Import Firebase Storage
+import { ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";  // Import storage functions
 
-import { auth, storage } from './firebase.js';  // Import from firebase.js
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import onAuthStateChanged
 
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -18,31 +18,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load files from Firebase Storage under users/{email}/files
   function loadUserFiles(email) {
-    const storageRef = storage.ref(`users/${email}/files`);  // Access user's storage folder
-    console.log("Loading files from: users/" + email + "/files");
+    const storageRef = ref(storage, `users/${email}/files`);  // ✅ Correct way to get a reference
+    console.log("📂 Loading files from:", `users/${email}/files`);
 
-    storageRef.listAll()
-      .then(result => {
-        console.log("📂 Files found:", result.items);
-        const fileList = document.getElementById("file-list");
-        fileList.innerHTML = "";
+    listAll(storageRef)  // ✅ Correct way to list all files
+        .then(result => {
+            console.log("📂 Files found:", result.items);
 
-        if (result.items.length === 0) {
-          fileList.innerHTML = "<li>No files found.</li>";
-        } else {
-          result.items.forEach(fileRef => {
-            fileRef.getDownloadURL().then(url => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => window.open(url, "_blank");
-              fileList.appendChild(li);
-            });
-          });
-        }
-      })
-      .catch(error => {
-        console.error("❌ Error loading files:", error);
-      });
+            const fileList = document.getElementById("file-list");
+            fileList.innerHTML = "";
+
+            if (result.items.length === 0) {
+                fileList.innerHTML = "<li>No files found.</li>";
+            } else {
+                result.items.forEach(fileRef => {
+                    getDownloadURL(fileRef).then(url => {
+                        const li = document.createElement("li");
+                        li.textContent = fileRef.name;
+                        li.onclick = () => window.open(url, "_blank");
+                        fileList.appendChild(li);
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error("❌ Error loading files:", error);
+        });
   }
 
 
