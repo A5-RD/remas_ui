@@ -6,6 +6,9 @@ fetch('https://github.com/a5eng/REMAS/blob/main/functions/index.js')
     // Initialize Firebase with the received config
     firebase.initializeApp(firebaseConfig);
 
+    const auth = firebase.auth();
+    const storage = firebase.storage();
+
     // Now you can use Firebase services as usual
     // For example, Firebase authentication or Firestore, etc.
     console.error("Firebase config worked");
@@ -14,8 +17,7 @@ fetch('https://github.com/a5eng/REMAS/blob/main/functions/index.js')
     console.error("Error loading Firebase config:", error);
   });
 
-const auth = firebase.auth();
-const storage = firebase.storage();
+
 
 // Enforce authentication: if no user, redirect to login page.
 auth.onAuthStateChanged(function (user) {
