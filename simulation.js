@@ -1,6 +1,6 @@
 // Firebase Configuration – replace placeholders with your actual config values.
 // Fetch the Firebase config from your backend
-fetch('https://a5eng.github.io/REMAS/index.js') 
+fetch('https://a5eng.github.io/REMAS/functions/index.js') 
   .then(response => response.json())
   .then(firebaseConfig => {
     // Initialize Firebase with the received config
