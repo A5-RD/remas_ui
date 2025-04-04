@@ -7,13 +7,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/fi
 document.addEventListener("DOMContentLoaded", function () {
   
   // Check user authentication status
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-        console.log("✅ User is logged in:", user.email);
-        loadUserFiles(user.email);  // Call the function with the user's email
+  onAuthStateChanged(auth, function(user) {
+    if (!user) {
+        // Redirect to login page (index.html) if not authenticated
+        window.location.href = "index.html";
     } else {
-        console.warn("⚠️ No user is logged in. Redirecting to login...");
-        window.location.href = "index.html";  // Redirect if not logged in
+        loadUserFiles(user.email); 
     }
   });
 
