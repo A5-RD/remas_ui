@@ -1,5 +1,3 @@
-
-
 // Firebase Configuration – replace placeholders with your actual config values.
 // Fetch the Firebase config from your backend
 fetch('https://github.com/a5eng/REMAS/blob/main/functions/index.js') 
