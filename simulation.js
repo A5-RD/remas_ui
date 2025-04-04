@@ -1,18 +1,21 @@
 // Import Firebase authentication
 import { storage } from "./firebase.js";  // Import Firebase Storage
 import { ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";  // Import storage functions
+import { auth } from "./firebase.js";  // Import auth
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"; // Import Auth function
 
 
 
 document.addEventListener("DOMContentLoaded", function () {
 
   // Check user authentication status
-  onAuthStateChanged(auth, function(user) {
-    if (!user) {
-        // Redirect to login page (index.html) if not authenticated
-        window.location.href = "index.html";
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log("✅ User is logged in:", user.email);
+        loadUserFiles(user.email);
     } else {
-        loadUserFiles(user.email); 
+        console.warn("⚠️ No user logged in. Redirecting...");
+        window.location.href = "index.html";
     }
   });
 
