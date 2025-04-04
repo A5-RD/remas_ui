@@ -48,44 +48,14 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  // Toggle Right Panel (minimize/restore)
+  // Function to toggle right panel visibility
   const rightPanel = document.getElementById("right-panel");
-  const minimizePanelBtn = document.getElementById("minimize-panel");
-  minimizePanelBtn.addEventListener("click", function () {
-    if (rightPanel.classList.contains("minimized")) {
-      rightPanel.classList.remove("minimized");
-    } else {
-      rightPanel.classList.add("minimized");
-    }
-  });
+  const rightPanelGlow = document.createElement("div");
+  rightPanelGlow.id = "right-panel-glow";
+  document.body.appendChild(rightPanelGlow);
 
-  // Toggle File Explorer (minimize/restore) inside the right panel
-  const fileExplorer = document.getElementById("file-explorer");
-  const minimizeExplorerBtn = document.getElementById("minimize-explorer");
-  minimizeExplorerBtn.addEventListener("click", function () {
-    if (fileExplorer.classList.contains("minimized")) {
-      fileExplorer.classList.remove("minimized");
-      minimizeExplorerBtn.textContent = "➖";
-    } else {
-      fileExplorer.classList.add("minimized");
-      minimizeExplorerBtn.textContent = "➕";
-    }
-  });
-
-  // Fullscreen Toggle for the simulation canvas
-  const fullscreenBtn = document.getElementById("fullscreen-btn");
-  fullscreenBtn.addEventListener("click", function () {
-    const canvas = document.getElementById("simulation-canvas");
-    if (!document.fullscreenElement) {
-      canvas.requestFullscreen().catch(err => console.error("Error entering fullscreen:", err));
-    } else {
-      document.exitFullscreen().catch(err => console.error("Error exiting fullscreen:", err));
-    }
-  });
-
-  // (Optional) Resizable Right Panel: Drag the left edge to adjust width
+  // Resizable Right Panel
   rightPanel.addEventListener("mousedown", function (e) {
-    // Only trigger resizing if near the left edge (e.g., within 8px)
     if (e.offsetX < 8) {
       e.preventDefault();
       document.addEventListener("mousemove", resizeRightPanel);
@@ -95,35 +65,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function resizeRightPanel(e) {
     const newWidth = window.innerWidth - e.clientX;
-    if (newWidth >= 200 && newWidth <= 600) {
+    if (newWidth >= 10 && newWidth <= 600) {
       rightPanel.style.width = newWidth + "px";
+      if (newWidth <= 20) {
+        rightPanel.classList.add("hidden");
+      } else {
+        rightPanel.classList.remove("hidden");
+      }
     }
   }
-  
+
   function stopResizingRightPanel() {
     document.removeEventListener("mousemove", resizeRightPanel);
     document.removeEventListener("mouseup", stopResizingRightPanel);
   }
 
-  // (Optional) Resizable File Explorer: Drag the top edge to adjust its height
-  fileExplorer.addEventListener("mousedown", function (e) {
-    // Trigger resizing if near the top edge (e.g., within 8px)
-    if (e.offsetY < 8) {
-      e.preventDefault();
-      document.addEventListener("mousemove", resizeFileExplorer);
-      document.addEventListener("mouseup", stopResizingFileExplorer);
+  // Show glow effect when hovering near right edge
+  document.addEventListener("mousemove", function (e) {
+    if (e.clientX > window.innerWidth - 10) {
+      rightPanelGlow.classList.add("visible");
+    } else {
+      rightPanelGlow.classList.remove("visible");
     }
   });
 
-  function resizeFileExplorer(e) {
-    const newHeight = window.innerHeight - e.clientY;
-    if (newHeight >= 150 && newHeight <= 600) {
-      fileExplorer.style.height = newHeight + "px";
+  // Expand right panel when dragging from right edge
+  rightPanelGlow.addEventListener("mousedown", function (e) {
+    if (rightPanel.classList.contains("hidden")) {
+      rightPanel.classList.remove("hidden");
+      rightPanel.style.width = "300px";
     }
-  }
+  });
 
-  function stopResizingFileExplorer() {
-    document.removeEventListener("mousemove", resizeFileExplorer);
-    document.removeEventListener("mouseup", stopResizingFileExplorer);
-  }
 });

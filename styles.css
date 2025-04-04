@@ -6,7 +6,7 @@ body, html {
     height: 100vh;
     overflow: hidden;
     font-family: 'Roboto Thin', sans-serif;
-    background-color: #000; /* Black background */
+    background-color: #000;
     color: #ffffff;
 }
 
@@ -41,79 +41,73 @@ canvas {
     right: 0;
     top: 0;
     border-left: 1px solid #444;
-    transition: width 0.3s ease, top 0.3s ease;
     display: flex;
     flex-direction: column;
-    resize: horizontal;
-    min-width: 200px;
+    min-width: 0px; /* Allow full collapse */
     max-width: 600px;
+    transition: width 0.3s ease, opacity 0.3s ease;
 }
 
-#right-panel.minimized {
-    width: 100%;
+/* Hidden Right Panel */
+#right-panel.hidden {
+    width: 0px;
+    opacity: 0;
+}
+
+/* White Glow Effect on Right Edge */
+#right-panel-glow {
+    position: absolute;
+    right: 0;
     top: 0;
-    height: 40px;
+    width: 5px;
+    height: 100%;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
-/* Right Panel Toolbar */
-#right-panel .toolbar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 10px;
-    font-size: 14px;
-    border-bottom: 1px solid #555;
-    cursor: pointer;
-}
-
-/* Minimize Panel Button */
-#minimize-panel {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
+/* Glow becomes visible when hovered */
+#right-panel-glow.visible {
+    opacity: 0.7;
 }
 
 /* File Explorer */
 #file-explorer {
     width: 100%;
     height: 300px;
-    background-color: rgba(50, 50, 50, 0.8);
+    background-color: rgba(40, 40, 40, 1);
     overflow-y: auto;
     position: relative;
-    transition: height 0.3s ease;
     resize: vertical;
     min-height: 150px;
     max-height: 600px;
     padding: 10px;
-    border: 1px solid #444;
+    border: 1px solid #666;
 }
 
-#file-explorer.minimized {
-    height: 40px;
-}
-
-/* File Explorer Toolbar (inside file explorer, for minimizing explorer only) */
-.explorer-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.explorer-title {
+/* File Explorer Header */
+#file-explorer-header {
     font-size: 14px;
     font-weight: bold;
-    color: white;
+    text-align: center;
+    padding: 8px 0;
+    background: rgba(60, 60, 60, 1);
+    border-bottom: 1px solid #777;
 }
 
-#minimize-explorer {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
+/* Scrollbar Visibility */
+#file-explorer::-webkit-scrollbar {
+    width: 8px;
+}
+
+#file-explorer::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+#file-explorer::-webkit-scrollbar-thumb:hover {
+    background-color: #aaa;
 }
 
 /* File List */
@@ -137,7 +131,7 @@ canvas {
     background-color: rgba(90, 90, 90, 0.9);
 }
 
-/* Resizable Handles */
+/* Resizable Panel - Right Edge */
 #right-panel::after {
     content: "";
     width: 8px;
@@ -149,5 +143,11 @@ canvas {
     top: 0;
 }
 
-#file-explorer::after {
-    content
+/* Right Edge Hover */
+body:hover #right-panel-glow {
+    opacity: 0;
+}
+
+body:hover #right-panel.hidden + #right-panel-glow {
+    opacity: 0.7;
+}
