@@ -47,12 +47,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
   }
 
+  // Remove the minimize button at the top of the right panel
+  const rightPanelTopMinimize = document.querySelector("#right-panel .minimize-button");
+  if (rightPanelTopMinimize) {
+      rightPanelTopMinimize.remove();
+  }
 
-  // Function to toggle right panel visibility
-  const rightPanel = document.getElementById("right-panel");
-  const rightPanelGlow = document.createElement("div");
-  rightPanelGlow.id = "right-panel-glow";
-  document.body.appendChild(rightPanelGlow);
+  // File Explorer Minimize Button
+  const fileExplorer = document.getElementById("file-explorer");
+  const fileExplorerMinimize = document.createElement("button");
+  fileExplorerMinimize.id = "file-explorer-minimize";
+  fileExplorerMinimize.innerHTML = "−"; // Minimize symbol
+  document.getElementById("file-explorer-header").appendChild(fileExplorerMinimize);
+
+  fileExplorerMinimize.addEventListener("click", function () {
+      fileExplorer.classList.toggle("collapsed");
+  });
 
   // Resizable Right Panel
   rightPanel.addEventListener("mousedown", function (e) {
@@ -75,6 +85,29 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  
+  
+  // Remove the minimize button at the top of the right panel
+  const rightPanelTopMinimize = document.querySelector("#right-panel .minimize-button");
+  if (rightPanelTopMinimize) {
+      rightPanelTopMinimize.remove();
+  }
+
+  // File Explorer Minimize Button
+  const fileExplorer = document.getElementById("file-explorer");
+  const fileExplorerMinimize = document.createElement("button");
+  fileExplorerMinimize.id = "file-explorer-minimize";
+  fileExplorerMinimize.innerHTML = "−"; // Minimize symbol
+  document.getElementById("file-explorer-header").appendChild(fileExplorerMinimize);
+
+  fileExplorerMinimize.addEventListener("click", function () {
+      fileExplorer.classList.toggle("collapsed");
+  });
+
+
+
+
+  
   function stopResizingRightPanel() {
     document.removeEventListener("mousemove", resizeRightPanel);
     document.removeEventListener("mouseup", stopResizingRightPanel);
