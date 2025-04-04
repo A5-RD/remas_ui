@@ -1,3 +1,8 @@
+
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-storage.js"></script>
+
 // Firebase Configuration – replace placeholders with your actual config values.
 // Fetch the Firebase config from your backend
 fetch('https://a5eng.github.io/REMAS/functions/index.js') 
@@ -8,6 +13,7 @@ fetch('https://a5eng.github.io/REMAS/functions/index.js')
 
     // Now you can use Firebase services as usual
     // For example, Firebase authentication or Firestore, etc.
+    console.error("Firebase config worked");
   })
   .catch(error => {
     console.error("Error loading Firebase config:", error);
