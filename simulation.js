@@ -1,50 +1,33 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
-// Firebase Configuration (use the same as in your auth.js)
-const firebaseConfig = {
-    apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-    authDomain: "atom5engineering.firebaseapp.com",
-    projectId: "atom5engineering",
-    storageBucket: "atom5engineering.appspot.com",
-    messagingSenderId: "956458197323",
-    appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-    measurementId: "G-X7H184TN54"
-};
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Import the initialized Firebase instance
+import { app } from './firebase.js';  // Import from firebase.js
+
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+// Initialize Firebase Authentication
 const auth = getAuth(app);
-const storage = getStorage(app);
+
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Check if user is logged in (using modular SDK)
-  onAuthStateChanged(auth, function(user) {
-    if (!user) {
-      // Redirect to login page if not authenticated
-      window.location.href = "index.html";
-    } else {
-      // Load user files if authenticated
-      loadUserFiles(user.email);
-    }
-  });
+  
 
+  
   // Load files from Firebase Storage under users/{email}/files
   function loadUserFiles(email) {
-    const storageRef = ref(storage, `users/${email}/files`);
+    const storageRef = storage.ref(`users/${email}/files`);
     const fileList = document.getElementById("file-list");
     fileList.innerHTML = "<li>Loading files...</li>";
     console.log("Loading files from: users/" + email + "/files");
 
-    listAll(storageRef)
+    storageRef.listAll()
       .then(result => {
         if (result.items.length === 0) {
           fileList.innerHTML = "<li>No files found.</li>";
         } else {
           fileList.innerHTML = "";
           result.items.forEach(fileRef => {
-            getDownloadURL(fileRef).then(url => {
+            fileRef.getDownloadURL().then(url => {
               const li = document.createElement("li");
               li.textContent = fileRef.name;
               li.onclick = () => window.open(url, "_blank");
@@ -59,5 +42,82 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
-  // The rest of your code remains unchanged
+  // Toggle Right Panel (minimize/restore)
+  const rightPanel = document.getElementById("right-panel");
+  const minimizePanelBtn = document.getElementById("minimize-panel");
+  minimizePanelBtn.addEventListener("click", function () {
+    if (rightPanel.classList.contains("minimized")) {
+      rightPanel.classList.remove("minimized");
+    } else {
+      rightPanel.classList.add("minimized");
+    }
+  });
+
+  // Toggle File Explorer (minimize/restore) inside the right panel
+  const fileExplorer = document.getElementById("file-explorer");
+  const minimizeExplorerBtn = document.getElementById("minimize-explorer");
+  minimizeExplorerBtn.addEventListener("click", function () {
+    if (fileExplorer.classList.contains("minimized")) {
+      fileExplorer.classList.remove("minimized");
+      minimizeExplorerBtn.textContent = "➖";
+    } else {
+      fileExplorer.classList.add("minimized");
+      minimizeExplorerBtn.textContent = "➕";
+    }
+  });
+
+  // Fullscreen Toggle for the simulation canvas
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  fullscreenBtn.addEventListener("click", function () {
+    const canvas = document.getElementById("simulation-canvas");
+    if (!document.fullscreenElement) {
+      canvas.requestFullscreen().catch(err => console.error("Error entering fullscreen:", err));
+    } else {
+      document.exitFullscreen().catch(err => console.error("Error exiting fullscreen:", err));
+    }
+  });
+
+  // (Optional) Resizable Right Panel: Drag the left edge to adjust width
+  rightPanel.addEventListener("mousedown", function (e) {
+    // Only trigger resizing if near the left edge (e.g., within 8px)
+    if (e.offsetX < 8) {
+      e.preventDefault();
+      document.addEventListener("mousemove", resizeRightPanel);
+      document.addEventListener("mouseup", stopResizingRightPanel);
+    }
+  });
+
+  function resizeRightPanel(e) {
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth >= 200 && newWidth <= 600) {
+      rightPanel.style.width = newWidth + "px";
+    }
+  }
+  
+  function stopResizingRightPanel() {
+    document.removeEventListener("mousemove", resizeRightPanel);
+    document.removeEventListener("mouseup", stopResizingRightPanel);
+  }
+
+  // (Optional) Resizable File Explorer: Drag the top edge to adjust its height
+  fileExplorer.addEventListener("mousedown", function (e) {
+    // Trigger resizing if near the top edge (e.g., within 8px)
+    if (e.offsetY < 8) {
+      e.preventDefault();
+      document.addEventListener("mousemove", resizeFileExplorer);
+      document.addEventListener("mouseup", stopResizingFileExplorer);
+    }
+  });
+
+  function resizeFileExplorer(e) {
+    const newHeight = window.innerHeight - e.clientY;
+    if (newHeight >= 150 && newHeight <= 600) {
+      fileExplorer.style.height = newHeight + "px";
+    }
+  }
+
+  function stopResizingFileExplorer() {
+    document.removeEventListener("mousemove", resizeFileExplorer);
+    document.removeEventListener("mouseup", stopResizingFileExplorer);
+  }
 });

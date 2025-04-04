@@ -1,52 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
+  <!DOCTYPE html>
+  <html lang="en">, simulation.html !DOCTYPE html>
+  <html lang="en">
   <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Simulation</title>
       <link rel="stylesheet" href="styles.css">
+  
+      <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
 
-      <!-- Import the modular Firebase SDK here -->
-      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
-      
+      <script src="simulation.js?v=2"></script>
   </head>
 
-  <body>
-    <div id="simulation-container">
-      <!-- Main Simulation Area -->
-      <div id="simulation-area">
-        <canvas id="simulation-canvas"></canvas>
-      </div>
-
-      <!-- Right Panel (holds File Explorer) -->
-      <div id="right-panel">
-        <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
-        <div class="toolbar">
-          <button id="minimize-panel">➖</button>
-        </div>
-        <!-- File Explorer: Contains user file list -->
-        <div id="file-explorer">
-          <div class="explorer-toolbar">
-            <button id="minimize-explorer">➖</button>
-          </div>
-          <ul id="file-list">
-            <!-- "Loading files..." will be shown while files are loading -->
-            <li>Loading files...</li>
-          </ul>
-        </div>
-      </div>
+<body>
+  <div id="simulation-container">
+    <!-- Main Simulation Area -->
+    <div id="simulation-area">
+      <canvas id="simulation-canvas"></canvas>
     </div>
 
-    <!-- Bottom Right Tabs (includes fullscreen button) -->
-    <div id="tabs">
-      <button class="tab-button" id="psi-tab">Ψ</button>
-      <button class="tab-button" id="sigma-tab">Σ</button>
-      <button class="tab-button" id="fullscreen-btn">⛶</button>
+    <!-- Right Panel (holds File Explorer) -->
+    <div id="right-panel">
+      <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
+      <div class="toolbar">
+        <button id="minimize-panel">➖</button>
+      </div>
+      <!-- File Explorer: Contains user file list -->
+      <div id="file-explorer">
+        <div class="explorer-toolbar">
+          <button id="minimize-explorer">➖</button>
+        </div>
+        <ul id="file-list">
+          <!-- "Loading files..." will be shown while files are loading -->
+          <li>Loading files...</li>
+        </ul>
+      </div>
     </div>
+  </div>
 
-    <!-- Link to your JavaScript file -->
-    <script src="simulation.js"></script>
-  </body>
+  <!-- Bottom Right Tabs (includes fullscreen button) -->
+  <div id="tabs">
+    <button class="tab-button" id="psi-tab">Ψ</button>
+    <button class="tab-button" id="sigma-tab">Σ</button>
+    <button class="tab-button" id="fullscreen-btn">⛶</button>
+  </div>
+</body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
