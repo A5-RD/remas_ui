@@ -1,84 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Simulation</title>
-    
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
-    
-    <!-- Your custom styles -->
-    <link rel="stylesheet" href="styles.css" />
-  
-    <!-- Firebase initialization script (move Firebase config here) -->
-    <script>
-      // Your Firebase configuration object (replace with actual values)
-      const firebaseConfig = {
-        apiKey: "AIzaSyA7...OLD_VALUE", 
-        authDomain: "remas-ui.firebaseapp.com", 
-        projectId: "remas-ui", 
-        storageBucket: "remas-ui.appspot.com", 
-        messagingSenderId: "1234567890", 
-        appId: "1:1234567890:web:abcdef123456"
-      };
-  
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-  
-      const auth = firebase.auth();
-      const storage = firebase.storage();
-  
-      console.log("Firebase config worked.");
-  
-      // Enforce authentication: if no user, redirect to login page.
-      auth.onAuthStateChanged(function (user) {
-        console.log("User state changed:", user);
-        if (!user) {
-          window.location.href = "login.html"; // Redirect to login page if not authenticated
-        } else {
-          console.log("User authenticated:", user.email);
-          simulationPage.style.display = "block";
-          loadingScreen.style.display = "none";
-          loadUserFiles(user.email);
-        }
-      });
-    </script>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Simulation</title>
+      <link rel="stylesheet" href="styles.css">
+
+      <!-- Import the modular Firebase SDK here -->
+      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
+      
   </head>
 
-<body>
-  <div id="simulation-container">
-    <!-- Main Simulation Area -->
-    <div id="simulation-area">
-      <canvas id="simulation-canvas"></canvas>
-    </div>
-
-    <!-- Right Panel (holds File Explorer) -->
-    <div id="right-panel">
-      <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
-      <div class="toolbar">
-        <button id="minimize-panel">➖</button>
+  <body>
+    <div id="simulation-container">
+      <!-- Main Simulation Area -->
+      <div id="simulation-area">
+        <canvas id="simulation-canvas"></canvas>
       </div>
-      <!-- File Explorer: Contains user file list -->
-      <div id="file-explorer">
-        <div class="explorer-toolbar">
-          <button id="minimize-explorer">➖</button>
+
+      <!-- Right Panel (holds File Explorer) -->
+      <div id="right-panel">
+        <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
+        <div class="toolbar">
+          <button id="minimize-panel">➖</button>
         </div>
-        <ul id="file-list">
-          <!-- "Loading files..." will be shown while files are loading -->
-          <li>Loading files...</li>
-        </ul>
+        <!-- File Explorer: Contains user file list -->
+        <div id="file-explorer">
+          <div class="explorer-toolbar">
+            <button id="minimize-explorer">➖</button>
+          </div>
+          <ul id="file-list">
+            <!-- "Loading files..." will be shown while files are loading -->
+            <li>Loading files...</li>
+          </ul>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Bottom Right Tabs (includes fullscreen button) -->
-  <div id="tabs">
-    <button class="tab-button" id="psi-tab">Ψ</button>
-    <button class="tab-button" id="sigma-tab">Σ</button>
-    <button class="tab-button" id="fullscreen-btn">⛶</button>
-  </div>
-</body>
+    <!-- Bottom Right Tabs (includes fullscreen button) -->
+    <div id="tabs">
+      <button class="tab-button" id="psi-tab">Ψ</button>
+      <button class="tab-button" id="sigma-tab">Σ</button>
+      <button class="tab-button" id="fullscreen-btn">⛶</button>
+    </div>
+
+    <!-- Link to your JavaScript file -->
+    <script src="simulation.js"></script>
+  </body>
 </html>
