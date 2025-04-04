@@ -1,36 +1,34 @@
 // Firebase Configuration – replace placeholders with your actual config values.
-// Fetch the Firebase config from your backend
-fetch('https://raw.githubusercontent.com/a5eng/REMAS/refs/heads/main/functions/index.js?token=GHSAT0AAAAAAC7BZI66K5XWBPS2TF6DTN3MZ7POGDQ') 
-  .then(response => response.json())
-  .then(firebaseConfig => {
-    // Initialize Firebase with the received config
-    firebase.initializeApp(firebaseConfig);
+const firebaseConfig = { 
+  apiKey: "AIzaSyA7...OLD_VALUE", 
+  authDomain: "remas-ui.firebaseapp.com", 
+  projectId: "remas-ui", 
+  storageBucket: "remas-ui.appspot.com", 
+  messagingSenderId: "1234567890", 
+  appId: "1:1234567890:web:abcdef123456"
+};
 
-    const auth = firebase.auth();
-    const storage = firebase.storage();
+// Initialize Firebase with the configuration
+firebase.initializeApp(firebaseConfig);
 
-    console.error("Firebase config worked.");
+// Now you can use Firebase services like Auth and Storage
+const auth = firebase.auth();
+const storage = firebase.storage();
 
-    // Enforce authentication: if no user, redirect to login page.
-    auth.onAuthStateChanged(function (user) {
-      console.log("User state changed:", user);
-      if (!user) {
-        window.location.href = "login.html"; // Redirect to login page if not authenticated
-      } else {
-        console.log("User authenticated:", user.email);
-        simulationPage.style.display = "block";
-        loadingScreen.style.display = "none";
-        loadUserFiles(user.email);
-      }
-    });
+console.log("Firebase config worked.");
 
-    // Now you can use Firebase services as usual
-    // For example, Firebase authentication or Firestore, etc.
-    
-  })
-  .catch(error => {
-    console.error("Error loading Firebase config:", error);
-  });
+// Enforce authentication: if no user, redirect to login page.
+auth.onAuthStateChanged(function (user) {
+  console.log("User state changed:", user);
+  if (!user) {
+    window.location.href = "login.html"; // Redirect to login page if not authenticated
+  } else {
+    console.log("User authenticated:", user.email);
+    simulationPage.style.display = "block";
+    loadingScreen.style.display = "none";
+    loadUserFiles(user.email);
+  }
+});
 
 
 
