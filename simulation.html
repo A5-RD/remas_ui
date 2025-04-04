@@ -14,39 +14,40 @@
 
   </head>
 
-<body>
-  <div id="simulation-container">
-    <!-- Main Simulation Area -->
-    <div id="simulation-area">
-      <canvas id="simulation-canvas"></canvas>
-    </div>
-
-    <!-- Right Panel (holds File Explorer) -->
-    <div id="right-panel">
-      <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
-      <div class="toolbar">
-        <button id="minimize-panel">➖</button>
+  <body>
+    <div id="simulation-container">
+      <!-- Main Simulation Area -->
+      <div id="simulation-area">
+        <canvas id="simulation-canvas"></canvas>
       </div>
-      <!-- File Explorer: Contains user file list -->
-      <div id="file-explorer">
-        <div class="explorer-toolbar">
-          <button id="minimize-explorer">➖</button>
+  
+      <!-- Right Panel (holds File Explorer) -->
+      <div id="right-panel">
+        <!-- Right Panel Toolbar: Contains minimize button (no title text) -->
+        <div class="toolbar">
+          <button id="minimize-panel">➖</button>
         </div>
-        <ul id="file-list">
-          <!-- "Loading files..." will be shown while files are loading -->
-          <li>Loading files...</li>
-        </ul>
+        <!-- File Explorer: Contains user file list -->
+        <div id="file-explorer">
+          <div class="explorer-toolbar">
+            <span class="explorer-title">File Explorer</span>
+            <button id="minimize-explorer">➖</button>
+          </div>
+          <ul id="file-list">
+            <!-- "Loading files..." will be shown while files are loading -->
+            <li>Loading files...</li>
+          </ul>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- Bottom Right Tabs (includes fullscreen button) -->
-  <div id="tabs">
-    <button class="tab-button" id="psi-tab">Ψ</button>
-    <button class="tab-button" id="sigma-tab">Σ</button>
-    <button class="tab-button" id="fullscreen-btn">⛶</button>
-  </div>
-</body>
+  
+    <!-- Bottom Right Tabs (includes fullscreen button) -->
+    <div id="tabs">
+      <button class="tab-button" id="psi-tab">Ψ</button>
+      <button class="tab-button" id="sigma-tab">Σ</button>
+      <button class="tab-button" id="fullscreen-btn">⛶</button>
+    </div>
+  </body>
 </html>
 
 

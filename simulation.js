@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function loadUserFiles(email) {
     const storageRef = ref(storage, `users/${email}/files`);  // ✅ Correct way to get a reference
     console.log("📂 Loading files from:", `users/${email}/files`);
-
+    
     listAll(storageRef)  // ✅ Correct way to list all files
         .then(result => {
             console.log("📂 Files found:", result.items);
