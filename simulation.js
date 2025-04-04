@@ -9,9 +9,24 @@ fetch('https://raw.githubusercontent.com/a5eng/REMAS/refs/heads/main/functions/i
     const auth = firebase.auth();
     const storage = firebase.storage();
 
+    console.error("Firebase config worked.");
+
+    // Enforce authentication: if no user, redirect to login page.
+    auth.onAuthStateChanged(function (user) {
+      console.log("User state changed:", user);
+      if (!user) {
+        window.location.href = "login.html"; // Redirect to login page if not authenticated
+      } else {
+        console.log("User authenticated:", user.email);
+        simulationPage.style.display = "block";
+        loadingScreen.style.display = "none";
+        loadUserFiles(user.email);
+      }
+    });
+
     // Now you can use Firebase services as usual
     // For example, Firebase authentication or Firestore, etc.
-    console.error("Firebase config worked");
+    
   })
   .catch(error => {
     console.error("Error loading Firebase config:", error);
@@ -19,18 +34,7 @@ fetch('https://raw.githubusercontent.com/a5eng/REMAS/refs/heads/main/functions/i
 
 
 
-// Enforce authentication: if no user, redirect to login page.
-auth.onAuthStateChanged(function (user) {
-  console.log("User state changed:", user);
-  if (!user) {
-    window.location.href = "login.html"; // Redirect to login page if not authenticated
-  } else {
-    console.log("User authenticated:", user.email);
-    simulationPage.style.display = "block";
-    loadingScreen.style.display = "none";
-    loadUserFiles(user.email);
-  }
-});
+
 
 document.addEventListener("DOMContentLoaded", function () {
   
