@@ -1,5 +1,10 @@
-// Firebase Configuration – replace placeholders with your actual config values.
-const firebaseConfig = { 
+// Import individual Firebase services
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
+
+// Firebase configuration
+const firebaseConfig = {
   apiKey: "AIzaSyA7...OLD_VALUE", 
   authDomain: "remas-ui.firebaseapp.com", 
   projectId: "remas-ui", 
@@ -8,12 +13,13 @@ const firebaseConfig = {
   appId: "1:1234567890:web:abcdef123456"
 };
 
-// Initialize Firebase with the configuration
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-// Now you can use Firebase services like Auth and Storage
-const auth = firebase.auth();
-const storage = firebase.storage();
+// Initialize services
+const auth = getAuth(app);
+const storage = getStorage(app);
+
 
 console.log("Firebase config worked.");
 
