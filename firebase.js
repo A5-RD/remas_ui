@@ -1,9 +1,7 @@
 // firebase.js
-
-// Import Firebase SDK
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import getAuth for authentication
 
-// Your Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
     authDomain: "atom5engineering.firebaseapp.com",
@@ -17,4 +15,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-export { app };  // Export the initialized app to be used in other files
+// Initialize Auth
+const auth = getAuth(app);  // Initialize Firebase Auth
+
+export { app, auth };  // Export auth and app

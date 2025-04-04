@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  
   // Load files from Firebase Storage under users/{email}/files
   function loadUserFiles(email) {
     const storageRef = storage.ref(`users/${email}/files`);
