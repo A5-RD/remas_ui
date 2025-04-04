@@ -1,7 +1,4 @@
 
-<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-storage.js"></script>
 
 // Firebase Configuration – replace placeholders with your actual config values.
 // Fetch the Firebase config from your backend
