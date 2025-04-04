@@ -1,14 +1,11 @@
 // Import Firebase authentication
 
-import { auth } from './firebase.js';  // Import from firebase.js
-import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { auth, storage } from './firebase.js';  // Import from firebase.js
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import onAuthStateChanged
-
-const storage = getStorage(app); // Initialize Firebase Storage
 
 
 document.addEventListener("DOMContentLoaded", function () {
-  
+
   // Check user authentication status
   onAuthStateChanged(auth, function(user) {
     if (!user) {
@@ -21,38 +18,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load files from Firebase Storage under users/{email}/files
   function loadUserFiles(email) {
-    const storageRef = ref(storage, `users/${email}/files`);
-    const fileList = document.getElementById("file-list");
+    const storageRef = storage.ref(`users/${email}/files`);  // Access user's storage folder
+    console.log("Loading files from: users/" + email + "/files");
 
-    fileList.innerHTML = "<li>Loading files...</li>";
-    console.log(`🔍 Attempting to load files from path: users/${email}/files`);
+    storageRef.listAll()
+      .then(result => {
+        console.log("📂 Files found:", result.items);
+        const fileList = document.getElementById("file-list");
+        fileList.innerHTML = "";
 
-    listAll(storageRef)
-        .then(result => {
-            console.log("📂 Found files:", result.items.map(item => item.name));
-            
-            if (result.items.length === 0) {
-                fileList.innerHTML = "<li>No files found.</li>";
-            } else {
-                fileList.innerHTML = "";
-                result.items.forEach(fileRef => {
-                    getDownloadURL(fileRef).then(url => {
-                        console.log(`✅ File: ${fileRef.name}, URL: ${url}`);
-                        const li = document.createElement("li");
-                        li.textContent = fileRef.name;
-                        li.onclick = () => window.open(url, "_blank");
-                        fileList.appendChild(li);
-                    }).catch(err => console.error(`❌ Error getting download URL for ${fileRef.name}:`, err));
-                });
-            }
-        })
-        .catch(error => {
-            console.error("❌ Error loading files:", error);
-            fileList.innerHTML = "<li>Error loading files. Check console.</li>";
-        });
+        if (result.items.length === 0) {
+          fileList.innerHTML = "<li>No files found.</li>";
+        } else {
+          result.items.forEach(fileRef => {
+            fileRef.getDownloadURL().then(url => {
+              const li = document.createElement("li");
+              li.textContent = fileRef.name;
+              li.onclick = () => window.open(url, "_blank");
+              fileList.appendChild(li);
+            });
+          });
+        }
+      })
+      .catch(error => {
+        console.error("❌ Error loading files:", error);
+      });
   }
-
-
 
 
   // Toggle Right Panel (minimize/restore)

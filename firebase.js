@@ -1,7 +1,11 @@
 // firebase.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import getAuth for authentication
 
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  
+import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";  // Import Storage
+
+// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
     authDomain: "atom5engineering.firebaseapp.com",
@@ -15,7 +19,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth
-const auth = getAuth(app);  // Initialize Firebase Auth
+// Initialize Firebase Services
+const auth = getAuth(app);  // Authentication
+const storage = getStorage(app);  // Cloud Storage
 
-export { app, auth };  // Export auth and app
+// Export Firebase modules
+export { app, auth, storage };
