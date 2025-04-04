@@ -91,7 +91,7 @@ canvas {
 /* File Explorer Header */
 #file-explorer-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; /* Pushes content to both sides */
     align-items: center;
     font-size: 14px;
     font-weight: bold;
@@ -99,13 +99,12 @@ canvas {
     padding: 8px 10px;
     background: rgba(60, 60, 60, 1);
     border-bottom: 1px solid #777;
-    position: relative;  /* Make the header position relative */
 }
 
-/* Move the minimize button to the right edge */
+/* Move the minimize button to the right edge using absolute positioning */
 #file-explorer-minimize {
     position: absolute;
-    right: 10px; /* Adjust the distance from the right edge */
+    right: 10px; /* Distance from the right edge of the panel */
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
@@ -120,6 +119,7 @@ canvas {
 #file-explorer-minimize:hover {
     color: white;
 }
+
 
 /* Collapsed File Explorer */
 #file-explorer.collapsed {
