@@ -1,6 +1,6 @@
 // Import Firebase authentication
 
-import { auth } from 'firebase.js';  // Import from firebase.js
+import { auth } from './firebase.js';  // Import from firebase.js
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import onAuthStateChanged
 
 
