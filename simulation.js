@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
   }
 
-
+  
   // File Explorer Minimize Button
   const fileExplorer = document.getElementById("file-explorer");
   const fileExplorerMinimize = document.createElement("button");
@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
   fileExplorerMinimize.addEventListener("click", function () {
       fileExplorer.classList.toggle("collapsed");
   });
+
 
   // Resizable Right Panel
   rightPanel.addEventListener("mousedown", function (e) {
@@ -79,10 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   }
-
-
-
-
   
   function stopResizingRightPanel() {
     document.removeEventListener("mousemove", resizeRightPanel);

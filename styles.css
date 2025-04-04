@@ -72,6 +72,7 @@ canvas {
     opacity: 0.7;
 }
 
+
 /* File Explorer */
 #file-explorer {
     width: 100%;
@@ -92,18 +93,23 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     text-align: center;
     padding: 8px 10px;
     background: rgba(60, 60, 60, 1);
     border-bottom: 1px solid #777;
+    position: relative;  /* Make the header position relative */
 }
 
-/* Minimize Button for File Explorer */
+/* Move the minimize button to the right edge */
 #file-explorer-minimize {
+    position: absolute;
+    right: 10px; /* Adjust the distance from the right edge */
+    top: 50%;
+    transform: translateY(-50%);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 14px;
     color: #bbb;
     background: none;
     border: none;
