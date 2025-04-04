@@ -1,9 +1,7 @@
 // Import Firebase authentication
-import { storage } from "./firebase.js";  // Import Firebase Storage
+import { storage , auth} from "./firebase.js";  // Import Firebase Storage
 import { ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";  // Import storage functions
-import { auth } from "./firebase.js";  // Import auth
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"; // Import Auth function
-
 
 
 document.addEventListener("DOMContentLoaded", function () {
