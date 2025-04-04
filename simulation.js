@@ -48,53 +48,21 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  // Function to toggle right panel visibility
-  const rightPanel = document.getElementById("right-panel");
-  const rightPanelGlow = document.createElement("div");
-  rightPanelGlow.id = "right-panel-glow";
-  document.body.appendChild(rightPanelGlow);
-
-  // Resizable Right Panel
-  rightPanel.addEventListener("mousedown", function (e) {
-    if (e.offsetX < 8) {
-      e.preventDefault();
-      document.addEventListener("mousemove", resizeRightPanel);
-      document.addEventListener("mouseup", stopResizingRightPanel);
-    }
-  });
-
-  function resizeRightPanel(e) {
-    const newWidth = window.innerWidth - e.clientX;
-    if (newWidth >= 10 && newWidth <= 600) {
-      rightPanel.style.width = newWidth + "px";
-      if (newWidth <= 20) {
-        rightPanel.classList.add("hidden");
-      } else {
-        rightPanel.classList.remove("hidden");
-      }
-    }
+  // Remove the minimize button at the top of the right panel
+  const rightPanelTopMinimize = document.querySelector("#right-panel .minimize-button");
+  if (rightPanelTopMinimize) {
+      rightPanelTopMinimize.remove();
   }
 
-  function stopResizingRightPanel() {
-    document.removeEventListener("mousemove", resizeRightPanel);
-    document.removeEventListener("mouseup", stopResizingRightPanel);
-  }
+  // File Explorer Minimize Button
+  const fileExplorer = document.getElementById("file-explorer");
+  const fileExplorerMinimize = document.createElement("button");
+  fileExplorerMinimize.id = "file-explorer-minimize";
+  fileExplorerMinimize.innerHTML = "−"; // Minimize symbol
+  document.getElementById("file-explorer-header").appendChild(fileExplorerMinimize);
 
-  // Show glow effect when hovering near right edge
-  document.addEventListener("mousemove", function (e) {
-    if (e.clientX > window.innerWidth - 10) {
-      rightPanelGlow.classList.add("visible");
-    } else {
-      rightPanelGlow.classList.remove("visible");
-    }
-  });
-
-  // Expand right panel when dragging from right edge
-  rightPanelGlow.addEventListener("mousedown", function (e) {
-    if (rightPanel.classList.contains("hidden")) {
-      rightPanel.classList.remove("hidden");
-      rightPanel.style.width = "300px";
-    }
+  fileExplorerMinimize.addEventListener("click", function () {
+      fileExplorer.classList.toggle("collapsed");
   });
 
 });
