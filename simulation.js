@@ -1,7 +1,17 @@
+// Import Firebase authentication
+import { auth } from "./firebase.js";  // Make sure the path to firebase.js is correct
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";  // Import onAuthStateChanged
 
 
 document.addEventListener("DOMContentLoaded", function () {
   
+  // Check user authentication status
+  onAuthStateChanged(auth, function(user) {
+    if (!user) {
+        // Redirect to login page (index.html) if not authenticated
+        window.location.href = "index.html";
+    }
+  });
 
   
   // Load files from Firebase Storage under users/{email}/files
