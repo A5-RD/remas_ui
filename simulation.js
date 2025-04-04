@@ -1,37 +1,3 @@
-// Your Firebase configuration object (replace with actual values)
-const firebaseConfig = {
-  apiKey: "AIzaSyA7...OLD_VALUE",
-  authDomain: "remas-ui.firebaseapp.com",
-  projectId: "remas-ui",
-  storageBucket: "remas-ui.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const storage = firebase.storage();
-
-
-console.log("Firebase config worked.");
-
-// Enforce authentication: if no user, redirect to login page.
-auth.onAuthStateChanged(function (user) {
-  console.log("User state changed:", user);
-  if (!user) {
-    window.location.href = "login.html"; // Redirect to login page if not authenticated
-  } else {
-    console.log("User authenticated:", user.email);
-    simulationPage.style.display = "block";
-    loadingScreen.style.display = "none";
-    loadUserFiles(user.email);
-  }
-});
-
-
-
 
 
 document.addEventListener("DOMContentLoaded", function () {

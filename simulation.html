@@ -1,19 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js" defer></script>
-
-  <!-- Main JS File -->
-  <script src="simulation.js?v=2" defer></script>
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulation</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
+    
+    <!-- Your custom styles -->
+    <link rel="stylesheet" href="styles.css" />
+  
+    <!-- Firebase initialization script (move Firebase config here) -->
+    <script>
+      // Your Firebase configuration object (replace with actual values)
+      const firebaseConfig = {
+        apiKey: "AIzaSyA7...OLD_VALUE", 
+        authDomain: "remas-ui.firebaseapp.com", 
+        projectId: "remas-ui", 
+        storageBucket: "remas-ui.appspot.com", 
+        messagingSenderId: "1234567890", 
+        appId: "1:1234567890:web:abcdef123456"
+      };
+  
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+  
+      const auth = firebase.auth();
+      const storage = firebase.storage();
+  
+      console.log("Firebase config worked.");
+  
+      // Enforce authentication: if no user, redirect to login page.
+      auth.onAuthStateChanged(function (user) {
+        console.log("User state changed:", user);
+        if (!user) {
+          window.location.href = "login.html"; // Redirect to login page if not authenticated
+        } else {
+          console.log("User authenticated:", user.email);
+          simulationPage.style.display = "block";
+          loadingScreen.style.display = "none";
+          loadUserFiles(user.email);
+        }
+      });
+    </script>
+  </head>
 
 <body>
   <div id="simulation-container">
