@@ -18,30 +18,42 @@ document.addEventListener("DOMContentLoaded", function () {
   function loadUserFiles(email) {
     const storageRef = storage.ref(`users/${email}/files`);
     const fileList = document.getElementById("file-list");
+
     fileList.innerHTML = "<li>Loading files...</li>";
-    console.log("Loading files from: users/" + email + "/files");
+    console.log("🔍 Attempting to load files from path:", `users/${email}/files`);
 
     storageRef.listAll()
       .then(result => {
+        console.log("✅ Storage listAll() success. Items found:", result.items.length);
+
         if (result.items.length === 0) {
           fileList.innerHTML = "<li>No files found.</li>";
+          console.log("⚠️ No files found for user:", email);
         } else {
           fileList.innerHTML = "";
           result.items.forEach(fileRef => {
-            fileRef.getDownloadURL().then(url => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.onclick = () => window.open(url, "_blank");
-              fileList.appendChild(li);
-            });
+            console.log("📂 Found file:", fileRef.name);
+
+            fileRef.getDownloadURL()
+              .then(url => {
+                console.log("🔗 File URL retrieved:", url);
+                const li = document.createElement("li");
+                li.textContent = fileRef.name;
+                li.onclick = () => window.open(url, "_blank");
+                fileList.appendChild(li);
+              })
+              .catch(urlError => {
+                console.error("❌ Error getting download URL for", fileRef.name, urlError);
+              });
           });
         }
       })
       .catch(error => {
-        console.error("Error loading files:", error);
+        console.error("❌ Error loading files:", error);
         fileList.innerHTML = "<li>Error loading files. Please check console.</li>";
       });
-  }
+}
+
 
   // Toggle Right Panel (minimize/restore)
   const rightPanel = document.getElementById("right-panel");
