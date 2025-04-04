@@ -1,24 +1,18 @@
-// Import individual Firebase services
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getStorage } from 'firebase/storage';
-
-// Firebase configuration
+// Your Firebase configuration object (replace with actual values)
 const firebaseConfig = {
-  apiKey: "AIzaSyA7...OLD_VALUE", 
-  authDomain: "remas-ui.firebaseapp.com", 
-  projectId: "remas-ui", 
-  storageBucket: "remas-ui.appspot.com", 
-  messagingSenderId: "1234567890", 
+  apiKey: "AIzaSyA7...OLD_VALUE",
+  authDomain: "remas-ui.firebaseapp.com",
+  projectId: "remas-ui",
+  storageBucket: "remas-ui.appspot.com",
+  messagingSenderId: "1234567890",
   appId: "1:1234567890:web:abcdef123456"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 
-// Initialize services
-const auth = getAuth(app);
-const storage = getStorage(app);
+const auth = firebase.auth();
+const storage = firebase.storage();
 
 
 console.log("Firebase config worked.");
