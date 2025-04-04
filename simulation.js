@@ -5,16 +5,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/fi
 
 
 
-app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "React app URL"
-  );
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  next();
-});
-
 document.addEventListener("DOMContentLoaded", function () {
 
   // Check user authentication status
