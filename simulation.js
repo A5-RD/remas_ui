@@ -1,4 +1,3 @@
-// simulation.js
 import { auth, storage } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
@@ -7,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
   const fileList = document.getElementById("file-list");
   const rightPanel = document.getElementById("right-panel");
-  const glowHandle = document.getElementById("right-panel-glow");
   const fullscreenBtn = document.getElementById("fullscreen-btn");
 
   // Hide container until authenticated
@@ -60,11 +58,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Resizable right panel by dragging left edge
   rightPanel.addEventListener("mousedown", e => {
-    // if clicking near the left edge of the panel
     if (e.offsetX < 8) {
       e.preventDefault();
-      // ensure panel is expanded
-      rightPanel.classList.remove("collapsed");
       document.addEventListener("mousemove", resizePanel);
       document.addEventListener("mouseup", stopResize);
     }
@@ -80,9 +75,4 @@ document.addEventListener("DOMContentLoaded", () => {
     document.removeEventListener("mousemove", resizePanel);
     document.removeEventListener("mouseup", stopResize);
   }
-
-  // Collapse/expand via glow handle
-  glowHandle.addEventListener("click", () => {
-    rightPanel.classList.toggle("collapsed");
-  });
 });
