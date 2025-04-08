@@ -128,7 +128,7 @@ canvas {
 #file-list {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 10;
     font-size: 11px;
 }
 
