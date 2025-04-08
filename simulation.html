@@ -15,28 +15,39 @@
   <script type="module" src="simulation.js"></script>
 </head>
 <body>
+  <!-- Right Panel -->
+  <div id="right-panel">
+    <div id="resize-handle"></div>
+    <div id="file-explorer">
+      <div id="file-explorer-header">
+        <span class="explorer-title">Memories</span>
+      </div>
+      <ul id="file-list">
+        <li>Loading files...</li>
+      </ul>
+    </div>
+  </div>
+  <div id="right-panel-glow"></div>
   <div id="simulation-container">
-    <!-- Main Simulation Area -->
-    <div id="simulation-area">
-      <canvas id="simulation-canvas"></canvas>
+    <!-- Bottom Right Tabs -->
+    <div id="tabs">
+      <button id="fullscreen-btn">⛶</button>
+      <button id="psi-btn" class="tab-btn selected">Ψ</button>
+      <button id="sigma-btn" class="tab-btn">Σ</button>
     </div>
 
-    <!-- Right Panel -->
-    <div id="right-panel">
-      <div id="file-explorer">
-        <div id="file-explorer-header">
-          <span class="explorer-title">File Explorer</span>
-        </div>
-        <ul id="file-list">
-          <li>Loading files...</li>
-        </ul>
+    <!-- Simulation Containers -->
+    <div id="main-content">
+      <div id="psi-container" class="simulation-container">
+        <!-- Content for Psi simulation -->
+        <canvas id="psi-canvas"></canvas>
+      </div>
+
+      <div id="sigma-container" class="simulation-container">
+        <!-- Content for Sigma simulation -->
+        <canvas id="sigma-canvas"></canvas>
       </div>
     </div>
-    <div id="right-panel-glow"></div>
-
-  <!-- Bottom Right Fullscreen Button -->
-  <div id="tabs">
-    <button id="fullscreen-btn">⛶</button>
   </div>
 </body>
 </html>
