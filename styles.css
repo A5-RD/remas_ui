@@ -93,20 +93,14 @@ canvas {
     display: flex;
     justify-content: space-between; /* Pushes content to both sides */
     align-items: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     text-align: center;
     padding: 8px 10px;
     background: rgba(60, 60, 60, 1);
     border-bottom: 1px solid #777;
-}.file-box-container {
-    margin-top: 20px; /* Adjust this value as needed */
-  }
-
-
-#file-explorer-minimize:hover {
-    color: white;
 }
+
 
 
 /* Collapsed File Explorer */
