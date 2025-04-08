@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
   }
 
-
+  
   // File Explorer Minimize Button
   const fileExplorer = document.getElementById("file-explorer");
   const fileExplorerMinimize = document.createElement("button");
@@ -60,12 +60,9 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
 
-  const rightPanel = document.getElementById("right-panel");
-  const rightPanelGlow = document.getElementById("right-panel-glow");
-
   // Resizable Right Panel
   rightPanel.addEventListener("mousedown", function (e) {
-    if (e.offsetX < 8) { // Trigger resize if within 8px of the right edge
+    if (e.offsetX < 8) {
       e.preventDefault();
       document.addEventListener("mousemove", resizeRightPanel);
       document.addEventListener("mouseup", stopResizingRightPanel);
@@ -75,15 +72,15 @@ document.addEventListener("DOMContentLoaded", function () {
   function resizeRightPanel(e) {
     const newWidth = window.innerWidth - e.clientX;
     if (newWidth >= 10 && newWidth <= 600) {
-      rightPanel.style.width = newWidth + "px"; // Adjust width of the panel
+      rightPanel.style.width = newWidth + "px";
       if (newWidth <= 20) {
-        rightPanel.classList.add("hidden"); // Hide the panel when width is small
+        rightPanel.classList.add("hidden");
       } else {
-        rightPanel.classList.remove("hidden"); // Show the panel
+        rightPanel.classList.remove("hidden");
       }
     }
   }
-
+  
   function stopResizingRightPanel() {
     document.removeEventListener("mousemove", resizeRightPanel);
     document.removeEventListener("mouseup", stopResizingRightPanel);
@@ -92,19 +89,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // Show glow effect when hovering near right edge
   document.addEventListener("mousemove", function (e) {
     if (e.clientX > window.innerWidth - 10) {
-      rightPanelGlow.classList.add("visible"); // Show glow when near right edge
+      rightPanelGlow.classList.add("visible");
     } else {
-      rightPanelGlow.classList.remove("visible"); // Hide glow when not near right edge
+      rightPanelGlow.classList.remove("visible");
     }
   });
 
-  // Expand right panel when dragging from right edge (using the glow as the handle)
+  // Expand right panel when dragging from right edge
   rightPanelGlow.addEventListener("mousedown", function (e) {
     if (rightPanel.classList.contains("hidden")) {
-      rightPanel.classList.remove("hidden"); // Remove the "hidden" class to show the panel
-      rightPanel.style.width = "300px"; // Set the default width on expand
+      rightPanel.classList.remove("hidden");
+      rightPanel.style.width = "300px";
     }
   });
-
 
 });

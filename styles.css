@@ -93,7 +93,7 @@ canvas {
     display: flex;
     justify-content: space-between; /* Pushes content to both sides */
     align-items: center;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: bold;
     text-align: center;
     padding: 8px 10px;
@@ -101,6 +101,24 @@ canvas {
     border-bottom: 1px solid #777;
 }
 
+/* Move the minimize button to the right edge using absolute positioning */
+#file-explorer-minimize {
+    position: absolute;
+    right: 10px; /* Distance from the right edge of the panel */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 14px;
+    color: #bbb;
+    background: none;
+    border: none;
+    outline: none;
+    transition: color 0.3s ease;
+}
+
+#file-explorer-minimize:hover {
+    color: white;
+}
 
 
 /* Collapsed File Explorer */
