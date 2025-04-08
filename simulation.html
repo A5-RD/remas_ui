@@ -1,58 +1,42 @@
-<meta http-equiv="Cache-Control" content="max-age=31536000, public">
-<input type="in" name="" id="">
+<!DOCTYPE html>
 <html lang="en">
-  <html lang="en">
-  <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Simulation</title>
-      <link rel="stylesheet" href="styles.css">
-  
-      <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
-
-      <script type="module" src="firebase.js"></script> <!-- Firebase initialization -->
-      <script type="module" src="simulation.js"></script> <!-- Your simulation script -->
-
-  </head>
-
-  <body>
-    <div id="simulation-container">
-      <!-- Main Simulation Area -->
-      <div id="simulation-area">
-        <canvas id="simulation-canvas"></canvas>
-      </div>
-  
-      <!-- Right Panel (holds File Explorer) -->
-      <div id="right-panel">
-        <!-- File Explorer: Contains user file list -->
-        <div id="file-explorer">
-          <div class="explorer-toolbar">
-            <span class="explorer-title">File Explorer</span>
-          </div>
-          <ul id="file-list">
-            <li>Loading files...</li>
-          </ul>
-        </div>
-      </div>
-      <div id="right-panel-glow"></div> <!-- This is the glow effect -->
-  
-    <!-- Bottom Right Tabs (includes fullscreen button) -->
-    <div id="tabs">
-      <button class="tab-button" id="psi-tab">Ψ</button>
-      <button class="tab-button" id="sigma-tab">Σ</button>
-      <button class="tab-button" id="fullscreen-btn">⛶</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulation</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Firebase SDKs -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"></script>
+  <!-- Your Firebase init -->
+  <script type="module" src="firebase.js"></script>
+  <!-- Simulation logic -->
+  <script type="module" src="simulation.js"></script>
+</head>
+<body>
+  <div id="simulation-container">
+    <!-- Main Simulation Area -->
+    <div id="simulation-area">
+      <canvas id="simulation-canvas"></canvas>
     </div>
-  </body>
+
+    <!-- Right Panel -->
+    <div id="right-panel">
+      <div id="file-explorer">
+        <div id="file-explorer-header">
+          <span>File Explorer</span>
+        </div>
+        <ul id="file-list">
+          <li>Loading files...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Right Fullscreen Button -->
+  <div id="tabs">
+    <button id="fullscreen-btn">⛶</button>
+  </div>
+</body>
 </html>
-
-
-
-
-
-
-
-
-
-
-

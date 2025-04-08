@@ -7,179 +7,106 @@ body, html {
     overflow: hidden;
     font-family: 'Roboto Thin', sans-serif;
     background-color: #000;
-    color: #ffffff;
-}
-
-/* Simulation Container */
-#simulation-container {
+    color: #fff;
+  }
+  
+  /* Simulation Container */
+  #simulation-container {
     display: flex;
     width: 100vw;
     height: 100vh;
-    position: relative;
-}
-
-/* Main Simulation Area */
-#simulation-area {
-    flex-grow: 1;
+  }
+  
+  /* Main Simulation Area */
+  #simulation-area {
+    flex: 1;
     background-color: #2e2e2e;
     position: relative;
-    transition: width 0.3s ease;
-}
-
-canvas {
-    display: block;
+  }
+  
+  canvas {
     width: 100%;
     height: 100%;
-}
-
-/* Right Panel */
-#right-panel {
+    display: block;
+  }
+  
+  /* Right Panel */
+  #right-panel {
     width: 300px;
     height: 100%;
-    background-color: rgba(50, 50, 50, 0.8);
+    background-color: rgba(50,50,50,0.8);
     position: absolute;
     right: 0;
     top: 0;
     border-left: 1px solid #444;
     display: flex;
     flex-direction: column;
-    min-width: 0px; /* Allow full collapse */
+    transition: width 0.3s ease;
+    min-width: 100px;
     max-width: 600px;
-    transition: width 0.3s ease, opacity 0.3s ease;
-}
-
-/* Hidden Right Panel */
-#right-panel.hidden {
-    width: 0px;
-    opacity: 0;
-}
-
-/* White Glow Effect on Right Edge */
-#right-panel-glow {
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: 5px;
-    height: 100%;
-    background: white;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-
-/* Glow becomes visible when hovered */
-#right-panel-glow.visible {
-    opacity: 0.7;
-}
-
-
-/* File Explorer */
-#file-explorer {
-    width: 100%;
-    height: 200px; /* Reduce default height */
-    background-color: rgba(40, 40, 40, 1);
-    overflow-y: auto;
-    position: relative;
-    resize: vertical;
-    min-height: 50px; /* Allow it to shrink */
-    max-height: 400px;
-    padding: 10px;
-    border: 1px solid #666;
-    transition: height 0.3s ease;
-}
-
-/* File Explorer Header */
-#file-explorer-header {
+  }
+  
+  /* File Explorer */
+  #file-explorer {
+    flex: 1;
     display: flex;
-    justify-content: space-between; /* Pushes content to both sides */
-    align-items: center;
-    font-size: 12px;
-    font-weight: bold;
-    text-align: center;
+    flex-direction: column;
+  }
+  
+  /* File Explorer Header (sticky) */
+  #file-explorer-header {
+    flex: 0 0 auto;
+    background: rgba(60,60,60,1);
     padding: 8px 10px;
-    background: rgba(60, 60, 60, 1);
+    font-size: 14px;
+    font-weight: bold;
     border-bottom: 1px solid #777;
-}
-
-/* Move the minimize button to the right edge using absolute positioning */
-#file-explorer-minimize {
-    position: absolute;
-    right: 10px; /* Distance from the right edge of the panel */
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 12px;
-    color: #bbb;
-    background: none;
-    border: none;
-    outline: none;
-    transition: color 0.3s ease;
-}
-
-#file-explorer-minimize:hover {
-    color: white;
-}
-
-
-/* Collapsed File Explorer */
-#file-explorer.collapsed {
-    height: 30px;
-    overflow: hidden;
-}
-
-
-/* Scrollbar Visibility */
-#file-explorer::-webkit-scrollbar {
-    width: 8px;
-}
-
-#file-explorer::-webkit-scrollbar-thumb {
-    background-color: #888;
-    border-radius: 4px;
-}
-
-#file-explorer::-webkit-scrollbar-thumb:hover {
-    background-color: #aaa;
-}
-
-/* File List */
-#file-list {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  
+  /* File List */
+  #file-list {
+    flex: 1;
+    overflow-y: auto;
     list-style: none;
     margin: 0;
-    padding: 10;
-    font-size: 11px;
-}
-
-#file-list li {
+    padding: 10px;
+    font-size: 12px;
+  }
+  
+  #file-list li {
     padding: 8px;
-    background-color: rgba(70, 70, 70, 0.8);
+    background: rgba(70,70,70,0.8);
     margin-bottom: 8px;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-#file-list li:hover {
-    background-color: rgba(90, 90, 90, 0.9);
-}
-
-/* Resizable Panel - Right Edge */
-#right-panel::after {
-    content: "";
-    width: 8px;
-    height: 100%;
-    background-color: transparent;
-    cursor: ew-resize;
+    transition: background 0.3s;
+  }
+  
+  #file-list li:hover {
+    background: rgba(90,90,90,0.9);
+  }
+  
+  /* Bottom Right Fullscreen Button */
+  #tabs {
     position: absolute;
-    left: -4px;
-    top: 0;
-}
-
-/* Right Edge Hover */
-body:hover #right-panel-glow {
-    opacity: 0;
-}
-
-body:hover #right-panel.hidden + #right-panel-glow {
-    opacity: 0.7;
-}
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  #fullscreen-btn {
+    background: none;
+    border: 1px solid white;
+    color: white;
+    padding: 8px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  #fullscreen-btn:hover {
+    background: rgba(255,255,255,0.1);
+  }
+  
