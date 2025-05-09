@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "index.html";
     } else {
       simContainer.style.display = "flex";
-      loadUserFiles(user.email);
+      //loadUserFiles(user.email);
     }
   });
 
@@ -72,19 +72,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.removeEventListener("mousemove", resizePanel);
     document.removeEventListener("mouseup", stopResize);
   }
-
-
+  
   const fileExplorer = document.getElementById("file-explorer");
   const fileExplorerHeader = document.getElementById("file-explorer-header");
   const fileList = document.getElementById("file-list");
   // For resizing file explorer
-  fileExplorer.addEventListener("mousedown", e => {
-    if (e.offsetY > fileExplorer.offsetHeight - 8) { // Detect drag on the bottom edge
-      e.preventDefault();
-      document.addEventListener("mousemove", resizeFileExplorer);
-      document.addEventListener("mouseup", stopResizeFileExplorer);
-    }
-  });
+  // fileExplorer.addEventListener("mousedown", e => {
+  //   if (e.offsetY > fileExplorer.offsetHeight - 8) { // Detect drag on the bottom edge
+  //     e.preventDefault();
+  //     document.addEventListener("mousemove", resizeFileExplorer);
+  //     document.addEventListener("mouseup", stopResizeFileExplorer);
+  //   }
+  // });
 
   function resizeFileExplorer(e) {
     const newHeight = e.clientY - fileExplorer.getBoundingClientRect().top;
@@ -142,4 +141,11 @@ document.addEventListener("DOMContentLoaded", () => {
       document.exitFullscreen();
     }
   });
+
+
+  // Start with Psi active (optional)
+  psiContainer.classList.add('active');
+
+
+
 });

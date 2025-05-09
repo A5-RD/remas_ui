@@ -20,4 +20,4 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);  // Firebase Authentication
 const storage = getStorage(app); // Firebase Storage
 
-export { app, auth, storage };  // Export storage so other files can use it
+export { app, auth, storage, firebaseConfig };  // Export storage so other files can use it

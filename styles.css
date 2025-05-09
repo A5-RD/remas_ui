@@ -20,14 +20,12 @@ body, html {
 /* Main Simulation Area */
 /* Simulation Containers */
 #main-content {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  width: calc(100% - 300px); /* Width minus the right panel */
-  height: 100vh;
-  padding-right: 20px;
-  padding-top: 10px;
+  flex: 1 1 auto; /* Allow it to grow */
+  height: 100%;
 }
+
+
+
 
 /* Simulation Containers (Psi and Sigma) */
 .simulation-container {
@@ -40,9 +38,46 @@ body, html {
   z-index: 1; /* Default z-index */
 }
 
+
+/* PSI CONTAINER */
 #psi-container {
   background-color: black; /* Black background for Psi */
+  position: relative;
+  z-index: 4; /* or higher if needed */
 }
+
+
+#psi-iframe {
+  z-index: -1; /* set the z-index to a lower value */
+}
+
+#psi-container {
+  background-color: transparent;
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block; /* Make sure it's visible */
+}
+
+#psi-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  z-index: 50;
+  background-color: black;
+}
+
+
+
+
+
+/* SIGMA CONTAINER */
 
 #sigma-container {
   background-color: white; /* White background for Sigma */
@@ -80,24 +115,24 @@ body, html {
 /* File Explorer */
 #file-explorer {
   flex: 1;
+  background-color: rgba(40, 40, 40, 0.1); /* Semi-transparent background for the file explorer */
   display: flex;
   flex-direction: column;
   height: 200px; /* Set default height to 200px */
   resize: vertical; /* Enable vertical resizing */
   overflow: hidden; /* Prevent overflowing content */
-  background-color: rgba(40, 40, 40, 0.3); /* Semi-transparent background for the file explorer */
 }
 
 /* File Explorer Header (sticky) */
 #file-explorer-header {
   flex: 0 0 auto;
-  background: rgba(60, 60, 60, 0.3); /* Semi-transparent header */
   padding: 8px 10px;
   font-size: 12px; /* Reduced font size */
   font-weight: bold;
   border-bottom: 1px solid #777;
   position: sticky;
   top: 0;
+  background: rgba(40, 40, 40, 0.1); /* Semi-transparent header */
   z-index: 1;
 }
 
@@ -109,7 +144,7 @@ body, html {
   margin: 0;
   padding: 10px;
   font-size: 12px; /* Reduced font size */
-  background-color: rgba(40, 40, 40, 0.3); /* Semi-transparent background for the file list */
+  background-color: rgba(40, 40, 40, 0.1); /* Semi-transparent background for the file list */
 }
 
 /* Individual File List Items (keep fully opaque) */
@@ -155,4 +190,8 @@ body, html {
 
 .tab-btn.selected {
   background: #333; /* Darker grey when selected */
+}
+
+#right-panel {
+  z-index: 5;
 }

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Psi Network</title>
+
+  <!-- Roboto Thin font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
+
+  <!-- 3D Force Graph library -->
+  <script src="https://unpkg.com/3d-force-graph"></script>
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 100;
+    }
+    #3d-graph { width: 100%; height: 100%; }
+    #loading, #controls-info, #json-editor {
+      position: absolute;
+      background: rgba(0,0,0,0.7);
+      padding: 20px;
+      border-radius: 8px;
+      z-index: 100;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 100;
+    }
+    #loading { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+    #controls-info { bottom:20px; left:20px; display:none; max-width:300px; }
+    #json-editor {
+      top:50%; left:50%; transform:translate(-50%,-50%);
+      width:800px; height:600px;
+      display:none; flex-direction:column;
+    }
+    .close-btn {
+      position:absolute; top:5px; right:10px;
+      background:none; border:none; color:white;
+      font-size:20px; cursor:pointer;
+    }
+    #json-textarea {
+      width:100%; height:80%; padding:10px; font-family:monospace; font-size:14px; color:black;
+    }
+    button { margin-top:10px; background:white; color:black; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="3d-graph"></div>
+
+  <div id="loading">Authenticating and loading network data...</div>
+
+  <div id="controls-info">
+    <button id="close-controls" class="close-btn">×</button>
+    <h3>Controls</h3>
+    <p>• Rotate: Right-click and drag</p>
+    <p>• Pan: Shift + right-click and drag</p>
+    <p>• Zoom: Mouse wheel</p>
+    <p>• Single-click: Highlight network component</p>
+    <p>• Double-click: Edit memory</p>
+  </div>
+
+  <div id="json-editor">
+    <button id="close-json-editor" class="close-btn">×</button>
+    <h3></h3>
+    <p id="json-filename" style="margin-top: -10px; margin-bottom: 10px; font-size: 14px; color: #ccc;"></p>
+    <textarea id="json-textarea"></textarea>
+    <button id="save-json-btn">Save</button>
+  </div>
+
+
+  <script type="module">
+    import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
+    import { getStorage, ref, listAll, getDownloadURL, uploadString } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js';
+    import { app, auth, storage } from './firebase.js';
+
+    const highlightedNodes = new Set();
+    let adjacency = {};
+
+    async function fetchMemoryFiles(email) {
+      try {
+        const dir = ref(storage, `users/${email}/memories`);
+        const result = await listAll(dir);
+        return Promise.all(result.items.map(async item => {
+          const url = await getDownloadURL(item);
+          const data = await (await fetch(url)).json();
+          return { filename: item.name.split('.')[0], data };
+        }));
+      } catch (e) { console.error(e); return []; }
+    }
+
+
+    function getComponent(start) {
+      const visited = new Set();
+      const queue = [start];
+      while (queue.length) {
+        const u = queue.shift();
+        if (!visited.has(u)) {
+          visited.add(u);
+
+          // Ensure adjacency[u] is defined before calling forEach
+          if (adjacency[u]) {
+            adjacency[u].forEach(v => {
+              if (!visited.has(v)) queue.push(v);
+            });
+          } else {
+            console.warn(`No adjacency list found for node: ${u}`);
+          }
+        }
+      }
+      return visited;
+    }
+
+
+    function buildAdjacency(memories) {
+      const links = [];
+      const nodes = [];
+
+      const ID_PATTERN = /\b[a-z]{5}\d{5}\b/g;
+
+      memories.forEach(m => {
+        nodes.push({ id: m.filename, val: 10 });
+
+        // Safely access associations from m.data
+        const associations = m.data && m.data.associations;
+
+        if (associations) {
+          let assocEntries = [];
+
+          if (Array.isArray(associations)) {
+            // If associations is an array, just use it directly
+            assocEntries = associations;
+          } else if (typeof associations === 'object') {
+            // If associations is an object, extract keys and values
+            assocEntries = Object.keys(associations).concat(
+              Object.values(associations).flat().map(String)
+            );
+          } else if (typeof associations === 'string') {
+            // If associations is a string, wrap it in an array
+            assocEntries = [associations];
+          }
+
+          // Process each entry in assocEntries
+          assocEntries.forEach(entry => {
+            // Ensure we match only valid IDs, applying the ID pattern regex
+            const matches = (typeof entry === 'string' ? entry : JSON.stringify(entry)).match(ID_PATTERN);
+
+            if (matches) {
+              // If matches are found, push the association to links
+              matches.forEach(match => links.push({ source: m.filename, target: match }));
+            }
+          });
+        }
+      });
+
+
+      // Add placeholder nodes for orphaned IDs (optional)
+      const existing = new Set(nodes.map(n => n.id));
+      links.forEach(link => {
+        if (!existing.has(link.target)) {
+          nodes.push({ id: link.target, val: 4, placeholder: true });
+        }
+      });
+
+      return { nodes, links };
+    }
+
+
+    async function buildGraph(user) {
+      const memories = await fetchMemoryFiles(user.email);
+      const graphElem = document.getElementById('3d-graph');
+      graphElem.innerHTML = '';
+
+      const { nodes, links } = buildAdjacency(memories);
+
+
+      buildAdjacency(nodes, links);
+
+      let lastClick = 0, lastId = null;
+      const Graph = ForceGraph3D()(graphElem)
+        .graphData({ nodes, links })
+        .nodeRelSize(2)
+        .nodeColor(n => highlightedNodes.has(n.id) ? 'white' : '#bbb')  // #bbb = light grey
+        .nodeOpacity(1)
+        .nodeLabel(d => d.id)
+
+
+        .linkColor(link => {
+          const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+          const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+          return (highlightedNodes.has(sourceId) && highlightedNodes.has(targetId)) ? 'orange' : 'white';
+        })
+        .linkWidth(0.5)
+
+        .linkOpacity(0.2)
+        .linkDirectionalParticles(1)
+        .linkDirectionalParticleWidth(1)
+
+        .backgroundColor('black')
+
+        .onNodeClick(node => {
+          const now = Date.now(), D = 300;
+          if (node.id === lastId && now - lastClick < D) {
+            // double-click: open editor
+            fetchMemoryFiles(auth.currentUser.email).then(files => {
+              const f = files.find(x => x.filename === node.id);
+              if (f) {
+                document.getElementById('json-filename').textContent = `Editing: ${f.filename}.json`;
+                document.getElementById('json-textarea').value = JSON.stringify(f.data, null, 2);
+                const ed = document.getElementById('json-editor');
+                ed.dataset.nodeId = node.id;
+                ed.style.display = 'flex';
+              }
+            });
+          } else {
+            // single-click: highlight component
+            highlightedNodes.clear();
+            getComponent(node.id).forEach(id => highlightedNodes.add(id));
+            Graph.nodeColor(Graph.nodeColor()).linkColor(Graph.linkColor());
+          }
+          lastClick = now; lastId = node.id;
+        })
+
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('controls-info').style.display = 'block';
+    }
+
+    onAuthStateChanged(auth, user => {
+      if (!user) return signInAnonymously(auth);
+      buildGraph(user);
+    });
+
+    document.getElementById('close-controls').onclick = () => document.getElementById('controls-info').style.display = 'none';
+    document.getElementById('close-json-editor').onclick = () => document.getElementById('json-editor').style.display = 'none';
+    document.getElementById('save-json-btn').onclick = async () => {
+      const id = document.getElementById('json-editor').dataset.nodeId;
+      try {
+        const data = JSON.parse(document.getElementById('json-textarea').value);
+        await uploadString(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`), JSON.stringify(data));
+        alert('Memory updated!'); document.getElementById('json-editor').style.display = 'none';
+      } catch(e) { alert('Save error'); console.error(e); }
+    };
+  </script>
+</body>
+</html>
