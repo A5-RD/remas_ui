@@ -162,14 +162,46 @@ body, html {
 }
 
 /* Bottom Right Tabs */
+
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+
 #tabs {
   position: fixed;
-  bottom: 10px;
-  right: 10px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(50, 50, 50, 0.8); /* semi-transparent grey */
   display: flex;
-  gap: 10px; /* Space out the buttons */
-  z-index: 11; /* Above content but below the right panel */
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0;
+  z-index: 1000;
 }
+
+#tabs button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2em;
+  font-family: 'Roboto', sans-serif;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+#tabs button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#tabs .selected {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 
 #fullscreen-btn,
 .tab-btn {
@@ -195,3 +227,6 @@ body, html {
 #right-panel {
   z-index: 5;
 }
+
+
+
