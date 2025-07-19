@@ -164,9 +164,8 @@ body, html {
 /* Bottom Right Tabs */
 
 
-body {
-  margin: 0;
-  font-family: 'Roboto', sans-serif;
+body, html {
+  font-family: 'Roboto Thin', sans-serif;
 }
 
 #tabs {
@@ -174,12 +173,12 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: rgba(50, 50, 50, 0.8); /* semi-transparent grey */
+  background-color: rgba(50, 50, 50, 0.8);
   display: flex;
   justify-content: center;
   gap: 12px;
   padding: 10px 0;
-  z-index: 1000;
+  z-index: 10000; /* Boost this high to ensure visibility */
 }
 
 #tabs button {
