@@ -98,6 +98,32 @@ body, html {
   z-index: 3;
 }
 
+
+
+#right-panel-toolbar {
+  background-color: rgba(50, 50, 50, 0.8);
+  padding: 10px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #444;
+  font-size: 18px;
+}
+
+#right-panel-toolbar button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+#right-panel-toolbar button:hover {
+  color: #00d0ff;
+}
+
+
 #right-panel:hover {
   cursor: ew-resize; /* Show resizing cursor when hovering the panel */
 }

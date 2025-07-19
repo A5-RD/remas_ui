@@ -14,45 +14,30 @@
   <!-- Simulation logic -->
   <script type="module" src="simulation.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
-
 </head>
 <body>
-  
-
   <!-- Right Panel -->
   <div id="right-panel">
-    <!-- <div id="resize-handle"></div>
-    <div id="file-explorer">
-      <div id="file-explorer-header">
-        <span class="explorer-title">Memories</span>
-      </div>
-      <ul id="file-list">
-        <li>Loading files...</li>
-      </ul>
-    </div> -->
-    <div id="tabs">
+    <!-- Tabs Section (now inside right panel, at the bottom) -->
+    <div id="right-panel-toolbar">
       <button id="psi-btn" class="tab-btn selected">Ψ</button>
       <button id="sigma-btn" class="tab-btn">Σ</button>
-
       <button id="start-sim" title="Start Simulation">▶</button>
       <button id="stop-sim" title="Stop Simulation">■</button>
       <button id="add-map" title="Add New Map">＋</button>
     </div>
   </div>
+
   <div id="right-panel-glow"></div>
+
+  <!-- Simulation Containers -->
   <div id="simulation-container">
-    <!-- Bottom Right Tabs -->
-
-    
-
-    <!-- Simulation Containers -->
     <div id="main-content">
       <div id="psi-container" class="simulation-container">
         <iframe id="psi-iframe" src="psi.html" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
 
       <div id="sigma-container" class="simulation-container">
-        <!-- Content for Sigma simulation -->
         <canvas id="sigma-canvas"></canvas>
       </div>
     </div>
