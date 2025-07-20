@@ -14,21 +14,30 @@
   <!-- Simulation logic -->
   <script type="module" src="simulation.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
 </head>
 <body>
   <!-- Right Panel -->
   <div id="right-panel">
     <!-- Tabs Section (now inside right panel, at the bottom) -->
+    <div id="resize-handle"></div>
+
     <div id="right-panel-toolbar">
-      <button id="psi-btn" class="tab-btn selected">Ψ</button>
-      <button id="sigma-btn" class="tab-btn">Σ</button>
-      <button id="start-sim" title="Start Simulation">▶</button>
+      <button id="start" class="material-symbols-outlined">play_arrow</button>
       <button id="stop-sim" title="Stop Simulation">■</button>
       <button id="add-map" title="Add New Map">＋</button>
     </div>
   </div>
 
   <div id="right-panel-glow"></div>
+
+  <!-- Bottom Right Tabs -->
+  <div id="tabs">
+    <button id="psi-btn" class="tab-btn selected">Ψ</button>
+    <button id="sigma-btn" class="tab-btn">Σ</button>
+  </div>
+
 
   <!-- Simulation Containers -->
   <div id="simulation-container">
@@ -38,7 +47,7 @@
       </div>
 
       <div id="sigma-container" class="simulation-container">
-        <canvas id="sigma-canvas"></canvas>
+        <iframe id="sigma-iframe" src="sigma.html" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
     </div>
   </div>

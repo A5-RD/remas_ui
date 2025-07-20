@@ -72,10 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.removeEventListener("mousemove", resizePanel);
     document.removeEventListener("mouseup", stopResize);
   }
-  
-  const fileExplorer = document.getElementById("file-explorer");
-  const fileExplorerHeader = document.getElementById("file-explorer-header");
-  const fileList = document.getElementById("file-list");
+
+  // const fileExplorer = document.getElementById("file-explorer");
+  // const fileExplorerHeader = document.getElementById("file-explorer-header");
+  // const fileList = document.getElementById("file-list");
   // For resizing file explorer
   // fileExplorer.addEventListener("mousedown", e => {
   //   if (e.offsetY > fileExplorer.offsetHeight - 8) { // Detect drag on the bottom edge
@@ -85,23 +85,25 @@ document.addEventListener("DOMContentLoaded", () => {
   //   }
   // });
 
-  function resizeFileExplorer(e) {
-    const newHeight = e.clientY - fileExplorer.getBoundingClientRect().top;
-    if (newHeight >= 30 && newHeight <= window.innerHeight - 100) { // Minimum and maximum height
-      fileExplorer.style.height = newHeight + "px";
-    }
-  }
-
-  function stopResizeFileExplorer() {
-    document.removeEventListener("mousemove", resizeFileExplorer);
-    document.removeEventListener("mouseup", stopResizeFileExplorer);
-  }
+  // function resizeFileExplorer(e) {
+  //   const newHeight = e.clientY - fileExplorer.getBoundingClientRect().top;
+  //   if (newHeight >= 30 && newHeight <= window.innerHeight - 100) { // Minimum and maximum height
+  //     fileExplorer.style.height = newHeight + "px";
+  //   }
+  // }
+  //
+  // function stopResizeFileExplorer() {
+  //   document.removeEventListener("mousemove", resizeFileExplorer);
+  //   document.removeEventListener("mouseup", stopResizeFileExplorer);
+  // }
 
 
   const psiBtn = document.getElementById("psi-btn");
   const sigmaBtn = document.getElementById("sigma-btn");
   const psiContainer = document.getElementById("psi-container");
   const sigmaContainer = document.getElementById("sigma-container");
+
+
   // Default view: Psi is selected
   showPsiContainer();
 
