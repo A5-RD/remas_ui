@@ -18,17 +18,50 @@
 
 </head>
 <body>
+
+  <div id="iframe-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: none;
+    background: transparent;
+    pointer-events: all;
+  "></div>
   <!-- Right Panel -->
   <div id="right-panel">
     <!-- Tabs Section (now inside right panel, at the bottom) -->
-    <div id="resize-handle"></div>
 
     <div id="right-panel-toolbar">
       <button id="start" class="material-symbols-outlined">play_arrow</button>
-      <button id="stop-sim" title="Stop Simulation">■</button>
+      <button id="stop" title="Stop Simulation">■</button>
       <button id="add-map" title="Add New Map">＋</button>
+      <button id="remove-map" title="Remove  Map">-</button>
+      <button id="find" title="Find" class="material-symbols-outlined">search</button>
     </div>
+    <div id="file-explorer">
+      <div id="file-explorer-header">
+        <span class="explorer-title">Map Objects</span>
+      </div>
+
+      <!-- Search bar below title -->
+      <div id="searchContainer" style="
+          display: none;
+          background-color: rgba(40, 40, 40, 0.1);
+          padding: 5px;
+        ">
+        <input type="text" id="searchInput" placeholder="Search filename..." style="width: 100%; padding: 4px;">
+      </div>
+
+      <ul id="file-list" style="max-height: 300px; overflow-y: auto;">
+        <li>Loading files...</li>
+      </ul>
+    </div>
+
   </div>
+  <input type="file" id="file-input" accept=".json" style="display: none" />
 
   <div id="right-panel-glow"></div>
 
@@ -44,12 +77,27 @@
     <div id="main-content">
       <div id="psi-container" class="simulation-container">
         <iframe id="psi-iframe" src="psi.html" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
+        <iframe id="psi-iframe" src="psi.html"></iframe>
+
       </div>
 
       <div id="sigma-container" class="simulation-container">
         <iframe id="sigma-iframe" src="sigma.html" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
     </div>
+  </div>
+  
+  <div id="json-editor">
+    <button id="close-json-editor" class="close-btn">×</button>
+    <h3></h3>
+    <p id="json-filename" style="margin-top: -10px; margin-bottom: 10px; font-size: 14px; color: #ccc;"></p>
+    <textarea id="json-textarea"></textarea>
+    <div style="display: flex; gap: 10px;">
+      <button id="save-json-btn">Save</button>
+      <button id="download-json-btn">Download</button>
+      <button id="delete-json-btn" style="background: #ff4444; color: white;">Delete</button>
+    </div>
+
   </div>
 </body>
 </html>

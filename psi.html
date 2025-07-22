@@ -28,7 +28,7 @@
     #3d-graph { width: 100%; height: 100%; }
     #loading, #controls-info, #json-editor {
       position: absolute;
-      background: rgba(0,0,0,0.7);
+      background: rgba(50, 50, 50, 0.3);
       padding: 20px;
       border-radius: 8px;
       z-index: 100;
@@ -38,9 +38,14 @@
     #loading { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
     #controls-info { bottom:20px; left:20px; display:none; max-width:300px; }
     #json-editor {
-      top:50%; left:50%; transform:translate(-50%,-50%);
-      width:800px; height:600px;
-      display:none; flex-direction:column;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      background: rgba(50, 50, 50, 0.3);
+
+      width:800px;
+      height:600px;
+      display:none;
+      flex-direction:column;
     }
     .close-btn {
       position:absolute; top:5px; right:10px;
@@ -48,8 +53,17 @@
       font-size:20px; cursor:pointer;
     }
     #json-textarea {
-      width:100%; height:80%; padding:10px; font-family:monospace; font-size:14px; color:black;
+      width:100%;
+      height:80%;
+      padding:10px;
+      font-family:monospace;
+      font-size:14px;
+      color: white;
+      background-color: rgba(50, 50, 50, 0.3);/* semitransparent dark background */
+      border: none;
+      outline: none;
     }
+
     button { margin-top:10px; background:white; color:black; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; }
   </style>
 </head>
@@ -74,7 +88,12 @@
     <h3></h3>
     <p id="json-filename" style="margin-top: -10px; margin-bottom: 10px; font-size: 14px; color: #ccc;"></p>
     <textarea id="json-textarea"></textarea>
-    <button id="save-json-btn">Save</button>
+    <div style="display: flex; gap: 10px;">
+      <button id="save-json-btn">Save</button>
+      <button id="download-json-btn">Download</button>
+      <button id="delete-json-btn" style="background: #ff4444; color: white;">Delete</button>
+    </div>
+
   </div>
 
 
@@ -247,9 +266,41 @@
       try {
         const data = JSON.parse(document.getElementById('json-textarea').value);
         await uploadString(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`), JSON.stringify(data));
-        alert('Memory updated!'); document.getElementById('json-editor').style.display = 'none';
+        document.getElementById('json-editor').style.display = 'none';
       } catch(e) { alert('Save error'); console.error(e); }
     };
+
+    document.getElementById('download-json-btn').onclick = () => {
+      const filename = document.getElementById('json-editor').dataset.nodeId + '.json';
+      const json = document.getElementById('json-textarea').value;
+
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+
+      URL.revokeObjectURL(url); // clean up
+    };
+
+    document.getElementById('delete-json-btn').onclick = () => {
+      const id = document.getElementById('json-editor').dataset.nodeId;
+
+      // Dispatch a custom event or simulate click if integrated in same DOM
+      const event = new CustomEvent('delete-file', { detail: { filename: id + '.json' } });
+      window.dispatchEvent(event); // or window.parent if this page is inside an iframe
+
+      document.getElementById('json-editor').style.display = 'none';
+    };
+
+
+
+
+
+
+
   </script>
 </body>
 </html>
