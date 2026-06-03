@@ -284,6 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const addMapButton = document.getElementById("add-map");
   const fileInput = document.getElementById("file-input");
+  const uploadBlendButton = document.getElementById("upload-blend");
+  const blendFileInput = document.getElementById("blend-file-input");
 
 
   async function getUniqueFilename(user) {
@@ -343,6 +345,57 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Upload failed");
     }
   });
+
+  async function uploadBlendFile(user, file) {
+    const formData = new FormData();
+    formData.append("user", user);
+    formData.append("file", file);
+
+    const res = await fetch(`${apiBase}/upload-blend`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Blend upload failed with status ${res.status}`);
+    }
+
+    return res.json().catch(() => ({}));
+  }
+
+  if (uploadBlendButton && blendFileInput) {
+    uploadBlendButton.addEventListener("click", () => {
+      blendFileInput.click();
+    });
+
+    blendFileInput.addEventListener("change", async () => {
+      const file = blendFileInput.files && blendFileInput.files[0];
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".blend")) {
+        alert("Please choose a .blend file.");
+        blendFileInput.value = "";
+        return;
+      }
+
+      const user = auth.currentUser?.email;
+      if (!user) {
+        alert("User not authenticated");
+        blendFileInput.value = "";
+        return;
+      }
+
+      try {
+        await uploadBlendFile(user, file);
+        alert(".blend file uploaded successfully");
+      } catch (err) {
+        console.error(err);
+        alert(".blend upload failed");
+      } finally {
+        blendFileInput.value = "";
+      }
+    });
+  }
 
   // Delete
   const removeMapButton = document.getElementById("remove-map");

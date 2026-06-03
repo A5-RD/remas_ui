@@ -176,6 +176,26 @@ body, html {
   z-index: 1;
 }
 
+.sidebar-actions {
+  margin-top: 8px;
+}
+
+.sidebar-action-btn {
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(70, 70, 70, 1);
+  color: #fff;
+  border: 1px solid #777;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sidebar-action-btn:hover {
+  color: #00d0ff;
+  border-color: #00d0ff;
+}
+
 /* File List */
 #file-list {
   flex: 1;
