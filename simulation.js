@@ -1,4 +1,4 @@
-import { auth, storage } from "./firebase.js";
+import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { ref, listAll, getBytes, uploadString } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
