@@ -16,36 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
       loadUserFiles(user.email);
     }
   });
-
-
-  function waitForIframeAndSend(iframe, message, maxAttempts = 10) {
-    let attempts = 0;
-
-    function trySend() {
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage(message, "*");
-      } else if (attempts < maxAttempts) {
-        attempts++;
-        setTimeout(trySend, 100); // retry after 100ms
-      } else {
-        console.warn("iframe still not available after retries.");
-      }
-    }
-
-    trySend();
-  }
-
-  const iframe = document.getElementById("simulation-editor");
-  console.log("iframe:", iframe);
-  console.log("iframe.contentWindow:", iframe?.contentWindow);
-
-
   function loadUserFiles(email) {
     const storageRef = ref(storage, `users/${email}/memories`);
     const fileList = document.getElementById("file-list");
     fileList.innerHTML = "<li>Loading files...</li>";
-
-    const iframe = document.getElementById("simulation-editor");
 
     listAll(storageRef)
       .then(result => {
@@ -93,7 +67,11 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(error => {
         console.error("Error loading files:", error);
-        fileList.innerHTML = "<li>Error loading files. Check console.</li>";
+        if (error?.code === "storage/unauthorized") {
+          fileList.innerHTML = "<li>Permission denied. Check Firebase Storage Rules for users/{email}/memories.</li>";
+        } else {
+          fileList.innerHTML = "<li>Error loading files. Check console.</li>";
+        }
       });
   }
 

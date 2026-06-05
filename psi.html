@@ -98,7 +98,7 @@
 
 
   <script type="module">
-    import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
     import { getStorage, ref, listAll, getDownloadURL, uploadString } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js';
     import { app, auth, storage } from './firebase.js';
 
@@ -255,7 +255,10 @@
     }
 
     onAuthStateChanged(auth, user => {
-      if (!user) return signInAnonymously(auth);
+      if (!user || !user.email) {
+        document.getElementById('loading').textContent = 'Waiting for authenticated user...';
+        return;
+      }
       buildGraph(user);
     });
 
