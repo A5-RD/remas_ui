@@ -4,13 +4,13 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth
 import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js"; // Import Firebase Storage
 
 const firebaseConfig = {
-    apiKey: "AIzaSyA9WkNeMgcrgmhUA97UPbp7R4pj-IZFnK0",
-    authDomain: "atom5engineering.firebaseapp.com",
-    projectId: "atom5engineering",
-    storageBucket: "atom5engineering.firebasestorage.app",
-    messagingSenderId: "956458197323",
-    appId: "1:956458197323:web:e01873bb7fa92ac70a08ce",
-    measurementId: "G-X7H184TN54"
+    apiKey: "AIzaSyDv3KzWRT2nje-GR_kvb7XCnLXsrJrG_D8",
+    authDomain: "remas-storage.firebaseapp.com",
+    projectId: "remas-storage",
+    storageBucket: "remas-storage.firebasestorage.app",
+    messagingSenderId: "157514987438",
+    appId: "1:157514987438:web:3044502cd36513dc1cfa3f",
+    measurementId: "G-3R53FPDSE5"
 }
 
 // Initialize Firebase
