@@ -99,7 +99,7 @@
 
   <script type="module">
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
-    import { getStorage, ref, listAll, getDownloadURL, uploadString } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js';
+    import { getStorage, ref, listAll, getBytes, uploadString } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js';
     import { app, auth, storage } from './firebase.js';
 
     const highlightedNodes = new Set();
@@ -110,8 +110,9 @@
         const dir = ref(storage, `users/${email}/memories`);
         const result = await listAll(dir);
         return Promise.all(result.items.map(async item => {
-          const url = await getDownloadURL(item);
-          const data = await (await fetch(url)).json();
+          const bytes = await getBytes(item);
+          const text = new TextDecoder().decode(bytes);
+          const data = JSON.parse(text);
           return { filename: item.name.split('.')[0], data };
         }));
       } catch (e) { console.error(e); return []; }

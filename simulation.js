@@ -1,6 +1,6 @@
 import { auth, storage } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getDownloadURL , uploadString} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, uploadString } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
@@ -29,39 +29,35 @@ document.addEventListener("DOMContentLoaded", () => {
           fileList.innerHTML = "<li>No files found.</li>";
         } else {
           result.items.forEach(fileRef => {
-            getDownloadURL(fileRef).then(url => {
-              const li = document.createElement("li");
-              li.textContent = fileRef.name;
-              li.classList.add("file-item");
-              li.dataset.filename = fileRef.name;
+            const li = document.createElement("li");
+            li.textContent = fileRef.name;
+            li.classList.add("file-item");
+            li.dataset.filename = fileRef.name;
 
-              li.addEventListener("click", (e) => {
-                if (e.shiftKey) {
-                  console.log("Shift-click detected for file:", fileRef.name);
+            li.addEventListener("click", async (e) => {
+              if (e.shiftKey) {
+                console.log("Shift-click detected for file:", fileRef.name);
+                try {
+                  const bytes = await getBytes(fileRef);
+                  const text = new TextDecoder().decode(bytes);
+                  const data = JSON.parse(text);
 
-                  getDownloadURL(fileRef).then(url => {
-                    fetch(url)
-                      .then(response => response.json())
-                      .then(data => {
-                        // Set editor contents
-                        document.getElementById('json-filename').textContent = `Editing: ${fileRef.name}`;
-                        document.getElementById('json-textarea').value = JSON.stringify(data, null, 2);
+                  // Set editor contents
+                  document.getElementById('json-filename').textContent = `Editing: ${fileRef.name}`;
+                  document.getElementById('json-textarea').value = JSON.stringify(data, null, 2);
 
-                        // Show editor
-                        const ed = document.getElementById('json-editor');
-                        ed.style.display = 'flex';
-                        ed.dataset.filename = fileRef.name; // Save for later (e.g. saving)
-                      })
-                      .catch(err => {
-                        console.error("Error fetching file contents:", err);
-                      });
-                  });
+                  // Show editor
+                  const ed = document.getElementById('json-editor');
+                  ed.style.display = 'flex';
+                  ed.dataset.filename = fileRef.name; // Save for later (e.g. saving)
+                } catch (err) {
+                  console.error("Error fetching file contents:", err);
                 }
-              });
-
-
-              fileList.appendChild(li);
+              }
             });
+
+
+            fileList.appendChild(li);
           });
         }
       })
