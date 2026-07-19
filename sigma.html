@@ -249,6 +249,9 @@
       }
     }
 
+    // Tell parent we are ready
+    window.parent.postMessage({ type: 'sigma-ready' }, '*');
+
     // Receive model from parent (simulation.js)
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'load-model') {
@@ -256,6 +259,6 @@
         if (url && filename) loadModelFromURL(url, filename);
       }
     });
-  </script>
+</script>
 </body>
 </html>

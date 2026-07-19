@@ -344,13 +344,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return res.json(); // { url, filename }
   }
 
-  function loadObjectInSigma(downloadURL, filename) {
+  // Queue for models waiting until sigma iframe is ready
+  let pendingSigmaModel = null;
+  let sigmaReady = false;
+
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'sigma-ready') {
+      sigmaReady = true;
+      if (pendingSigmaModel) {
+        const { url, filename } = pendingSigmaModel;
+        pendingSigmaModel = null;
+        _sendToSigma(url, filename);
+      }
+    }
+  });
+
+  function _sendToSigma(url, filename) {
     const sigmaIframe = document.getElementById('sigma-iframe');
     if (sigmaIframe?.contentWindow) {
-      sigmaIframe.contentWindow.postMessage(
-        { type: 'load-model', url: downloadURL, filename },
-        '*'
-      );
+      sigmaIframe.contentWindow.postMessage({ type: 'load-model', url, filename }, '*');
+    }
+  }
+
+  function loadObjectInSigma(downloadURL, filename) {
+    if (sigmaReady) {
+      _sendToSigma(downloadURL, filename);
+    } else {
+      pendingSigmaModel = { url: downloadURL, filename };
     }
   }
 
