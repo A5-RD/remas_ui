@@ -511,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
           addObjectToList(itemRef.name, url);
         } else {
           // .blend etc — list it, clicking triggers backend conversion
-          addBlendToList(itemRef.name, userEmail);
+          addBlendToList(itemRef.name);
         }
       }
     } catch (err) {
@@ -520,7 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function addBlendToList(filename, userEmail) {
+  function addBlendToList(filename) {
     const objectsList = document.getElementById('objects-list');
     const emptyMsg = objectsList.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
@@ -532,21 +532,24 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent = filename + ' ⚙';
     li.dataset.filename = filename;
     li.classList.add('file-item');
-    li.title = 'Click to convert and view in Sigma';
-    li.addEventListener('click', async () => {
-      li.textContent = `Converting ${filename}…`;
-      li.style.color = '#00d0ff';
-      try {
-        const { url, filename: glbName } = await convertBlendOnBackend(filename);
-        li.remove();
-        addObjectToList(glbName, url);
-        sigmaBtn.click();
-        loadObjectInSigma(url, glbName);
-      } catch (err) {
-        li.textContent = filename + ' ⚙ (failed)';
-        li.style.color = '#ff6666';
-        console.error(err);
-      }
+    li.title = 'Click to select objects and load in Sigma';
+    li.addEventListener('click', () => {
+      openBlendModal(filename, async (selectedObjects) => {
+        li.textContent = `Converting ${filename}…`;
+        li.style.color = '#00d0ff';
+        try {
+          const { url, filename: glbName } = await convertBlendOnBackend(filename, selectedObjects);
+          li.textContent = filename + ' ⚙';
+          li.style.color = '';
+          addObjectToList(glbName, url);
+          sigmaBtn.click();
+          loadObjectInSigma(url, glbName);
+        } catch (err) {
+          li.textContent = filename + ' ⚙ (failed)';
+          li.style.color = '#ff6666';
+          console.error(err);
+        }
+      });
     });
     objectsList.appendChild(li);
   }
@@ -583,13 +586,10 @@ document.addEventListener("DOMContentLoaded", () => {
           converting.classList.add('file-item');
           objectsList.appendChild(converting);
 
-          // Ask backend to convert .blend → .glb
-          const { url, filename: glbName } = await convertBlendOnBackend(file.name);
           converting.remove();
-
-          addObjectToList(glbName, url);
-          sigmaBtn.click();
-          loadObjectInSigma(url, glbName);
+          // Show object selection modal before converting
+          addBlendToList(file.name);
+          document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`)?.click();
 
         } else if (RENDERABLE_EXTS.has(ext)) {
           const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
