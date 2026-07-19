@@ -406,24 +406,63 @@ document.addEventListener("DOMContentLoaded", () => {
       const objectsRef = ref(storage, `users/${userEmail}/objects`);
       const result = await listAll(objectsRef);
 
-      const renderableItems = result.items.filter(item => {
+      // Show all known 3D file types
+      const ALL_OBJECT_EXTS = new Set(['glb', 'gltf', 'obj', 'blend', 'blend1', 'fbx']);
+      const items = result.items.filter(item => {
         const ext = item.name.split('.').pop().toLowerCase();
-        return RENDERABLE_EXTS.has(ext);
+        return ALL_OBJECT_EXTS.has(ext);
       });
 
-      if (renderableItems.length === 0) {
+      if (items.length === 0) {
         objectsList.innerHTML = '<li class="empty-msg">No objects uploaded.</li>';
         return;
       }
 
-      for (const itemRef of renderableItems) {
-        const url = await getDownloadURL(itemRef);
-        addObjectToList(itemRef.name, url);
+      for (const itemRef of items) {
+        const ext = itemRef.name.split('.').pop().toLowerCase();
+        if (RENDERABLE_EXTS.has(ext)) {
+          const url = await getDownloadURL(itemRef);
+          addObjectToList(itemRef.name, url);
+        } else {
+          // .blend etc — list it, clicking triggers backend conversion
+          addBlendToList(itemRef.name, userEmail);
+        }
       }
     } catch (err) {
       console.error('Error loading objects:', err);
       objectsList.innerHTML = '<li class="empty-msg">Error loading objects.</li>';
     }
+  }
+
+  function addBlendToList(filename, userEmail) {
+    const objectsList = document.getElementById('objects-list');
+    const emptyMsg = objectsList.querySelector('.empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+
+    const existing = [...objectsList.querySelectorAll('li')].find(li => li.dataset.filename === filename);
+    if (existing) return;
+
+    const li = document.createElement('li');
+    li.textContent = filename + ' ⚙';
+    li.dataset.filename = filename;
+    li.classList.add('file-item');
+    li.title = 'Click to convert and view in Sigma';
+    li.addEventListener('click', async () => {
+      li.textContent = `Converting ${filename}…`;
+      li.style.color = '#00d0ff';
+      try {
+        const { url, filename: glbName } = await convertBlendOnBackend(filename);
+        li.remove();
+        addObjectToList(glbName, url);
+        sigmaBtn.click();
+        loadObjectInSigma(url, glbName);
+      } catch (err) {
+        li.textContent = filename + ' ⚙ (failed)';
+        li.style.color = '#ff6666';
+        console.error(err);
+      }
+    });
+    objectsList.appendChild(li);
   }
 
   if (uploadBlendButton && blendFileInput) {
