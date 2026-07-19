@@ -176,22 +176,6 @@ body, html {
   z-index: 1;
 }
 
-#upload-section {
-  background-color: rgba(40, 40, 40, 0.1);
-  border-bottom: 1px solid #777;
-}
-
-#upload-section-header {
-  flex: 0 0 auto;
-  padding: 8px 10px;
-  font-size: 12px;
-  font-weight: bold;
-  background: rgba(40, 40, 40, 0.1);
-}
-
-.sidebar-actions {
-  margin: 8px 10px;
-}
 
 .sidebar-action-btn {
   width: 100%;
@@ -346,11 +330,21 @@ body, html {
 
 #objects-section-header {
   flex: 0 0 auto;
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
   font-size: 12px;
   font-weight: bold;
   background: rgba(40, 40, 40, 0.1);
   border-bottom: 1px solid #555;
+}
+
+#objects-section-header .sidebar-action-btn {
+  width: auto;
+  padding: 2px 8px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 #objects-list {
