@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigma - 3D Viewer</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; overflow: hidden; width: 100vw; height: 100vh; font-family: 'Roboto', sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+
+    #drop-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,0.2);
+      font-size: 16px;
+      text-align: center;
+      pointer-events: none;
+      line-height: 1.8;
+    }
+
+    #model-list {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      max-width: 220px;
+      z-index: 10;
+    }
+    .model-tag {
+      background: rgba(30,30,30,0.85);
+      color: #ddd;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 5px 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      cursor: default;
+      border: 1px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .model-tag:hover { border-color: #00d0ff; }
+    .model-tag .remove-btn {
+      color: #ff6666;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .model-tag .remove-btn:hover { color: #ff3333; }
+
+    #status {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: rgba(255,255,255,0.4);
+      font-family: monospace;
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    #loading-overlay {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.6);
+      color: #00d0ff;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 6px;
+      border: 1px solid #00d0ff44;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="drop-hint">No 3D model loaded.<br>Upload a .glb, .gltf, or .obj file from the panel.</div>
+  <div id="model-list"></div>
+  <div id="loading-overlay">Loading model...</div>
+  <div id="status"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+    scene.fog = new THREE.Fog(0x111111, 30, 80);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.01, 1000);
+    camera.position.set(0, 2.5, 6);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 0.5;
+    controls.maxDistance = 100;
+
+    // Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight.position.set(6, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x8888ff, 0.4);
+    fillLight.position.set(-5, 3, -5);
+    scene.add(fillLight);
+
+    // Floor grid
+    const grid = new THREE.GridHelper(40, 40, 0x333333, 0x222222);
+    scene.add(grid);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Model loading
+    const gltfLoader = new GLTFLoader();
+    const objLoader = new OBJLoader();
+
+    const loadedModels = new Map();
+    const modelListEl = document.getElementById('model-list');
+    const dropHint = document.getElementById('drop-hint');
+    const statusEl = document.getElementById('status');
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+      if (msg) setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, 5000);
+    }
+
+    function centerAndScale(object) {
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if (maxDim === 0) return;
+      const scale = 3 / maxDim;
+      object.scale.setScalar(scale);
+      // center horizontally, sit on grid
+      object.position.set(
+        -center.x * scale,
+        -box.min.y * scale,
+        -center.z * scale
+      );
+    }
+
+    function addModelTag(name, object) {
+      const tag = document.createElement('div');
+      tag.className = 'model-tag';
+
+      const label = document.createElement('span');
+      label.textContent = name.length > 22 ? name.slice(0, 20) + '…' : name;
+      label.title = name;
+
+      const rm = document.createElement('span');
+      rm.className = 'remove-btn';
+      rm.textContent = '×';
+      rm.title = 'Remove from scene';
+      rm.addEventListener('click', () => {
+        scene.remove(object);
+        loadedModels.delete(name);
+        tag.remove();
+        if (loadedModels.size === 0) dropHint.style.display = 'block';
+      });
+
+      tag.appendChild(label);
+      tag.appendChild(rm);
+      modelListEl.appendChild(tag);
+    }
+
+    function loadModelFromURL(url, filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+
+      loadingOverlay.style.display = 'block';
+      setStatus(`Loading ${filename}…`);
+
+      const onLoad = (object) => {
+        centerAndScale(object);
+        scene.add(object);
+        loadedModels.set(filename, object);
+        addModelTag(filename, object);
+        dropHint.style.display = 'none';
+        loadingOverlay.style.display = 'none';
+        setStatus(`Loaded: ${filename}`);
+
+        // Frame camera on new model
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const dist = Math.max(size.x, size.y, size.z) * 2.5;
+        camera.position.set(center.x + dist * 0.6, center.y + dist * 0.5, center.z + dist);
+        controls.target.copy(center);
+        controls.update();
+      };
+
+      const onError = (err) => {
+        console.error('Model load error:', err);
+        loadingOverlay.style.display = 'none';
+        setStatus(`Failed to load: ${filename}`);
+      };
+
+      if (ext === 'glb' || ext === 'gltf') {
+        gltfLoader.load(url, (gltf) => onLoad(gltf.scene), undefined, onError);
+      } else if (ext === 'obj') {
+        objLoader.load(url, onLoad, undefined, onError);
+      } else {
+        loadingOverlay.style.display = 'none';
+        setStatus(`.${ext} not supported in browser. Upload .glb, .gltf, or .obj`);
+      }
+    }
+
+    // Receive model from parent (simulation.js)
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'load-model') {
+        const { url, filename } = event.data;
+        if (url && filename) loadModelFromURL(url, filename);
+      }
+    });
+  </script>
+</body>
+</html>

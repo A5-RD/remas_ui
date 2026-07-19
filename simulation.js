@@ -1,6 +1,6 @@
 import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, uploadString } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, uploadString, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       simContainer.style.display = "flex";
       loadUserFiles(user.email);
+      loadObjectsList(user.email);
     }
   });
   function loadUserFiles(email) {
@@ -320,21 +321,68 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  async function uploadBlendFile(user, file) {
-    const formData = new FormData();
-    formData.append("user", user);
-    formData.append("file", file);
+  const RENDERABLE_EXTS = ['glb', 'gltf', 'obj'];
 
-    const res = await fetch(`${apiBase}/upload-blend`, {
-      method: "POST",
-      body: formData,
-    });
+  async function uploadObjectFile(userEmail, file) {
+    const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
+    const snapshot = await uploadBytes(objectRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return { downloadURL, filename: file.name };
+  }
 
-    if (!res.ok) {
-      throw new Error(`Blend upload failed with status ${res.status}`);
+  function loadObjectInSigma(downloadURL, filename) {
+    const sigmaIframe = document.getElementById('sigma-iframe');
+    if (sigmaIframe?.contentWindow) {
+      sigmaIframe.contentWindow.postMessage(
+        { type: 'load-model', url: downloadURL, filename },
+        '*'
+      );
     }
+  }
 
-    return res.json().catch(() => ({}));
+  function addObjectToList(filename, downloadURL) {
+    const objectsList = document.getElementById('objects-list');
+    const emptyMsg = objectsList.querySelector('.empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+
+    // Don't add duplicates
+    const existing = [...objectsList.querySelectorAll('li')].find(li => li.dataset.filename === filename);
+    if (existing) return;
+
+    const li = document.createElement('li');
+    li.textContent = filename;
+    li.dataset.filename = filename;
+    li.dataset.url = downloadURL;
+    li.classList.add('file-item');
+    li.title = 'Click to view in Sigma';
+    li.addEventListener('click', () => {
+      sigmaBtn.click();
+      loadObjectInSigma(downloadURL, filename);
+    });
+    objectsList.appendChild(li);
+  }
+
+  async function loadObjectsList(userEmail) {
+    const objectsList = document.getElementById('objects-list');
+    objectsList.innerHTML = '';
+
+    try {
+      const objectsRef = ref(storage, `users/${userEmail}/objects`);
+      const result = await listAll(objectsRef);
+
+      if (result.items.length === 0) {
+        objectsList.innerHTML = '<li class="empty-msg">No objects uploaded.</li>';
+        return;
+      }
+
+      for (const itemRef of result.items) {
+        const url = await getDownloadURL(itemRef);
+        addObjectToList(itemRef.name, url);
+      }
+    } catch (err) {
+      console.error('Error loading objects:', err);
+      objectsList.innerHTML = '<li class="empty-msg">Error loading objects.</li>';
+    }
   }
 
   if (uploadBlendButton && blendFileInput) {
@@ -346,25 +394,29 @@ document.addEventListener("DOMContentLoaded", () => {
       const file = blendFileInput.files && blendFileInput.files[0];
       if (!file) return;
 
-      if (!file.name.toLowerCase().endsWith(".blend")) {
-        alert("Please choose a .blend file.");
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!RENDERABLE_EXTS.includes(ext)) {
+        alert(`.${ext} files cannot be rendered in the browser.\nPlease upload a .glb, .gltf, or .obj file.`);
         blendFileInput.value = "";
         return;
       }
 
-      const user = auth.currentUser?.email;
-      if (!user) {
+      const userEmail = auth.currentUser?.email;
+      if (!userEmail) {
         alert("User not authenticated");
         blendFileInput.value = "";
         return;
       }
 
       try {
-        await uploadBlendFile(user, file);
-        alert(".blend file uploaded successfully");
+        const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
+        addObjectToList(filename, downloadURL);
+        // Switch to sigma tab and load the model
+        sigmaBtn.click();
+        loadObjectInSigma(downloadURL, filename);
       } catch (err) {
         console.error(err);
-        alert(".blend upload failed");
+        alert("Object upload failed");
       } finally {
         blendFileInput.value = "";
       }

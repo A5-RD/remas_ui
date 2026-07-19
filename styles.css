@@ -337,3 +337,50 @@ body, html {
 #right-panel {
   z-index: 5;
 }
+
+/* 3D Objects Section */
+#objects-section {
+  background-color: rgba(40, 40, 40, 0.1);
+  border-bottom: 1px solid #777;
+}
+
+#objects-section-header {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  background: rgba(40, 40, 40, 0.1);
+  border-bottom: 1px solid #555;
+}
+
+#objects-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  font-size: 12px;
+  background-color: rgba(40, 40, 40, 0.1);
+}
+
+#objects-list li {
+  padding: 8px;
+  background: rgba(70, 70, 70, 1);
+  margin-bottom: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#objects-list li:hover {
+  background: rgba(0, 180, 220, 0.3);
+  color: #00d0ff;
+}
+
+#objects-list li.empty-msg {
+  cursor: default;
+  color: #888;
+  background: transparent;
+}
+#objects-list li.empty-msg:hover {
+  background: transparent;
+  color: #888;
+}
