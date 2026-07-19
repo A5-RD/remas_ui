@@ -321,13 +321,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  const RENDERABLE_EXTS = ['glb', 'gltf', 'obj'];
+  const RENDERABLE_EXTS = new Set(['glb', 'gltf', 'obj']);
+  const NEEDS_CONVERSION_EXTS = new Set(['blend', 'blend1']);
 
   async function uploadObjectFile(userEmail, file) {
     const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
     const snapshot = await uploadBytes(objectRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return { downloadURL, filename: file.name };
+  }
+
+  async function convertBlendOnBackend(filename) {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${apiBase}/api/blender/convert/${encodeURIComponent(filename)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Conversion failed (${res.status})`);
+    }
+    return res.json(); // { url, filename }
   }
 
   function loadObjectInSigma(downloadURL, filename) {
@@ -345,21 +359,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const emptyMsg = objectsList.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
 
-    // Don't add duplicates
     const existing = [...objectsList.querySelectorAll('li')].find(li => li.dataset.filename === filename);
     if (existing) return;
 
     const li = document.createElement('li');
     li.textContent = filename;
     li.dataset.filename = filename;
-    li.dataset.url = downloadURL;
+    li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
     li.title = 'Click to view in Sigma';
     li.addEventListener('click', () => {
+      const url = li.dataset.url;
+      if (!url) return;
       sigmaBtn.click();
-      loadObjectInSigma(downloadURL, filename);
+      loadObjectInSigma(url, filename);
     });
     objectsList.appendChild(li);
+    return li;
   }
 
   async function loadObjectsList(userEmail) {
@@ -370,12 +386,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const objectsRef = ref(storage, `users/${userEmail}/objects`);
       const result = await listAll(objectsRef);
 
-      if (result.items.length === 0) {
+      const renderableItems = result.items.filter(item => {
+        const ext = item.name.split('.').pop().toLowerCase();
+        return RENDERABLE_EXTS.has(ext);
+      });
+
+      if (renderableItems.length === 0) {
         objectsList.innerHTML = '<li class="empty-msg">No objects uploaded.</li>';
         return;
       }
 
-      for (const itemRef of result.items) {
+      for (const itemRef of renderableItems) {
         const url = await getDownloadURL(itemRef);
         addObjectToList(itemRef.name, url);
       }
@@ -395,12 +416,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!file) return;
 
       const ext = file.name.split('.').pop().toLowerCase();
-      if (!RENDERABLE_EXTS.includes(ext)) {
-        alert(`.${ext} files cannot be rendered in the browser.\nPlease upload a .glb, .gltf, or .obj file.`);
-        blendFileInput.value = "";
-        return;
-      }
-
       const userEmail = auth.currentUser?.email;
       if (!userEmail) {
         alert("User not authenticated");
@@ -409,14 +424,40 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
-        const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
-        addObjectToList(filename, downloadURL);
-        // Switch to sigma tab and load the model
-        sigmaBtn.click();
-        loadObjectInSigma(downloadURL, filename);
+        if (NEEDS_CONVERSION_EXTS.has(ext)) {
+          // Upload .blend to Firebase Storage first
+          await uploadObjectFile(userEmail, file);
+
+          // Show a status item while converting
+          const objectsList = document.getElementById('objects-list');
+          const emptyMsg = objectsList.querySelector('.empty-msg');
+          if (emptyMsg) emptyMsg.remove();
+          const converting = document.createElement('li');
+          converting.textContent = `Converting ${file.name}…`;
+          converting.style.color = '#00d0ff';
+          converting.classList.add('file-item');
+          objectsList.appendChild(converting);
+
+          // Ask backend to convert .blend → .glb
+          const { url, filename: glbName } = await convertBlendOnBackend(file.name);
+          converting.remove();
+
+          addObjectToList(glbName, url);
+          sigmaBtn.click();
+          loadObjectInSigma(url, glbName);
+
+        } else if (RENDERABLE_EXTS.has(ext)) {
+          const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
+          addObjectToList(filename, downloadURL);
+          sigmaBtn.click();
+          loadObjectInSigma(downloadURL, filename);
+
+        } else {
+          alert(`Unsupported file type: .${ext}\nSupported: .blend, .glb, .gltf, .obj`);
+        }
       } catch (err) {
         console.error(err);
-        alert("Object upload failed");
+        alert(`Upload failed: ${err.message}`);
       } finally {
         blendFileInput.value = "";
       }
