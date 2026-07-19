@@ -331,17 +331,103 @@ document.addEventListener("DOMContentLoaded", () => {
     return { downloadURL, filename: file.name };
   }
 
-  async function convertBlendOnBackend(filename) {
+  async function listBlendObjects(filename) {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${apiBase}/api/blender/list-objects/${encodeURIComponent(filename)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to list objects (${res.status})`);
+    }
+    const data = await res.json();
+    return data.objects; // [{ name, type, visible }]
+  }
+
+  async function convertBlendOnBackend(filename, selectedObjects) {
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(`${apiBase}/api/blender/convert/${encodeURIComponent(filename)}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(selectedObjects && selectedObjects.length ? selectedObjects : null),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `Conversion failed (${res.status})`);
     }
     return res.json(); // { url, filename }
+  }
+
+  // Modal logic
+  function openBlendModal(filename, onLoad) {
+    const modal = document.getElementById('blend-modal');
+    const title = document.getElementById('blend-modal-title');
+    const loadingEl = document.getElementById('blend-modal-loading');
+    const listEl = document.getElementById('blend-object-list');
+    const loadBtn = document.getElementById('blend-load-btn');
+    const closeBtn = document.getElementById('blend-modal-close');
+    const selectAllBtn = document.getElementById('blend-select-all');
+    const deselectAllBtn = document.getElementById('blend-deselect-all');
+
+    title.textContent = filename;
+    loadingEl.style.display = 'block';
+    listEl.innerHTML = '';
+    modal.style.display = 'flex';
+
+    listBlendObjects(filename).then(objects => {
+      loadingEl.style.display = 'none';
+
+      if (!objects.length) {
+        listEl.innerHTML = '<li style="color:#888;padding:8px;">No objects found.</li>';
+        return;
+      }
+
+      objects.forEach(obj => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.value = obj.name;
+
+        const label = document.createElement('span');
+        label.textContent = obj.name;
+
+        const typeTag = document.createElement('span');
+        typeTag.className = 'obj-type';
+        typeTag.textContent = obj.type;
+
+        li.appendChild(cb);
+        li.appendChild(label);
+        li.appendChild(typeTag);
+        li.addEventListener('click', (e) => {
+          if (e.target !== cb) cb.checked = !cb.checked;
+        });
+        listEl.appendChild(li);
+      });
+    }).catch(err => {
+      loadingEl.textContent = `Error: ${err.message}`;
+    });
+
+    const close = () => { modal.style.display = 'none'; };
+    closeBtn.onclick = close;
+    modal.onclick = (e) => { if (e.target === modal) close(); };
+
+    selectAllBtn.onclick = () => {
+      listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    };
+    deselectAllBtn.onclick = () => {
+      listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    };
+
+    loadBtn.onclick = () => {
+      const selected = [...listEl.querySelectorAll('input[type="checkbox"]:checked')]
+        .map(cb => cb.value);
+      close();
+      onLoad(selected);
+    };
   }
 
   // Queue for models waiting until sigma iframe is ready

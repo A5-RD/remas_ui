@@ -99,6 +99,25 @@
     </div>
   </div>
   
+  <!-- Blend Object Selection Modal -->
+  <div id="blend-modal" style="display:none;">
+    <div id="blend-modal-inner">
+      <div id="blend-modal-header">
+        <span id="blend-modal-title">Select objects to load</span>
+        <button id="blend-modal-close" class="close-btn">×</button>
+      </div>
+      <div id="blend-modal-body">
+        <div id="blend-modal-loading">Loading objects…</div>
+        <ul id="blend-object-list"></ul>
+      </div>
+      <div id="blend-modal-footer">
+        <button id="blend-select-all">Select All</button>
+        <button id="blend-deselect-all">Deselect All</button>
+        <button id="blend-load-btn">Load Selected</button>
+      </div>
+    </div>
+  </div>
+
   <div id="json-editor">
     <button id="close-json-editor" class="close-btn">×</button>
     <h3></h3>
