@@ -486,18 +486,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadObjectsList(userEmail) {
     const objectsList = document.getElementById('objects-list');
-    objectsList.innerHTML = '';
+    objectsList.innerHTML = '<li class="empty-msg">Loading objects…</li>';
 
     try {
-      const objectsRef = ref(storage, `users/${userEmail}/objects`);
+      const objectsRef = ref(storage, `users/${userEmail}/objects/`);
       const result = await listAll(objectsRef);
 
-      // Show all known 3D file types
+      console.log(`[objects] found ${result.items.length} items in objects/ for ${userEmail}`);
+
       const ALL_OBJECT_EXTS = new Set(['glb', 'gltf', 'obj', 'blend', 'blend1', 'fbx']);
       const items = result.items.filter(item => {
         const ext = item.name.split('.').pop().toLowerCase();
         return ALL_OBJECT_EXTS.has(ext);
       });
+
+      objectsList.innerHTML = '';
 
       if (items.length === 0) {
         objectsList.innerHTML = '<li class="empty-msg">No objects uploaded.</li>';
@@ -510,13 +513,12 @@ document.addEventListener("DOMContentLoaded", () => {
           const url = await getDownloadURL(itemRef);
           addObjectToList(itemRef.name, url);
         } else {
-          // .blend etc — list it, clicking triggers backend conversion
           addBlendToList(itemRef.name);
         }
       }
     } catch (err) {
-      console.error('Error loading objects:', err);
-      objectsList.innerHTML = '<li class="empty-msg">Error loading objects.</li>';
+      console.error('[objects] Error loading objects:', err);
+      objectsList.innerHTML = `<li class="empty-msg">Error: ${err.code || err.message}</li>`;
     }
   }
 
