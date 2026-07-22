@@ -489,10 +489,12 @@ document.addEventListener("DOMContentLoaded", () => {
     objectsList.innerHTML = '<li class="empty-msg">Loading objects…</li>';
 
     try {
-      const objectsRef = ref(storage, `users/${userEmail}/objects/`);
+      const objectsRef = ref(storage, `users/${userEmail}/objects`);
+      console.log(`[objects] querying path: users/${userEmail}/objects`);
       const result = await listAll(objectsRef);
 
-      console.log(`[objects] found ${result.items.length} items in objects/ for ${userEmail}`);
+      console.log(`[objects] found ${result.items.length} items, prefixes: ${result.prefixes.length}`);
+      result.items.forEach(i => console.log('[objects] item:', i.fullPath));
 
       const ALL_OBJECT_EXTS = new Set(['glb', 'gltf', 'obj', 'blend', 'blend1', 'fbx']);
       const items = result.items.filter(item => {
