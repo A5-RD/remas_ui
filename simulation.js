@@ -337,8 +337,14 @@ document.addEventListener("DOMContentLoaded", () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Failed to list objects (${res.status})`);
+      const raw = await res.text();
+      let detail = "";
+      try {
+        detail = JSON.parse(raw)?.detail || "";
+      } catch (_) {
+        detail = raw?.trim?.() || "";
+      }
+      throw new Error(detail || `Failed to list objects (${res.status})`);
     }
     const data = await res.json();
     return data.objects; // [{ name, type, visible }]
@@ -355,8 +361,14 @@ document.addEventListener("DOMContentLoaded", () => {
       body: JSON.stringify(selectedObjects && selectedObjects.length ? selectedObjects : null),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Conversion failed (${res.status})`);
+      const raw = await res.text();
+      let detail = "";
+      try {
+        detail = JSON.parse(raw)?.detail || "";
+      } catch (_) {
+        detail = raw?.trim?.() || "";
+      }
+      throw new Error(detail || `Conversion failed (${res.status})`);
     }
     return res.json(); // { url, filename }
   }
@@ -408,7 +420,14 @@ document.addEventListener("DOMContentLoaded", () => {
         listEl.appendChild(li);
       });
     }).catch(err => {
-      loadingEl.textContent = `Error: ${err.message}`;
+      loadingEl.style.display = 'none';
+      listEl.innerHTML = '<li style="color:#888;padding:8px;">Could not read object list. You can still load the full file.</li>';
+      loadBtn.textContent = 'Load Full File';
+      loadBtn.onclick = () => {
+        close();
+        onLoad(null);
+      };
+      console.error('[blend] list objects failed:', err);
     });
 
     const close = () => { modal.style.display = 'none'; };
