@@ -326,7 +326,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function uploadObjectFile(userEmail, file) {
     const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
-    const snapshot = await uploadBytes(objectRef, file);
+    const metadata = { contentType: file.type || 'application/octet-stream' };
+    const snapshot = await uploadBytes(objectRef, file, metadata);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return { downloadURL, filename: file.name };
   }
@@ -503,6 +504,47 @@ document.addEventListener("DOMContentLoaded", () => {
     return li;
   }
 
+  // concurrency helper: map inputs to async mapper with limited concurrency
+  async function pMap(inputs, mapper, concurrency = 8) {
+    const results = [];
+    const executing = new Set();
+
+    for (const input of inputs) {
+      const p = (async () => mapper(input))();
+      results.push(p);
+      executing.add(p);
+      p.finally(() => executing.delete(p));
+
+      if (executing.size >= concurrency) {
+        // wait for any to finish before launching more
+        await Promise.race(executing);
+      }
+    }
+
+    return Promise.all(results);
+  }
+
+  // Debug helper: fetch first bytes of a stored object and display header hex
+  async function debugGetBlendHeader(filename) {
+    const userEmail = auth.currentUser?.email;
+    if (!userEmail) {
+      console.warn('[debug] no authenticated user');
+      alert('Not authenticated');
+      return;
+    }
+
+    try {
+      const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
+      const bytes = await getBytes(objectRef);
+      const header = Array.from(bytes.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log(`[debug] header bytes for ${filename}:`, header);
+      alert(`Header bytes for ${filename}:\n${header}`);
+    } catch (err) {
+      console.error('[debug] failed to fetch blend header:', err);
+      alert('Error fetching file header: ' + (err?.message || err));
+    }
+  }
+
   async function loadObjectsList(userEmail) {
     const objectsList = document.getElementById('objects-list');
     objectsList.innerHTML = '<li class="empty-msg">Loading objects…</li>';
@@ -521,6 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return ALL_OBJECT_EXTS.has(ext);
       });
 
+      // Clear and prepare fragment to batch DOM updates
       objectsList.innerHTML = '';
 
       if (items.length === 0) {
@@ -528,15 +571,79 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      for (const itemRef of items) {
+      // Resolve download URLs with limited concurrency, then create DOM nodes in a fragment
+      const results = await pMap(items, async (itemRef) => {
         const ext = itemRef.name.split('.').pop().toLowerCase();
         if (RENDERABLE_EXTS.has(ext)) {
-          const url = await getDownloadURL(itemRef);
-          addObjectToList(itemRef.name, url);
+          try {
+            const url = await getDownloadURL(itemRef);
+            return { kind: 'renderable', name: itemRef.name, url };
+          } catch (err) {
+            console.warn('[objects] failed to get URL for', itemRef.name, err);
+            return { kind: 'renderable', name: itemRef.name, url: null, error: err };
+          }
         } else {
-          addBlendToList(itemRef.name);
+          return { kind: 'blend', name: itemRef.name };
+        }
+      }, /*concurrency=*/8);
+
+      const frag = document.createDocumentFragment();
+      for (const r of results) {
+        if (r.kind === 'renderable') {
+          const li = document.createElement('li');
+          li.textContent = r.name;
+          li.dataset.filename = r.name;
+          li.dataset.url = r.url || '';
+          li.classList.add('file-item');
+          li.title = 'Click to view in Sigma';
+          li.addEventListener('click', () => {
+            const url = li.dataset.url;
+            if (!url) return;
+            sigmaBtn.click();
+            loadObjectInSigma(url, r.name);
+          });
+          frag.appendChild(li);
+        } else {
+          const li = document.createElement('li');
+          li.textContent = r.name + ' ⚙';
+          li.dataset.filename = r.name;
+          li.classList.add('file-item');
+          li.title = 'Click to select objects and load in Sigma';
+          li.addEventListener('click', () => {
+            openBlendModal(r.name, async (selectedObjects) => {
+              li.textContent = `Converting ${r.name}…`;
+              li.style.color = '#00d0ff';
+              try {
+                const { url, filename: glbName } = await convertBlendOnBackend(r.name, selectedObjects);
+                li.textContent = r.name + ' ⚙';
+                li.style.color = '';
+                // append converted glb to list
+                const newLi = document.createElement('li');
+                newLi.textContent = glbName;
+                newLi.dataset.filename = glbName;
+                newLi.dataset.url = url || '';
+                newLi.classList.add('file-item');
+                newLi.title = 'Click to view in Sigma';
+                newLi.addEventListener('click', () => {
+                  if (!newLi.dataset.url) return;
+                  sigmaBtn.click();
+                  loadObjectInSigma(newLi.dataset.url, glbName);
+                });
+                frag.appendChild(newLi);
+                sigmaBtn.click();
+                loadObjectInSigma(url, glbName);
+              } catch (err) {
+                li.textContent = r.name + ' ⚙ (failed)';
+                li.style.color = '#ff6666';
+                console.error(err);
+              }
+            });
+          });
+          frag.appendChild(li);
         }
       }
+
+      objectsList.appendChild(frag);
     } catch (err) {
       console.error('[objects] Error loading objects:', err);
       objectsList.innerHTML = `<li class="empty-msg">Error: ${err.code || err.message}</li>`;
@@ -555,8 +662,14 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent = filename + ' ⚙';
     li.dataset.filename = filename;
     li.classList.add('file-item');
-    li.title = 'Click to select objects and load in Sigma';
-    li.addEventListener('click', () => {
+    li.title = 'Click to select objects and load in Sigma (Ctrl/Cmd/Alt+click to inspect)';
+    li.addEventListener('click', (e) => {
+      // Modifier-click to inspect raw file header in storage
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        debugGetBlendHeader(filename);
+        return;
+      }
+
       openBlendModal(filename, async (selectedObjects) => {
         li.textContent = `Converting ${filename}…`;
         li.style.color = '#00d0ff';
