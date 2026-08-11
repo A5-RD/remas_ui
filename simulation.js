@@ -513,10 +513,11 @@ document.addEventListener("DOMContentLoaded", () => {
     li.dataset.filename = filename;
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
-    li.title = 'Click to view in Sigma';
+    li.title = 'Click to select; double-click to view in Sigma';
     li.addEventListener('click', (e) => {
-      // select for deletion
       setSelectedObject(li);
+    });
+    li.addEventListener('dblclick', (e) => {
       const url = li.dataset.url;
       if (!url) return;
       sigmaBtn.click();
@@ -617,8 +618,11 @@ document.addEventListener("DOMContentLoaded", () => {
           li.dataset.filename = r.name;
           li.dataset.url = r.url || '';
           li.classList.add('file-item');
-          li.title = 'Click to view in Sigma';
+          li.title = 'Click to select; double-click to view in Sigma';
           li.addEventListener('click', () => {
+            setSelectedObject(li);
+          });
+          li.addEventListener('dblclick', () => {
             const url = li.dataset.url;
             if (!url) return;
             sigmaBtn.click();
@@ -630,8 +634,9 @@ document.addEventListener("DOMContentLoaded", () => {
           li.textContent = r.name + ' ⚙';
           li.dataset.filename = r.name;
           li.classList.add('file-item');
-          li.title = 'Click to select objects and load in Sigma';
-          li.addEventListener('click', () => {
+          li.title = 'Click to select; double-click to choose objects and convert';
+          li.addEventListener('click', () => setSelectedObject(li));
+          li.addEventListener('dblclick', () => {
             openBlendModal(r.name, async (selectedObjects) => {
               li.textContent = `Converting ${r.name}…`;
               li.style.color = '#00d0ff';
@@ -684,17 +689,16 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent = filename + ' ⚙';
     li.dataset.filename = filename;
     li.classList.add('file-item');
-    li.title = 'Click to select objects and load in Sigma (Ctrl/Cmd/Alt+click to inspect)';
+    li.title = 'Click to select; double-click to choose objects and convert (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
-      // modifier-click to inspect raw header
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
-
-      // select this blend entry
       setSelectedObject(li);
+    });
 
+    li.addEventListener('dblclick', () => {
       openBlendModal(filename, async (selectedObjects) => {
         li.textContent = `Converting ${filename}…`;
         li.style.color = '#00d0ff';
@@ -750,7 +754,23 @@ document.addEventListener("DOMContentLoaded", () => {
           converting.remove();
           // Show object selection modal before converting
           addBlendToList(file.name);
-          document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`)?.click();
+          // Open modal immediately for the newly uploaded blend so user can select objects
+          openBlendModal(file.name, async (selectedObjects) => {
+            try {
+              // find the newly added list item (if needed for status)
+              const li = document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`);
+              if (li) { li.textContent = `Converting ${file.name}…`; li.style.color = '#00d0ff'; }
+              const { url, filename: glbName } = await convertBlendOnBackend(file.name, selectedObjects);
+              if (li) { li.textContent = file.name + ' ⚙'; li.style.color = ''; }
+              addObjectToList(glbName, url);
+              sigmaBtn.click();
+              loadObjectInSigma(url, glbName);
+            } catch (err) {
+              console.error(err);
+              const li = document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`);
+              if (li) { li.textContent = file.name + ' ⚙ (failed)'; li.style.color = '#ff6666'; }
+            }
+          });
 
         } else if (RENDERABLE_EXTS.has(ext)) {
           const { downloadURL, filename } = await uploadObjectFile(userEmail, file);

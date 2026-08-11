@@ -347,6 +347,19 @@ body, html {
   line-height: 1;
 }
 
+.objects-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#objects-list li.selected {
+  background-color: #e0e0e0;
+  color: #000;
+  font-weight: bold;
+  border-radius: 6px;
+}
+
 #objects-list {
   list-style: none;
   margin: 0;
