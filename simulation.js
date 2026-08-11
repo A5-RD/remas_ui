@@ -1,6 +1,6 @@
 import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, uploadString, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
@@ -339,13 +339,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (!res.ok) {
       const raw = await res.text();
+      console.error('[blend] list-objects response status:', res.status, 'url:', res.url);
+      console.error('[blend] response headers:', Array.from(res.headers.entries()));
+      console.error('[blend] raw response body:', raw);
       let detail = "";
       try {
         detail = JSON.parse(raw)?.detail || "";
       } catch (_) {
         detail = raw?.trim?.() || "";
       }
-      throw new Error(detail || `Failed to list objects (${res.status})`);
+      // surfaced error includes backend detail when available
+      const errMsg = detail || `Failed to list objects (${res.status})`;
+      console.error('[blend] detail:', errMsg);
+      throw new Error(errMsg);
     }
     const data = await res.json();
     return data.objects; // [{ name, type, visible }]
@@ -363,13 +369,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (!res.ok) {
       const raw = await res.text();
+      console.error('[blend] convert response status:', res.status, 'url:', res.url);
+      console.error('[blend] response headers:', Array.from(res.headers.entries()));
+      console.error('[blend] raw response body:', raw);
       let detail = "";
       try {
         detail = JSON.parse(raw)?.detail || "";
       } catch (_) {
         detail = raw?.trim?.() || "";
       }
-      throw new Error(detail || `Conversion failed (${res.status})`);
+      const errMsg = detail || `Conversion failed (${res.status})`;
+      console.error('[blend] detail:', errMsg);
+      throw new Error(errMsg);
     }
     return res.json(); // { url, filename }
   }
@@ -454,6 +465,15 @@ document.addEventListener("DOMContentLoaded", () => {
   let pendingSigmaModel = null;
   let sigmaReady = false;
 
+  // currently selected object list item (for deletion)
+  let selectedObjectLi = null;
+
+  function setSelectedObject(li) {
+    if (selectedObjectLi) selectedObjectLi.classList.remove('selected');
+    selectedObjectLi = li;
+    if (selectedObjectLi) selectedObjectLi.classList.add('selected');
+  }
+
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'sigma-ready') {
       sigmaReady = true;
@@ -494,7 +514,9 @@ document.addEventListener("DOMContentLoaded", () => {
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
     li.title = 'Click to view in Sigma';
-    li.addEventListener('click', () => {
+    li.addEventListener('click', (e) => {
+      // select for deletion
+      setSelectedObject(li);
       const url = li.dataset.url;
       if (!url) return;
       sigmaBtn.click();
@@ -664,7 +686,10 @@ document.addEventListener("DOMContentLoaded", () => {
     li.classList.add('file-item');
     li.title = 'Click to select objects and load in Sigma (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
-      // Modifier-click to inspect raw file header in storage
+      // select this blend entry
+      setSelectedObject(li);
+      // modifier-click handled earlier (debug)
+      openBlendModal(filename, async (selectedObjects) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
@@ -741,6 +766,40 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(`Upload failed: ${err.message}`);
       } finally {
         blendFileInput.value = "";
+      }
+    });
+  }
+
+  // Remove object button handler
+  const removeObjectButton = document.getElementById('remove-object');
+  if (removeObjectButton) {
+    removeObjectButton.addEventListener('click', async () => {
+      if (!selectedObjectLi) {
+        alert('No object selected. Click an object to select it first.');
+        return;
+      }
+
+      const filename = selectedObjectLi.dataset.filename;
+      if (!filename) {
+        alert('Selected item has no filename');
+        return;
+      }
+
+      const confirmDelete = confirm(`Delete object ${filename}? This cannot be undone.`);
+      if (!confirmDelete) return;
+
+      try {
+        const userEmail = auth.currentUser?.email;
+        if (!userEmail) throw new Error('User not authenticated');
+        const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
+        await deleteObject(objectRef);
+        // remove from DOM
+        selectedObjectLi.remove();
+        selectedObjectLi = null;
+        alert('Deleted ' + filename);
+      } catch (err) {
+        console.error('[objects] failed to delete object:', err);
+        alert('Delete failed: ' + (err?.message || err));
       }
     });
   }
