@@ -469,6 +469,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedObjectLi = null;
 
   function setSelectedObject(li) {
+    // toggle if clicking the currently selected item
+    if (selectedObjectLi === li) {
+      selectedObjectLi.classList.remove('selected');
+      selectedObjectLi = null;
+      return;
+    }
+
     if (selectedObjectLi) selectedObjectLi.classList.remove('selected');
     selectedObjectLi = li;
     if (selectedObjectLi) selectedObjectLi.classList.add('selected');
