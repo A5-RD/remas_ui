@@ -686,14 +686,14 @@ document.addEventListener("DOMContentLoaded", () => {
     li.classList.add('file-item');
     li.title = 'Click to select objects and load in Sigma (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
-      // select this blend entry
-      setSelectedObject(li);
-      // modifier-click handled earlier (debug)
-      openBlendModal(filename, async (selectedObjects) => {
+      // modifier-click to inspect raw header
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
+
+      // select this blend entry
+      setSelectedObject(li);
 
       openBlendModal(filename, async (selectedObjects) => {
         li.textContent = `Converting ${filename}…`;
