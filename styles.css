@@ -357,6 +357,12 @@ body, html {
   align-items: center;
 }
 
+.maps-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
 #objects-list li.selected {
   background-color: #e0e0e0;
   color: #000;
