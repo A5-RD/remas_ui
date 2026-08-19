@@ -325,11 +325,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const NEEDS_CONVERSION_EXTS = new Set(['blend', 'blend1']);
 
   async function uploadObjectFile(userEmail, file) {
-    const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
-    const metadata = { contentType: file.type || 'application/octet-stream' };
-    const snapshot = await uploadBytes(objectRef, file, metadata);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return { downloadURL, filename: file.name };
+    try {
+      // Log basic file info and first bytes to aid debugging of corrupted uploads
+      console.log('[upload] preparing upload for', file.name, 'size=', file.size, 'type=', file.type);
+      try {
+        const buf = await file.arrayBuffer();
+        const header = new Uint8Array(buf).slice(0, 32);
+        const headerHex = Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log('[upload] header (first 32 bytes):', headerHex);
+      } catch (err) {
+        console.warn('[upload] failed to read file header for logging', err);
+      }
+
+      const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
+      const metadata = { contentType: file.type || 'application/octet-stream' };
+      const snapshot = await uploadBytes(objectRef, file, metadata);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return { downloadURL, filename: file.name };
+    } catch (err) {
+      console.error('[upload] uploadObjectFile failed for', file.name, err);
+      throw err;
+    }
   }
 
   async function listBlendObjects(filename) {
@@ -386,7 +402,50 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Modal logic
-  function openBlendModal(filename, onLoad) {
+  async function isBlendHeaderValid(filename) {
+    const userEmail = auth.currentUser?.email;
+    if (!userEmail) return false;
+    try {
+      const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
+      const bytes = await getBytes(objectRef);
+      const hdr = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 16));
+      return hdr.includes('BLENDER');
+    } catch (err) {
+      console.error('[blend] header check failed', err);
+      return false;
+    }
+  }
+
+  async function downloadStoredFile(filename) {
+    const userEmail = auth.currentUser?.email;
+    if (!userEmail) throw new Error('Not authenticated');
+    const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
+    const bytes = await getBytes(objectRef);
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function openBlendModal(filename, onLoad) {
+    // quick client-side validation: check header bytes before asking backend
+    try {
+      const valid = await isBlendHeaderValid(filename);
+      if (!valid) {
+        const proceed = confirm(`${filename} in storage does not look like a valid .blend. Download stored blob for inspection?`);
+        if (proceed) {
+          try { await downloadStoredFile(filename); } catch (err) { alert('Download failed: ' + (err?.message || err)); }
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('[blend] header validation error', err);
+    }
     const modal = document.getElementById('blend-modal');
     const title = document.getElementById('blend-modal-title');
     const loadingEl = document.getElementById('blend-modal-loading');
@@ -744,6 +803,22 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
+        // Read first bytes to verify this actually looks like a .blend before uploading
+        try {
+          const buf = await file.arrayBuffer();
+          const headerBytes = new Uint8Array(buf).slice(0, 16);
+          const headerHex = Array.from(headerBytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+          console.log('[blend-upload] detected header for', file.name, headerHex);
+          const asciiHeader = new TextDecoder('ascii', { fatal: false }).decode(headerBytes);
+          console.log('[blend-upload] ascii header preview:', asciiHeader);
+          if (!asciiHeader.includes('BLENDER')) {
+            const proceed = confirm(`${file.name} does not appear to be a Blender .blend file (header: ${headerHex}).\n\nUpload anyway?`);
+            if (!proceed) { blendFileInput.value = ""; return; }
+          }
+        } catch (hdrErr) {
+          console.warn('[blend-upload] could not inspect file header', hdrErr);
+        }
+
         if (NEEDS_CONVERSION_EXTS.has(ext)) {
           // Upload .blend to Firebase Storage first
           await uploadObjectFile(userEmail, file);
