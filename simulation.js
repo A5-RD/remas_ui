@@ -1,6 +1,6 @@
 import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, getMetadata, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
@@ -324,22 +324,70 @@ document.addEventListener("DOMContentLoaded", () => {
   const RENDERABLE_EXTS = new Set(['glb', 'gltf', 'obj']);
   const NEEDS_CONVERSION_EXTS = new Set(['blend', 'blend1']);
 
+  function formatHeader(bytes) {
+    const header = bytes.slice(0, 32);
+    const hex = Array.from(header).map(byte => byte.toString(16).padStart(2, '0')).join(' ');
+    const ascii = new TextDecoder('ascii', { fatal: false }).decode(header);
+    const signature = ascii.startsWith('BLENDER')
+      ? 'Blender .blend'
+      : hex.startsWith('28 b5 2f fd')
+        ? 'Zstandard-compressed data (not a directly readable .blend)'
+        : 'unknown/non-Blender data';
+    return { ascii, hex, signature };
+  }
+
+  async function readStoredObjectHeader(objectRef, filename) {
+    const [metadata, downloadURL] = await Promise.all([
+      getMetadata(objectRef),
+      getDownloadURL(objectRef),
+    ]);
+    const response = await fetch(downloadURL, { headers: { Range: 'bytes=0-31' } });
+    if (!response.ok) throw new Error(`Stored-header fetch failed (${response.status})`);
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('Stored-header response has no readable body');
+    const { value } = await reader.read();
+    await reader.cancel();
+
+    const header = formatHeader(value || new Uint8Array());
+    console.log('[upload] Firebase object verification:', {
+      filename,
+      path: objectRef.fullPath,
+      requestedRange: 'bytes=0-31',
+      responseStatus: response.status,
+      contentRange: response.headers.get('content-range'),
+      contentEncoding: response.headers.get('content-encoding'),
+      storageContentType: metadata.contentType,
+      storageContentEncoding: metadata.contentEncoding || null,
+      storageSize: metadata.size,
+      storageMd5: metadata.md5Hash || null,
+      header,
+    });
+    return header;
+  }
+
   async function uploadObjectFile(userEmail, file) {
     try {
-      // Log basic file info and first bytes to aid debugging of corrupted uploads
-      console.log('[upload] preparing upload for', file.name, 'size=', file.size, 'type=', file.type);
-      try {
-        const buf = await file.arrayBuffer();
-        const header = new Uint8Array(buf).slice(0, 32);
-        const headerHex = Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ');
-        console.log('[upload] header (first 32 bytes):', headerHex);
-      } catch (err) {
-        console.warn('[upload] failed to read file header for logging', err);
-      }
+      const localHeader = formatHeader(new Uint8Array(await file.slice(0, 32).arrayBuffer()));
+      console.log('[upload] local file verification:', {
+        filename: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        lastModified: new Date(file.lastModified).toISOString(),
+        header: localHeader,
+      });
 
       const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
       const metadata = { contentType: file.type || 'application/octet-stream' };
       const snapshot = await uploadBytes(objectRef, file, metadata);
+      const storedHeader = await readStoredObjectHeader(snapshot.ref, file.name);
+      if (storedHeader.hex !== localHeader.hex) {
+        console.error('[upload] HEADER MISMATCH: local and stored bytes differ', {
+          filename: file.name,
+          localHeader,
+          storedHeader,
+        });
+      }
       const downloadURL = await getDownloadURL(snapshot.ref);
       return { downloadURL, filename: file.name };
     } catch (err) {
@@ -803,16 +851,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
-        // Read first bytes to verify this actually looks like a .blend before uploading
         try {
-          const buf = await file.arrayBuffer();
-          const headerBytes = new Uint8Array(buf).slice(0, 16);
-          const headerHex = Array.from(headerBytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
-          console.log('[blend-upload] detected header for', file.name, headerHex);
-          const asciiHeader = new TextDecoder('ascii', { fatal: false }).decode(headerBytes);
-          console.log('[blend-upload] ascii header preview:', asciiHeader);
-          if (!asciiHeader.includes('BLENDER')) {
-            const proceed = confirm(`${file.name} does not appear to be a Blender .blend file (header: ${headerHex}).\n\nUpload anyway?`);
+          const header = formatHeader(new Uint8Array(await file.slice(0, 32).arrayBuffer()));
+          console.log('[blend-upload] selected file signature:', { filename: file.name, header });
+          if (!header.ascii.startsWith('BLENDER')) {
+            const proceed = confirm(`${file.name} is ${header.signature}.\nHeader: ${header.hex}\n\nA valid .blend begins with BLENDER. Upload anyway?`);
             if (!proceed) { blendFileInput.value = ""; return; }
           }
         } catch (hdrErr) {
