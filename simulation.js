@@ -422,20 +422,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function convertBlendOnBackend(filename, selectedObjects) {
-    const token = await auth.currentUser.getIdToken();
-    const res = await fetch(`${apiBase}/api/blender/convert/${encodeURIComponent(filename)}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(selectedObjects && selectedObjects.length ? selectedObjects : null),
+    const traceId = `ui-${Date.now()}-${crypto.randomUUID()}`;
+    const requestUrl = `${apiBase}/api/blender/convert/${encodeURIComponent(filename)}`;
+    const requestBody = selectedObjects && selectedObjects.length ? selectedObjects : null;
+    const startedAt = performance.now();
+    console.groupCollapsed(`[blend:${traceId}] conversion request`);
+    console.log('filename:', filename);
+    console.log('url:', requestUrl);
+    console.log('selected object count:', selectedObjects?.length || 0);
+    console.log('selected objects:', selectedObjects || []);
+    console.log('online:', navigator.onLine);
+    console.groupEnd();
+
+    let res;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      res = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-REMAS-Trace-ID': traceId,
+        },
+        body: JSON.stringify(requestBody),
+      });
+    } catch (err) {
+      console.error(`[blend:${traceId}] network failure after ${Math.round(performance.now() - startedAt)}ms`, {
+        name: err?.name,
+        message: err?.message,
+        url: requestUrl,
+        online: navigator.onLine,
+      });
+      throw new Error(`Conversion request could not reach the API (trace ${traceId}): ${err?.message || err}`);
+    }
+
+    console.info(`[blend:${traceId}] response received after ${Math.round(performance.now() - startedAt)}ms`, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: Array.from(res.headers.entries()),
     });
     if (!res.ok) {
       const raw = await res.text();
-      console.error('[blend] convert response status:', res.status, 'url:', res.url);
-      console.error('[blend] response headers:', Array.from(res.headers.entries()));
-      console.error('[blend] raw response body:', raw);
+      console.error(`[blend:${traceId}] convert response status:`, res.status, 'url:', res.url);
+      console.error(`[blend:${traceId}] raw response body:`, raw);
       let detail = "";
       try {
         detail = JSON.parse(raw)?.detail || "";
@@ -443,10 +472,12 @@ document.addEventListener("DOMContentLoaded", () => {
         detail = raw?.trim?.() || "";
       }
       const errMsg = detail || `Conversion failed (${res.status})`;
-      console.error('[blend] detail:', errMsg);
-      throw new Error(errMsg);
+      console.error(`[blend:${traceId}] detail:`, errMsg);
+      throw new Error(`${errMsg} (trace ${traceId})`);
     }
-    return res.json(); // { url, filename }
+    const data = await res.json();
+    console.info(`[blend:${traceId}] conversion succeeded after ${Math.round(performance.now() - startedAt)}ms`, data);
+    return data; // { url, filename, cached, trace_id }
   }
 
   // Modal logic
