@@ -588,6 +588,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (selectedObjectLi) selectedObjectLi.classList.add('selected');
   }
 
+  function handleObjectListClick(event, li) {
+    // The second click of a double-click must not toggle this item off.
+    if (event.detail === 1) setSelectedObject(li);
+  }
+
+  function preserveObjectSelection(li) {
+    if (selectedObjectLi !== li) setSelectedObject(li);
+  }
+
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'sigma-ready') {
       sigmaReady = true;
@@ -628,10 +637,11 @@ document.addEventListener("DOMContentLoaded", () => {
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
     li.title = 'Click to select; double-click to view in Sigma';
-    li.addEventListener('click', (e) => {
-      setSelectedObject(li);
+    li.addEventListener('click', (event) => {
+      handleObjectListClick(event, li);
     });
-    li.addEventListener('dblclick', (e) => {
+    li.addEventListener('dblclick', () => {
+      preserveObjectSelection(li);
       const url = li.dataset.url;
       if (!url) return;
       sigmaBtn.click();
@@ -733,10 +743,11 @@ document.addEventListener("DOMContentLoaded", () => {
           li.dataset.url = r.url || '';
           li.classList.add('file-item');
           li.title = 'Click to select; double-click to view in Sigma';
-          li.addEventListener('click', () => {
-            setSelectedObject(li);
+          li.addEventListener('click', (event) => {
+            handleObjectListClick(event, li);
           });
           li.addEventListener('dblclick', () => {
+            preserveObjectSelection(li);
             const url = li.dataset.url;
             if (!url) return;
             sigmaBtn.click();
@@ -749,8 +760,9 @@ document.addEventListener("DOMContentLoaded", () => {
           li.dataset.filename = r.name;
           li.classList.add('file-item');
           li.title = 'Click to select; double-click to choose objects and convert';
-          li.addEventListener('click', () => setSelectedObject(li));
+          li.addEventListener('click', (event) => handleObjectListClick(event, li));
           li.addEventListener('dblclick', () => {
+            preserveObjectSelection(li);
             openBlendModal(r.name, async (selectedObjects) => {
               li.textContent = `Converting ${r.name}…`;
               li.style.color = '#00d0ff';
@@ -809,10 +821,11 @@ document.addEventListener("DOMContentLoaded", () => {
         debugGetBlendHeader(filename);
         return;
       }
-      setSelectedObject(li);
+      handleObjectListClick(e, li);
     });
 
     li.addEventListener('dblclick', () => {
+      preserveObjectSelection(li);
       openBlendModal(filename, async (selectedObjects) => {
         li.textContent = `Converting ${filename}…`;
         li.style.color = '#00d0ff';
