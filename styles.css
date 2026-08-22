@@ -226,7 +226,8 @@ body, html {
 
 
 #file-list li:hover {
-  background: rgba(90, 90, 90, 1); /* Solid background for hover state */
+  background: rgba(0, 180, 220, 0.3);
+  color: #00d0ff;
 }
 
 .selected {
