@@ -352,6 +352,13 @@ body, html {
   line-height: 1;
 }
 
+#file-explorer-header .sidebar-action-btn {
+  width: auto;
+  padding: 2px 8px;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .objects-actions {
   display: inline-flex;
   gap: 6px;
