@@ -869,8 +869,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (uploadBlendButton && blendFileInput) {
-    uploadBlendButton.addEventListener("click", () => {
-      blendFileInput.click();
+    uploadBlendButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      blendFileInput.value = "";
+      console.info('[object-upload] opening native file picker', {
+        showPickerSupported: typeof blendFileInput.showPicker === 'function',
+        accept: blendFileInput.accept,
+      });
+      try {
+        if (typeof blendFileInput.showPicker === 'function') {
+          blendFileInput.showPicker();
+        } else {
+          blendFileInput.click();
+        }
+      } catch (err) {
+        console.warn('[object-upload] showPicker failed; falling back to input.click()', err);
+        blendFileInput.click();
+      }
     });
 
     blendFileInput.addEventListener("change", async () => {

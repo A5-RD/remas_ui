@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20260822b"></script>
+  <script type="module" src="simulation.js?v=20260822c"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -69,7 +69,7 @@
         <span class="explorer-title">3D Objects</span>
         <div class="objects-actions">
           <button id="find-objects" class="sidebar-action-btn material-symbols-outlined" title="Search 3D objects">search</button>
-          <button id="upload-blend" class="sidebar-action-btn" title="Upload .blend / .glb / .obj">+</button>
+          <button id="upload-blend" type="button" class="sidebar-action-btn" title="Upload a 3D object">+</button>
           <button id="remove-object" class="sidebar-action-btn" title="Remove Object">-</button>
         </div>
       </div>
@@ -84,7 +84,7 @@
 
   </div>
   <input type="file" id="file-input" accept=".json" style="display: none" />
-  <input type="file" id="blend-file-input" accept=".glb,.gltf,.obj,.fbx,.blend" style="display: none" />
+  <input type="file" id="blend-file-input" accept=".glb,.gltf,.obj,.fbx,.blend,.blend1" hidden />
 
   <div id="right-panel-glow"></div>
 
