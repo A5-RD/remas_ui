@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260822b" />
   <!-- Firebase SDKs -->
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20260822"></script>
+  <script type="module" src="simulation.js?v=20260822b"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -37,13 +37,13 @@
     <div id="right-panel-toolbar">
       <button id="start" class="material-symbols-outlined">play_arrow</button>
       <button id="stop" title="Stop Simulation">■</button>
-      <button id="find" title="Find" class="material-symbols-outlined">search</button>
     </div>
 
     <div id="file-explorer">
       <div id="file-explorer-header">
         <span class="explorer-title">Memories</span>
         <div class="maps-actions">
+          <button id="find" class="sidebar-action-btn material-symbols-outlined" title="Search memories">search</button>
           <button id="add-map" class="sidebar-action-btn" title="Add New Map">＋</button>
           <button id="remove-map" class="sidebar-action-btn" title="Remove Map">-</button>
         </div>
@@ -61,19 +61,25 @@
       <ul id="file-list" style="max-height: 300px; overflow-y: auto;">
         <li>Loading files...</li>
       </ul>
+      <button class="section-resize-handle" type="button" aria-label="Resize Memories section" title="Drag to resize Memories"></button>
     </div>
 
     <div id="objects-section">
       <div id="objects-section-header">
         <span class="explorer-title">3D Objects</span>
         <div class="objects-actions">
+          <button id="find-objects" class="sidebar-action-btn material-symbols-outlined" title="Search 3D objects">search</button>
           <button id="upload-blend" class="sidebar-action-btn" title="Upload .blend / .glb / .obj">+</button>
           <button id="remove-object" class="sidebar-action-btn" title="Remove Object">-</button>
         </div>
       </div>
+      <div id="object-search-container" class="section-search-container">
+        <input type="text" id="object-search-input" placeholder="Search 3D objects...">
+      </div>
       <ul id="objects-list" style="max-height: 200px; overflow-y: auto;">
         <li>Loading objects...</li>
       </ul>
+      <button class="section-resize-handle" type="button" aria-label="Resize 3D Objects section" title="Drag to resize 3D Objects"></button>
     </div>
 
   </div>

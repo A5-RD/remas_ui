@@ -140,26 +140,32 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileExplorer = document.getElementById("file-explorer");
   const fileExplorerHeader = document.getElementById("file-explorer-header");
   const fileList = document.getElementById("file-list");
-  // For resizing file explorer
-  fileExplorer.addEventListener("mousedown", e => {
-    if (e.offsetY > fileExplorer.offsetHeight - 8) { // Detect drag on the bottom edge
-      e.preventDefault();
-      document.addEventListener("mousemove", resizeFileExplorer);
-      document.addEventListener("mouseup", stopResizeFileExplorer);
-    }
-  });
 
-  function resizeFileExplorer(e) {
-    const newHeight = e.clientY - fileExplorer.getBoundingClientRect().top;
-    if (newHeight >= 30 && newHeight <= window.innerHeight - 100) { // Minimum and maximum height
-      fileExplorer.style.height = newHeight + "px";
-    }
+  function enableSectionResize(section) {
+    const handle = section.querySelector('.section-resize-handle');
+    if (!handle) return;
+
+    const resizeSection = (event) => {
+      const newHeight = event.clientY - section.getBoundingClientRect().top;
+      if (newHeight >= 80 && newHeight <= window.innerHeight - 100) {
+        section.style.height = `${newHeight}px`;
+      }
+    };
+
+    const stopResizeSection = () => {
+      document.removeEventListener('mousemove', resizeSection);
+      document.removeEventListener('mouseup', stopResizeSection);
+    };
+
+    handle.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      document.addEventListener('mousemove', resizeSection);
+      document.addEventListener('mouseup', stopResizeSection);
+    });
   }
 
-  function stopResizeFileExplorer() {
-    document.removeEventListener("mousemove", resizeFileExplorer);
-    document.removeEventListener("mouseup", stopResizeFileExplorer);
-  }
+  enableSectionResize(fileExplorer);
+  enableSectionResize(document.getElementById('objects-section'));
 
   const selectedFiles = new Set();
 
@@ -1042,6 +1048,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const findButton = document.getElementById("find");
   const searchContainer = document.getElementById("searchContainer");
   const searchInput = document.getElementById("searchInput");
+  const findObjectsButton = document.getElementById("find-objects");
+  const objectSearchContainer = document.getElementById("object-search-container");
+  const objectSearchInput = document.getElementById("object-search-input");
 
 
   findButton.addEventListener("click", () => {
@@ -1051,6 +1060,16 @@ document.addEventListener("DOMContentLoaded", () => {
       searchInput.focus();
     } else {
       clearSearch();
+    }
+  });
+
+  findObjectsButton.addEventListener("click", () => {
+    const isVisible = objectSearchContainer.style.display === "block";
+    objectSearchContainer.style.display = isVisible ? "none" : "block";
+    if (!isVisible) {
+      objectSearchInput.focus();
+    } else {
+      clearObjectSearch();
     }
   });
 
@@ -1090,6 +1109,23 @@ document.addEventListener("DOMContentLoaded", () => {
     items.forEach(item => {
       item.style.display = "list-item";
       item.style.backgroundColor = "";
+    });
+  }
+
+  objectSearchInput.addEventListener("input", () => {
+    const query = objectSearchInput.value.trim().toLowerCase();
+    document.querySelectorAll('#objects-list li').forEach(item => {
+      const name = item.dataset.filename || item.textContent;
+      item.style.display = query === "" || name.toLowerCase().includes(query)
+        ? "list-item"
+        : "none";
+    });
+  });
+
+  function clearObjectSearch() {
+    objectSearchInput.value = "";
+    document.querySelectorAll('#objects-list li').forEach(item => {
+      item.style.display = "list-item";
     });
   }
 
