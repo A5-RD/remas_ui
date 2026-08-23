@@ -267,6 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("file-input");
   const uploadBlendButton = document.getElementById("upload-blend");
   const blendFileInput = document.getElementById("blend-file-input");
+  const loadSelectedObjectButton = document.getElementById("load-selected-object");
 
 
   async function getUniqueFilename(user) {
@@ -629,6 +630,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (selectedObjectLi !== li) setSelectedObject(li);
   }
 
+  function loadSelectedObject() {
+    if (!selectedObjectLi) {
+      alert('Select a 3D object first.');
+      return;
+    }
+
+    console.info('[objects] loading selected object:', selectedObjectLi.dataset.filename);
+    selectedObjectLi.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    }));
+  }
+
+  loadSelectedObjectButton?.addEventListener('click', loadSelectedObject);
+
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'sigma-ready') {
       sigmaReady = true;
@@ -868,6 +885,78 @@ document.addEventListener("DOMContentLoaded", () => {
     objectsList.appendChild(li);
   }
 
+  function upsertUploadStatus(filename, text, color = '#fff') {
+    const objectsList = document.getElementById('objects-list');
+    const emptyMsg = objectsList.querySelector('.empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+
+    let li = [...objectsList.querySelectorAll('li')]
+      .find(item => item.dataset.uploadStatusFilename === filename);
+
+    if (!li) {
+      li = document.createElement('li');
+      li.classList.add('file-item');
+      li.dataset.uploadStatusFilename = filename;
+      objectsList.appendChild(li);
+    }
+
+    li.textContent = `[upload] ${filename}: ${text}`;
+    li.style.color = color;
+    return li;
+  }
+
+  async function processObjectUploadFile(file, userEmail) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const statusItem = upsertUploadStatus(file.name, 'queued', '#9ab4c4');
+
+    if (!ext) {
+      upsertUploadStatus(file.name, 'failed (missing extension)', '#ff6666');
+      return { filename: file.name, result: 'failed' };
+    }
+
+    if (!NEEDS_CONVERSION_EXTS.has(ext) && !RENDERABLE_EXTS.has(ext)) {
+      upsertUploadStatus(file.name, `skipped (unsupported .${ext})`, '#f2b74a');
+      return { filename: file.name, result: 'skipped' };
+    }
+
+    try {
+      upsertUploadStatus(file.name, 'uploading…', '#00d0ff');
+
+      if (NEEDS_CONVERSION_EXTS.has(ext)) {
+        try {
+          const header = formatHeader(new Uint8Array(await file.slice(0, 32).arrayBuffer()));
+          console.log('[blend-upload] selected file signature:', { filename: file.name, header });
+          if (!header.ascii.startsWith('BLENDER')) {
+            const proceed = confirm(`${file.name} is ${header.signature}.\nHeader: ${header.hex}\n\nA valid .blend begins with BLENDER. Upload anyway?`);
+            if (!proceed) {
+              upsertUploadStatus(file.name, 'skipped by user (header check)', '#f2b74a');
+              return { filename: file.name, result: 'skipped' };
+            }
+          }
+        } catch (hdrErr) {
+          console.warn('[blend-upload] could not inspect file header', hdrErr);
+        }
+      }
+
+      const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
+
+      if (NEEDS_CONVERSION_EXTS.has(ext)) {
+        addBlendToList(filename);
+        upsertUploadStatus(filename, 'uploaded ✓ (select and click load)', '#7CFC00');
+      } else {
+        addObjectToList(filename, downloadURL);
+        upsertUploadStatus(filename, 'uploaded ✓', '#7CFC00');
+      }
+
+      return { filename, result: 'uploaded' };
+    } catch (err) {
+      console.error('[object-upload] upload failed for', file.name, err);
+      statusItem.textContent = `[upload] ${file.name}: failed (${err?.message || err})`;
+      statusItem.style.color = '#ff6666';
+      return { filename: file.name, result: 'failed', error: err };
+    }
+  }
+
   if (uploadBlendButton && blendFileInput) {
     uploadBlendButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -890,10 +979,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     blendFileInput.addEventListener("change", async () => {
-      const file = blendFileInput.files && blendFileInput.files[0];
-      if (!file) return;
+      const files = Array.from(blendFileInput.files || []);
+      if (!files.length) return;
 
-      const ext = file.name.split('.').pop().toLowerCase();
       const userEmail = auth.currentUser?.email;
       if (!userEmail) {
         alert("User not authenticated");
@@ -901,67 +989,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      uploadBlendButton.disabled = true;
+      const previousLabel = uploadBlendButton.textContent;
+      uploadBlendButton.textContent = '…';
+
+      let uploaded = 0;
+      let failed = 0;
+      let skipped = 0;
+
       try {
-        try {
-          const header = formatHeader(new Uint8Array(await file.slice(0, 32).arrayBuffer()));
-          console.log('[blend-upload] selected file signature:', { filename: file.name, header });
-          if (!header.ascii.startsWith('BLENDER')) {
-            const proceed = confirm(`${file.name} is ${header.signature}.\nHeader: ${header.hex}\n\nA valid .blend begins with BLENDER. Upload anyway?`);
-            if (!proceed) { blendFileInput.value = ""; return; }
-          }
-        } catch (hdrErr) {
-          console.warn('[blend-upload] could not inspect file header', hdrErr);
-        }
-
-        if (NEEDS_CONVERSION_EXTS.has(ext)) {
-          // Upload .blend to Firebase Storage first
-          await uploadObjectFile(userEmail, file);
-
-          // Show a status item while converting
-          const objectsList = document.getElementById('objects-list');
-          const emptyMsg = objectsList.querySelector('.empty-msg');
-          if (emptyMsg) emptyMsg.remove();
-          const converting = document.createElement('li');
-          converting.textContent = `Converting ${file.name}…`;
-          converting.style.color = '#00d0ff';
-          converting.classList.add('file-item');
-          objectsList.appendChild(converting);
-
-          converting.remove();
-          // Show object selection modal before converting
-          addBlendToList(file.name);
-          // Open modal immediately for the newly uploaded blend so user can select objects
-          openBlendModal(file.name, async (selectedObjects) => {
-            try {
-              // find the newly added list item (if needed for status)
-              const li = document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`);
-              if (li) { li.textContent = `Converting ${file.name}…`; li.style.color = '#00d0ff'; }
-              const { url, filename: glbName } = await convertBlendOnBackend(file.name, selectedObjects);
-              if (li) { li.textContent = file.name + ' ⚙'; li.style.color = ''; }
-              addObjectToList(glbName, url);
-              sigmaBtn.click();
-              loadObjectInSigma(url, glbName);
-            } catch (err) {
-              console.error(err);
-              const li = document.getElementById('objects-list').querySelector(`[data-filename="${file.name}"]`);
-              if (li) { li.textContent = file.name + ' ⚙ (failed)'; li.style.color = '#ff6666'; }
-            }
-          });
-
-        } else if (RENDERABLE_EXTS.has(ext)) {
-          const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
-          addObjectToList(filename, downloadURL);
-          sigmaBtn.click();
-          loadObjectInSigma(downloadURL, filename);
-
-        } else {
-          alert(`Unsupported file type: .${ext}\nSupported: .blend, .glb, .gltf, .obj`);
+        for (const file of files) {
+          const result = await processObjectUploadFile(file, userEmail);
+          if (result.result === 'uploaded') uploaded += 1;
+          else if (result.result === 'failed') failed += 1;
+          else skipped += 1;
         }
       } catch (err) {
         console.error(err);
-        alert(`Upload failed: ${err.message}`);
+        alert(`Upload queue failed: ${err.message}`);
       } finally {
+        uploadBlendButton.disabled = false;
+        uploadBlendButton.textContent = previousLabel;
         blendFileInput.value = "";
+        alert(`Upload complete. Uploaded: ${uploaded}, Failed: ${failed}, Skipped: ${skipped}`);
       }
     });
   }
