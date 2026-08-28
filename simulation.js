@@ -491,15 +491,10 @@ document.addEventListener("DOMContentLoaded", () => {
   async function isBlendHeaderValid(filename) {
     const userEmail = auth.currentUser?.email;
     if (!userEmail) return false;
-    try {
-      const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
-      const bytes = await getBytes(objectRef);
-      const hdr = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 16));
-      return hdr.includes('BLENDER');
-    } catch (err) {
-      console.error('[blend] header check failed', err);
-      return false;
-    }
+    const objectRef = ref(storage, `users/${userEmail}/objects/${filename}`);
+    const bytes = await getBytes(objectRef);
+    const hdr = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 16));
+    return hdr.includes('BLENDER');
   }
 
   async function downloadStoredFile(filename) {
@@ -530,7 +525,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     } catch (err) {
-      console.warn('[blend] header validation error', err);
+      console.warn('[blend] header validation error (network/storage issue, skipping check)', err);
+      alert(`Could not verify ${filename} due to a network/storage error (${err?.code || err?.message || err}). Proceeding without validation — check your connection if loading fails.`);
     }
     const modal = document.getElementById('blend-modal');
     const title = document.getElementById('blend-modal-title');
