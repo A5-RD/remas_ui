@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function stopResize() {
     iframeOverlay.style.display = "none";
 
+    
     // Clean up listeners
     iframeOverlay.removeEventListener("mousemove", resizePanel);
     iframeOverlay.removeEventListener("mouseup", stopResize);
@@ -487,6 +488,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return data; // { url, filename, cached, trace_id }
   }
 
+  async function resolveConvertedModelUrl(convertResponse) {
+    if (convertResponse?.url) return convertResponse.url;
+
+    const userEmail = auth.currentUser?.email;
+    const storagePath = convertResponse?.storage_path
+      || (userEmail && convertResponse?.filename ? `users/${userEmail}/objects/${convertResponse.filename}` : null);
+
+    if (!storagePath) {
+      throw new Error(`Conversion response missing both signed URL and storage path for ${convertResponse?.filename || 'model'}`);
+    }
+
+    const objectRef = ref(storage, storagePath);
+    const fallbackUrl = await getDownloadURL(objectRef);
+    console.info('[blend] resolved fallback Firebase download URL via storage path:', storagePath);
+    return fallbackUrl;
+  }
+
   // Modal logic
   async function isBlendHeaderValid(filename) {
     const userEmail = auth.currentUser?.email;
@@ -805,7 +823,9 @@ document.addEventListener("DOMContentLoaded", () => {
               li.textContent = `Converting ${r.name}…`;
               li.style.color = '#00d0ff';
               try {
-                const { url, filename: glbName } = await convertBlendOnBackend(r.name, selectedObjects);
+                const convertResponse = await convertBlendOnBackend(r.name, selectedObjects);
+                const glbName = convertResponse.filename;
+                const url = await resolveConvertedModelUrl(convertResponse);
                 li.textContent = r.name + ' ⚙';
                 li.style.color = '';
                 // append converted glb to list
@@ -865,7 +885,9 @@ document.addEventListener("DOMContentLoaded", () => {
         li.textContent = `Converting ${filename}…`;
         li.style.color = '#00d0ff';
         try {
-          const { url, filename: glbName } = await convertBlendOnBackend(filename, selectedObjects);
+          const convertResponse = await convertBlendOnBackend(filename, selectedObjects);
+          const glbName = convertResponse.filename;
+          const url = await resolveConvertedModelUrl(convertResponse);
           li.textContent = filename + ' ⚙';
           li.style.color = '';
           addObjectToList(glbName, url);
