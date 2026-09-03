@@ -233,6 +233,8 @@ body, html {
   background: repeating-linear-gradient(135deg, transparent 0 3px, #777 3px 4px);
   cursor: ns-resize;
   opacity: 0.75;
+  touch-action: none;
+  z-index: 2;
 }
 
 .section-resize-handle:hover {
@@ -428,6 +430,20 @@ body, html {
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.3s;
+  position: relative;
+}
+
+#objects-list li.blend-item[data-converted="1"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00d0ff;
+  box-shadow: 0 0 6px rgba(0, 208, 255, 0.8);
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 #objects-list li:hover {

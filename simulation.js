@@ -1,6 +1,6 @@
 import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, getMetadata, uploadString, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, getMetadata, uploadString, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
@@ -80,19 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const rightPanel = document.getElementById("right-panel");
   const iframeOverlay = document.getElementById("iframe-overlay");
 
-  rightPanel.addEventListener("mousedown", e => {
-    if (e.offsetX < 8) {
-      e.preventDefault();
-
-      // Show overlay to block iframe interference
-      iframeOverlay.style.display = "block";
-
-      // Attach listeners to overlay
-      iframeOverlay.addEventListener("mousemove", resizePanel);
-      iframeOverlay.addEventListener("mouseup", stopResize);
-    }
-  });
-
   function resizePanel(e) {
     let newWidth = window.innerWidth - e.clientX;
 
@@ -107,35 +94,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function stopResize() {
     iframeOverlay.style.display = "none";
-
-    
-    // Clean up listeners
-    iframeOverlay.removeEventListener("mousemove", resizePanel);
-    iframeOverlay.removeEventListener("mouseup", stopResize);
+    document.removeEventListener("mousemove", resizePanel);
+    document.removeEventListener("mouseup", stopResize);
   }
+
+  rightPanel.addEventListener("mousedown", (event) => {
+    const panelLeftEdge = rightPanel.getBoundingClientRect().left;
+    if (event.target !== rightPanel || event.clientX > panelLeftEdge + 8) return;
+
+    event.preventDefault();
+    iframeOverlay.style.display = "block";
+    document.addEventListener("mousemove", resizePanel);
+    document.addEventListener("mouseup", stopResize);
+  });
 
 
   const psiBtn = document.getElementById("psi-btn");
   const sigmaBtn = document.getElementById("sigma-btn");
   const psiContainer = document.getElementById("psi-container");
   const sigmaContainer = document.getElementById("sigma-container");
-
-  const overlay = document.getElementById("iframe-overlay");
-
-  rightPanel.addEventListener("mousedown", e => {
-    if (e.offsetX < 8) {
-      e.preventDefault();
-      overlay.style.display = "block"; // block iframe during resize
-      document.addEventListener("mousemove", resizePanel);
-      document.addEventListener("mouseup", stopResize);
-    }
-  });
-
-  function stopResize() {
-    overlay.style.display = "none"; // restore iframe access
-    document.removeEventListener("mousemove", resizePanel);
-    document.removeEventListener("mouseup", stopResize);
-  }
 
   // File Explorer
   const fileExplorer = document.getElementById("file-explorer");
@@ -154,14 +131,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const stopResizeSection = () => {
-      document.removeEventListener('mousemove', resizeSection);
-      document.removeEventListener('mouseup', stopResizeSection);
+      document.removeEventListener('pointermove', resizeSection);
+      document.removeEventListener('pointerup', stopResizeSection);
+      document.removeEventListener('pointercancel', stopResizeSection);
     };
 
-    handle.addEventListener('mousedown', (event) => {
+    handle.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      document.addEventListener('mousemove', resizeSection);
-      document.addEventListener('mouseup', stopResizeSection);
+      event.stopPropagation();
+      handle.setPointerCapture(event.pointerId);
+      document.addEventListener('pointermove', resizeSection);
+      document.addEventListener('pointerup', stopResizeSection);
+      document.addEventListener('pointercancel', stopResizeSection);
     });
   }
 
@@ -374,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return header;
   }
 
-  async function uploadObjectFile(userEmail, file) {
+  async function uploadObjectFile(userEmail, file, { onProgress, needsDownloadUrl = true } = {}) {
     try {
       const localHeader = formatHeader(new Uint8Array(await file.slice(0, 32).arrayBuffer()));
       console.log('[upload] local file verification:', {
@@ -387,17 +368,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const objectRef = ref(storage, `users/${userEmail}/objects/${file.name}`);
       const metadata = { contentType: file.type || 'application/octet-stream' };
-      const snapshot = await uploadBytes(objectRef, file, metadata);
-      const storedHeader = await readStoredObjectHeader(snapshot.ref, file.name);
-      if (storedHeader.hex !== localHeader.hex) {
-        console.error('[upload] HEADER MISMATCH: local and stored bytes differ', {
-          filename: file.name,
-          localHeader,
-          storedHeader,
+      const uploadTask = uploadBytesResumable(objectRef, file, metadata);
+      const snapshot = await new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (taskSnapshot) => {
+            const percent = taskSnapshot.totalBytes
+              ? Math.round((taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100)
+              : 0;
+            console.info('[upload] progress:', file.name, `${percent}%`, taskSnapshot.bytesTransferred, '/', taskSnapshot.totalBytes);
+            onProgress?.(percent, taskSnapshot.bytesTransferred, taskSnapshot.totalBytes);
+          },
+          reject,
+          () => resolve(uploadTask.snapshot),
+        );
+      });
+
+      // Header verification is diagnostic only. Do not block a completed upload on a large-file read.
+      void readStoredObjectHeader(snapshot.ref, file.name)
+        .then((storedHeader) => {
+          if (storedHeader.hex !== localHeader.hex) {
+            console.error('[upload] HEADER MISMATCH: local and stored bytes differ', {
+              filename: file.name,
+              localHeader,
+              storedHeader,
+            });
+          }
+        })
+        .catch((verificationError) => {
+          console.warn('[upload] stored-header verification failed after successful upload:', file.name, verificationError);
         });
-      }
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return { downloadURL, filename: file.name };
+
+      const downloadURL = needsDownloadUrl ? await getDownloadURL(snapshot.ref) : null;
+      return { downloadURL, filename: file.name, storagePath: snapshot.ref.fullPath };
     } catch (err) {
       console.error('[upload] uploadObjectFile failed for', file.name, err);
       throw err;
@@ -714,7 +716,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function blendHasConvertedOutput(blendFilename, objectNames) {
+    const stem = blendFilename.replace(/\.(blend|blend1)$/i, '').toLowerCase();
+    return objectNames.some((name) => {
+      const lower = name.toLowerCase();
+      return lower === `${stem}.glb` || (lower.startsWith(`${stem}_`) && lower.endsWith('.glb'));
+    });
+  }
+
   function addObjectToList(filename, downloadURL) {
+    // Keep sidebar blend-focused: do not show renderable derivative files as list rows.
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    if (RENDERABLE_EXTS.has(ext)) return null;
+
     const objectsList = document.getElementById('objects-list');
     const emptyMsg = objectsList.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
@@ -798,7 +812,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return ALL_OBJECT_EXTS.has(ext);
       });
 
-      // Clear and prepare fragment to batch DOM updates
       objectsList.innerHTML = '';
 
       if (items.length === 0) {
@@ -806,96 +819,60 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Resolve download URLs with limited concurrency, then create DOM nodes in a fragment
-      const results = await pMap(items, async (itemRef) => {
-        const ext = itemRef.name.split('.').pop().toLowerCase();
-        if (RENDERABLE_EXTS.has(ext)) {
-          try {
-            const url = await getDownloadURL(itemRef);
-            return { kind: 'renderable', name: itemRef.name, url };
-          } catch (err) {
-            console.warn('[objects] failed to get URL for', itemRef.name, err);
-            return { kind: 'renderable', name: itemRef.name, url: null, error: err };
-          }
-        } else {
-          return { kind: 'blend', name: itemRef.name };
-        }
-      }, /*concurrency=*/8);
+      const objectNames = items.map(item => item.name);
+      const blendItems = items.filter(item => {
+        const ext = item.name.split('.').pop().toLowerCase();
+        return ext === 'blend' || ext === 'blend1';
+      });
 
-      const frag = document.createDocumentFragment();
-      for (const r of results) {
-        if (r.kind === 'renderable') {
-          const li = document.createElement('li');
-          li.textContent = r.name;
-          li.dataset.filename = r.name;
-          li.dataset.url = r.url || '';
-          li.classList.add('file-item');
-          li.title = 'Click to select and view in Sigma';
-          li.addEventListener('click', () => {
-            preserveObjectSelection(li);
-            const url = li.dataset.url;
-            if (!url) return;
-            sigmaBtn.click();
-            loadObjectInSigma(url, r.name);
-          });
-          frag.appendChild(li);
-        } else {
-          const li = document.createElement('li');
-          li.textContent = r.name + ' ⚙';
-          li.dataset.filename = r.name;
-          li.classList.add('file-item');
-          li.title = 'Click to select and choose objects to convert';
-          li.addEventListener('click', () => {
-            preserveObjectSelection(li);
-            openBlendModal(r.name, async (selectedObjects) => {
-              li.textContent = `Converting ${r.name}…`;
-              li.style.color = '#00d0ff';
-              try {
-                const convertResponse = await convertBlendOnBackend(r.name, selectedObjects);
-                const glbName = convertResponse.filename;
-                const url = await resolveConvertedModelUrl(convertResponse);
-                li.textContent = r.name + ' ⚙';
-                li.style.color = '';
-                addObjectToList(glbName, url);
-                sigmaBtn.click();
-                loadObjectInSigma(url, glbName);
-              } catch (err) {
-                li.textContent = r.name + ' ⚙ (failed)';
-                li.style.color = '#ff6666';
-                console.error(err);
-              }
-            });
-          });
-          frag.appendChild(li);
-        }
+      if (!blendItems.length) {
+        objectsList.innerHTML = '<li class="empty-msg">No .blend files uploaded.</li>';
+        return;
       }
 
-      objectsList.appendChild(frag);
+      for (const blendItem of blendItems) {
+        const hasConverted = blendHasConvertedOutput(blendItem.name, objectNames);
+        addBlendToList(blendItem.name, { hasConverted });
+      }
     } catch (err) {
       console.error('[objects] Error loading objects:', err);
       objectsList.innerHTML = `<li class="empty-msg">Error: ${err.code || err.message}</li>`;
     }
   }
 
-  function addBlendToList(filename) {
+  function addBlendToList(filename, { hasConverted = false } = {}) {
     const objectsList = document.getElementById('objects-list');
     const emptyMsg = objectsList.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
 
     const existing = [...objectsList.querySelectorAll('li')].find(li => li.dataset.filename === filename);
-    if (existing) return;
+    if (existing) {
+      existing.dataset.converted = hasConverted ? '1' : existing.dataset.converted || '0';
+      existing.title = hasConverted
+        ? 'Already loaded. Conversion not necessary.'
+        : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+      return existing;
+    }
 
     const li = document.createElement('li');
     li.textContent = filename + ' ⚙';
     li.dataset.filename = filename;
+    li.dataset.converted = hasConverted ? '1' : '0';
     li.classList.add('file-item');
-    li.title = 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+    li.classList.add('blend-item');
+    li.title = hasConverted
+      ? 'Already loaded. Conversion not necessary.'
+      : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
       preserveObjectSelection(li);
+      if (li.dataset.converted === '1') {
+        alert(`${filename} has already been converted. Loading again is not necessary.`);
+        return;
+      }
       openBlendModal(filename, async (selectedObjects) => {
         li.textContent = `Converting ${filename}…`;
         li.style.color = '#00d0ff';
@@ -905,7 +882,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const url = await resolveConvertedModelUrl(convertResponse);
           li.textContent = filename + ' ⚙';
           li.style.color = '';
-          addObjectToList(glbName, url);
+          li.dataset.converted = '1';
+          li.title = 'Already loaded. Conversion not necessary.';
           sigmaBtn.click();
           loadObjectInSigma(url, glbName);
         } catch (err) {
@@ -953,7 +931,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      upsertUploadStatus(file.name, 'uploading…', '#00d0ff');
+      upsertUploadStatus(file.name, `uploading… (0%, ${Math.round(file.size / 1024 / 1024 * 10) / 10} MB)`, '#00d0ff');
 
       if (NEEDS_CONVERSION_EXTS.has(ext)) {
         try {
@@ -971,14 +949,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      const { downloadURL, filename } = await uploadObjectFile(userEmail, file);
+      const { downloadURL, filename } = await uploadObjectFile(userEmail, file, {
+        needsDownloadUrl: !NEEDS_CONVERSION_EXTS.has(ext),
+        onProgress: (percent, bytesTransferred, totalBytes) => {
+          const uploadedMb = (bytesTransferred / 1024 / 1024).toFixed(1);
+          const totalMb = (totalBytes / 1024 / 1024).toFixed(1);
+          upsertUploadStatus(file.name, `uploading… (${percent}%, ${uploadedMb}/${totalMb} MB)`, '#00d0ff');
+        },
+      });
 
       if (NEEDS_CONVERSION_EXTS.has(ext)) {
         addBlendToList(filename);
         upsertUploadStatus(filename, 'uploaded ✓ (select and click load)', '#7CFC00');
       } else {
-        addObjectToList(filename, downloadURL);
-        upsertUploadStatus(filename, 'uploaded ✓', '#7CFC00');
+        upsertUploadStatus(filename, 'uploaded ✓ (hidden from list; only .blend rows shown)', '#7CFC00');
+        sigmaBtn.click();
+        loadObjectInSigma(downloadURL, filename);
       }
 
       return { filename, result: 'uploaded' };
