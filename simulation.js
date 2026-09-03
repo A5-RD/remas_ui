@@ -623,6 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Queue for models waiting until sigma iframe is ready
   let pendingSigmaModel = null;
   let sigmaReady = false;
+  let lastSigmaRequestId = 0;
 
   // currently selected object list item (for deletion)
   let selectedObjectLi = null;
@@ -664,25 +665,52 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.data?.type === 'sigma-ready') {
       sigmaReady = true;
       if (pendingSigmaModel) {
-        const { url, filename } = pendingSigmaModel;
+        const { url, filename, requestId } = pendingSigmaModel;
         pendingSigmaModel = null;
-        _sendToSigma(url, filename);
+        _sendToSigma(url, filename, requestId);
+      }
+      return;
+    }
+
+    if (event.data?.type === 'sigma-load-ack') {
+      sigmaReady = true;
+      console.info('[sigma] load request acknowledged:', event.data);
+      return;
+    }
+
+    if (event.data?.type === 'sigma-status') {
+      if (event.data.level === 'error') {
+        console.error('[sigma]', event.data.message, event.data.detail || '');
+      } else {
+        console.info('[sigma]', event.data.message, event.data.detail || '');
       }
     }
   });
 
-  function _sendToSigma(url, filename) {
+  const sigmaIframe = document.getElementById('sigma-iframe');
+  sigmaIframe?.addEventListener('load', () => {
+    sigmaReady = true;
+    if (pendingSigmaModel) {
+      const { url, filename, requestId } = pendingSigmaModel;
+      pendingSigmaModel = null;
+      _sendToSigma(url, filename, requestId);
+    }
+  });
+
+  function _sendToSigma(url, filename, requestId = 0) {
     const sigmaIframe = document.getElementById('sigma-iframe');
     if (sigmaIframe?.contentWindow) {
-      sigmaIframe.contentWindow.postMessage({ type: 'load-model', url, filename }, '*');
+      sigmaIframe.contentWindow.postMessage({ type: 'load-model', url, filename, requestId }, '*');
+      return true;
     }
+    return false;
   }
 
   function loadObjectInSigma(downloadURL, filename) {
-    if (sigmaReady) {
-      _sendToSigma(downloadURL, filename);
-    } else {
-      pendingSigmaModel = { url: downloadURL, filename };
+    const requestId = ++lastSigmaRequestId;
+    const sent = _sendToSigma(downloadURL, filename, requestId);
+    if (!sent) {
+      pendingSigmaModel = { url: downloadURL, filename, requestId };
     }
   }
 
@@ -828,20 +856,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const url = await resolveConvertedModelUrl(convertResponse);
                 li.textContent = r.name + ' ⚙';
                 li.style.color = '';
-                // append converted glb to list
-                const newLi = document.createElement('li');
-                newLi.textContent = glbName;
-                newLi.dataset.filename = glbName;
-                newLi.dataset.url = url || '';
-                newLi.classList.add('file-item');
-                newLi.title = 'Click to select and view in Sigma';
-                newLi.addEventListener('click', () => {
-                  preserveObjectSelection(newLi);
-                  if (!newLi.dataset.url) return;
-                  sigmaBtn.click();
-                  loadObjectInSigma(newLi.dataset.url, glbName);
-                });
-                frag.appendChild(newLi);
+                addObjectToList(glbName, url);
                 sigmaBtn.click();
                 loadObjectInSigma(url, glbName);
               } catch (err) {

@@ -222,6 +222,7 @@
         dropHint.style.display = 'none';
         loadingOverlay.style.display = 'none';
         setStatus(`Loaded: ${filename}`);
+        window.parent.postMessage({ type: 'sigma-status', level: 'info', message: `Loaded ${filename}` }, '*');
 
         // Frame camera on new model
         const box = new THREE.Box3().setFromObject(object);
@@ -237,6 +238,12 @@
         console.error('Model load error:', err);
         loadingOverlay.style.display = 'none';
         setStatus(`Failed to load: ${filename}`);
+        window.parent.postMessage({
+          type: 'sigma-status',
+          level: 'error',
+          message: `Failed to load ${filename}`,
+          detail: err?.message || String(err),
+        }, '*');
       };
 
       if (ext === 'glb' || ext === 'gltf') {
@@ -246,6 +253,11 @@
       } else {
         loadingOverlay.style.display = 'none';
         setStatus(`.${ext} not supported in browser. Upload .glb, .gltf, or .obj`);
+        window.parent.postMessage({
+          type: 'sigma-status',
+          level: 'error',
+          message: `Unsupported extension .${ext}`,
+        }, '*');
       }
     }
 
@@ -255,7 +267,12 @@
     // Receive model from parent (simulation.js)
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'load-model') {
-        const { url, filename } = event.data;
+        const { url, filename, requestId } = event.data;
+        window.parent.postMessage({
+          type: 'sigma-load-ack',
+          requestId: requestId ?? null,
+          filename: filename ?? null,
+        }, '*');
         if (url && filename) loadModelFromURL(url, filename);
       }
     });
