@@ -716,12 +716,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function blendHasConvertedOutput(blendFilename, objectNames) {
+  function findConvertedOutput(blendFilename, objectNames) {
     const stem = blendFilename.replace(/\.(blend|blend1)$/i, '').toLowerCase();
-    return objectNames.some((name) => {
+    const matches = objectNames.filter((name) => {
       const lower = name.toLowerCase();
       return lower === `${stem}.glb` || (lower.startsWith(`${stem}_`) && lower.endsWith('.glb'));
     });
+    return matches.find(name => name.toLowerCase() === `${stem}.glb`) || matches.sort()[0] || null;
+  }
+
+  async function loadCachedBlendOutput(li) {
+    const blendFilename = li.dataset.filename;
+    const glbFilename = li.dataset.convertedFilename;
+    const userEmail = auth.currentUser?.email;
+    if (!glbFilename || !userEmail) {
+      throw new Error(`No cached GLB is available for ${blendFilename}`);
+    }
+
+    li.dataset.loading = '1';
+    li.style.color = '#00d0ff';
+    li.title = `Loading ${glbFilename}…`;
+    try {
+      const glbRef = ref(storage, `users/${userEmail}/objects/${glbFilename}`);
+      const url = await getDownloadURL(glbRef);
+      console.info('[objects] loading cached conversion:', { blendFilename, glbFilename });
+      sigmaBtn.click();
+      loadObjectInSigma(url, glbFilename);
+      li.title = `Loaded conversion: ${glbFilename}`;
+    } finally {
+      li.dataset.loading = '0';
+      li.style.color = '';
+    }
   }
 
   function addObjectToList(filename, downloadURL) {
@@ -831,8 +856,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       for (const blendItem of blendItems) {
-        const hasConverted = blendHasConvertedOutput(blendItem.name, objectNames);
-        addBlendToList(blendItem.name, { hasConverted });
+        const convertedFilename = findConvertedOutput(blendItem.name, objectNames);
+        addBlendToList(blendItem.name, { convertedFilename });
       }
     } catch (err) {
       console.error('[objects] Error loading objects:', err);
@@ -840,7 +865,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function addBlendToList(filename, { hasConverted = false } = {}) {
+  function addBlendToList(filename, { convertedFilename = null } = {}) {
+    const hasConverted = Boolean(convertedFilename);
     const objectsList = document.getElementById('objects-list');
     const emptyMsg = objectsList.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
@@ -848,8 +874,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const existing = [...objectsList.querySelectorAll('li')].find(li => li.dataset.filename === filename);
     if (existing) {
       existing.dataset.converted = hasConverted ? '1' : existing.dataset.converted || '0';
+      if (convertedFilename) existing.dataset.convertedFilename = convertedFilename;
       existing.title = hasConverted
-        ? 'Already loaded. Conversion not necessary.'
+        ? `Click to load cached conversion: ${convertedFilename}`
         : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
       return existing;
     }
@@ -858,19 +885,28 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent = filename + ' ⚙';
     li.dataset.filename = filename;
     li.dataset.converted = hasConverted ? '1' : '0';
+    li.dataset.convertedFilename = convertedFilename || '';
+    li.dataset.loading = '0';
     li.classList.add('file-item');
     li.classList.add('blend-item');
     li.title = hasConverted
-      ? 'Already loaded. Conversion not necessary.'
+      ? `Click to load cached conversion: ${convertedFilename}`
       : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
-    li.addEventListener('click', (e) => {
+    li.addEventListener('click', async (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
       preserveObjectSelection(li);
       if (li.dataset.converted === '1') {
-        alert(`${filename} has already been converted. Loading again is not necessary.`);
+        if (li.dataset.loading === '1') return;
+        try {
+          await loadCachedBlendOutput(li);
+        } catch (err) {
+          console.error('[objects] failed to load cached conversion:', err);
+          li.style.color = '#ff6666';
+          li.title = `Could not load cached conversion: ${err?.message || err}`;
+        }
         return;
       }
       openBlendModal(filename, async (selectedObjects) => {
@@ -883,7 +919,8 @@ document.addEventListener("DOMContentLoaded", () => {
           li.textContent = filename + ' ⚙';
           li.style.color = '';
           li.dataset.converted = '1';
-          li.title = 'Already loaded. Conversion not necessary.';
+          li.dataset.convertedFilename = glbName;
+          li.title = `Click to load cached conversion: ${glbName}`;
           sigmaBtn.click();
           loadObjectInSigma(url, glbName);
         } catch (err) {
