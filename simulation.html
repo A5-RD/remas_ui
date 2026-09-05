@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css?v=20260902c" />
+  <link rel="stylesheet" href="styles.css?v=20260905a" />
   <!-- Firebase SDKs -->
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20260904a"></script>
+  <script type="module" src="simulation.js?v=20260905a"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -126,6 +126,43 @@
         <button id="blend-select-all">Select All</button>
         <button id="blend-deselect-all">Deselect All</button>
         <button id="blend-load-btn">Load Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="simulation-run-modal" style="display:none;">
+    <div id="simulation-run-modal-inner">
+      <div id="simulation-run-modal-header">
+        <span>Run Ava Simulation</span>
+        <button id="simulation-run-modal-close" class="close-btn">×</button>
+      </div>
+      <div id="simulation-run-modal-body">
+        <label class="simulation-field">
+          <span>Ava .blend file</span>
+          <select id="simulation-blend-select"></select>
+        </label>
+        <label class="simulation-field">
+          <span>Starting memory</span>
+          <select id="simulation-memory-select"></select>
+        </label>
+        <label class="simulation-field">
+          <span>Duration (seconds)</span>
+          <input id="simulation-duration-input" type="number" min="1" max="30" step="1" value="6">
+        </label>
+        <label class="simulation-field">
+          <span>Armature name (optional)</span>
+          <input id="simulation-armature-input" type="text" placeholder="Auto-detect first armature">
+        </label>
+        <label class="simulation-field">
+          <span>Scene prompt (optional)</span>
+          <textarea id="simulation-prompt-input" rows="3" placeholder="Ex: Ava plays the piano with focused, joyful energy."></textarea>
+        </label>
+        <div id="simulation-run-status">Choose a .blend and memory, then run the render.</div>
+        <video id="simulation-run-video" controls playsinline style="display:none;"></video>
+      </div>
+      <div id="simulation-run-modal-footer">
+        <button id="simulation-run-refresh" type="button">Refresh Lists</button>
+        <button id="simulation-run-submit" type="button">Render Clip</button>
       </div>
     </div>
   </div>

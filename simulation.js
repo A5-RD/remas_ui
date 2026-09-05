@@ -4,6 +4,8 @@ import { ref, listAll, getBytes, getMetadata, uploadString, uploadBytes, uploadB
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
+  const availableMemoryFiles = [];
+  const availableBlendFiles = [];
 
   // Hide container until authenticated
   simContainer.style.display = "none";
@@ -21,10 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const storageRef = ref(storage, `users/${email}/memories`);
     const fileList = document.getElementById("file-list");
     fileList.innerHTML = "<li>Loading files...</li>";
+    availableMemoryFiles.length = 0;
 
     listAll(storageRef)
       .then(result => {
         fileList.innerHTML = "";
+        availableMemoryFiles.push(...result.items.map((fileRef) => fileRef.name).sort((left, right) => left.localeCompare(right)));
+        refreshSimulationRunOptions();
 
         if (result.items.length === 0) {
           fileList.innerHTML = "<li>No files found.</li>";
@@ -64,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(error => {
         console.error("Error loading files:", error);
+        refreshSimulationRunOptions();
         if (error?.code === "storage/unauthorized") {
           fileList.innerHTML = "<li>Permission denied. Check Firebase Storage Rules for users/{email}/memories.</li>";
         } else {
@@ -200,17 +206,162 @@ document.addEventListener("DOMContentLoaded", () => {
   // API INTEGRATION
   const apiBase = "https://remas-api-507506689237.us-central1.run.app";
 
-  // Start Simulation
-  document.getElementById("start").addEventListener("click", async () => {
-    try {
-      const response = await fetch(`${apiBase}/start`, {
-        method: "POST"
-      });
-      if (!response.ok) throw new Error("Start failed");
-      console.log("Simulation started");
-    } catch (error) {
-      console.error("Error starting simulation:", error);
+  const simulationRunModal = document.getElementById('simulation-run-modal');
+  const simulationBlendSelect = document.getElementById('simulation-blend-select');
+  const simulationMemorySelect = document.getElementById('simulation-memory-select');
+  const simulationDurationInput = document.getElementById('simulation-duration-input');
+  const simulationArmatureInput = document.getElementById('simulation-armature-input');
+  const simulationPromptInput = document.getElementById('simulation-prompt-input');
+  const simulationRunStatus = document.getElementById('simulation-run-status');
+  const simulationRunVideo = document.getElementById('simulation-run-video');
+  const simulationRunSubmit = document.getElementById('simulation-run-submit');
+  const simulationRunRefresh = document.getElementById('simulation-run-refresh');
+  const simulationRunClose = document.getElementById('simulation-run-modal-close');
+
+  function setSimulationStatus(message, tone = 'info') {
+    simulationRunStatus.textContent = message;
+    const tones = {
+      info: { background: 'rgba(0, 208, 255, 0.08)', border: '#2b5563', color: '#a7ebff' },
+      success: { background: 'rgba(124, 252, 0, 0.08)', border: '#497c23', color: '#c5ff9b' },
+      error: { background: 'rgba(255, 80, 80, 0.08)', border: '#7a3030', color: '#ffb6b6' },
+    };
+    const palette = tones[tone] || tones.info;
+    simulationRunStatus.style.background = palette.background;
+    simulationRunStatus.style.borderColor = palette.border;
+    simulationRunStatus.style.color = palette.color;
+  }
+
+  function fillSelectOptions(selectEl, values, placeholder) {
+    selectEl.innerHTML = '';
+    if (!values.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = placeholder;
+      selectEl.appendChild(option);
+      selectEl.disabled = true;
+      return;
     }
+
+    selectEl.disabled = false;
+    values.forEach((value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = value;
+      selectEl.appendChild(option);
+    });
+  }
+
+  function getPreferredMemorySelection() {
+    if (selectedFiles.size === 1) return [...selectedFiles][0];
+    return availableMemoryFiles[0] || '';
+  }
+
+  function getPreferredBlendSelection() {
+    if (selectedObjectLi?.dataset?.filename) return selectedObjectLi.dataset.filename;
+    return availableBlendFiles[0] || '';
+  }
+
+  function refreshSimulationRunOptions() {
+    fillSelectOptions(simulationBlendSelect, availableBlendFiles, 'No .blend files available');
+    fillSelectOptions(simulationMemorySelect, availableMemoryFiles, 'No memories available');
+
+    const preferredBlend = getPreferredBlendSelection();
+    if (preferredBlend) simulationBlendSelect.value = preferredBlend;
+
+    const preferredMemory = getPreferredMemorySelection();
+    if (preferredMemory) simulationMemorySelect.value = preferredMemory;
+  }
+
+  function closeSimulationRunModal() {
+    simulationRunModal.style.display = 'none';
+  }
+
+  function openSimulationRunModal() {
+    refreshSimulationRunOptions();
+    simulationRunVideo.pause();
+    simulationRunVideo.removeAttribute('src');
+    simulationRunVideo.load();
+    simulationRunVideo.style.display = 'none';
+    setSimulationStatus('Choose a .blend and memory, then run the render.', 'info');
+    simulationRunModal.style.display = 'flex';
+  }
+
+  async function resolveStoragePathUrl(storagePath) {
+    if (!storagePath) throw new Error('Missing storage path for simulation result');
+    return getDownloadURL(ref(storage, storagePath));
+  }
+
+  async function runAvaSimulation() {
+    const blendFilename = simulationBlendSelect.value;
+    const memoryFilename = simulationMemorySelect.value || null;
+    const durationSeconds = Number(simulationDurationInput.value || 0);
+    const armatureName = simulationArmatureInput.value.trim() || null;
+    const prompt = simulationPromptInput.value.trim() || null;
+
+    if (!blendFilename) {
+      setSimulationStatus('Select an Ava .blend file first.', 'error');
+      return;
+    }
+    if (!durationSeconds || durationSeconds < 1 || durationSeconds > 30) {
+      setSimulationStatus('Duration must be between 1 and 30 seconds.', 'error');
+      return;
+    }
+
+    simulationRunSubmit.disabled = true;
+    setSimulationStatus('Rendering Ava armature motion in Blender… This can take a minute.', 'info');
+    simulationRunVideo.style.display = 'none';
+
+    const traceId = `sim-${Date.now()}-${crypto.randomUUID()}`;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(`${apiBase}/api/blender/simulate/${encodeURIComponent(blendFilename)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-REMAS-Trace-ID': traceId,
+        },
+        body: JSON.stringify({
+          memory_filename: memoryFilename,
+          duration_seconds: durationSeconds,
+          armature_name: armatureName,
+          prompt,
+        }),
+      });
+
+      if (!response.ok) {
+        const raw = await response.text();
+        let detail = '';
+        try {
+          detail = JSON.parse(raw)?.detail || '';
+        } catch (_) {
+          detail = raw?.trim?.() || '';
+        }
+        throw new Error(detail || `Simulation failed (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
+      simulationRunVideo.src = videoUrl;
+      simulationRunVideo.style.display = 'block';
+
+      const summary = payload.plan?.memory_summary?.description || memoryFilename || 'No memory summary';
+      const profile = payload.plan?.motion_profile || 'custom';
+      setSimulationStatus(
+        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nMemory: ${summary}`,
+        'success'
+      );
+    } catch (error) {
+      console.error('[simulation] render failed', { traceId, error });
+      setSimulationStatus(`Render failed (${traceId}): ${error?.message || error}`, 'error');
+    } finally {
+      simulationRunSubmit.disabled = false;
+    }
+  }
+
+  // Start Simulation
+  document.getElementById("start").addEventListener("click", () => {
+    openSimulationRunModal();
   });
 
   // Stop Simulation
@@ -250,6 +401,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadBlendButton = document.getElementById("upload-blend");
   const blendFileInput = document.getElementById("blend-file-input");
   const loadSelectedObjectButton = document.getElementById("load-selected-object");
+
+  simulationRunClose?.addEventListener('click', closeSimulationRunModal);
+  simulationRunModal?.addEventListener('click', (event) => {
+    if (event.target === simulationRunModal) closeSimulationRunModal();
+  });
+  simulationRunRefresh?.addEventListener('click', () => {
+    const userEmail = auth.currentUser?.email;
+    if (!userEmail) return;
+    loadUserFiles(userEmail);
+    loadObjectsList(userEmail);
+    setSimulationStatus('Refreshing memories and .blend files…', 'info');
+  });
+  simulationRunSubmit?.addEventListener('click', runAvaSimulation);
 
 
   async function getUniqueFilename(user) {
@@ -822,6 +986,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadObjectsList(userEmail) {
     const objectsList = document.getElementById('objects-list');
     objectsList.innerHTML = '<li class="empty-msg">Loading objects…</li>';
+    availableBlendFiles.length = 0;
 
     try {
       const objectsRef = ref(storage, `users/${userEmail}/objects`);
@@ -840,6 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
       objectsList.innerHTML = '';
 
       if (items.length === 0) {
+        refreshSimulationRunOptions();
         objectsList.innerHTML = '<li class="empty-msg">No objects uploaded.</li>';
         return;
       }
@@ -849,8 +1015,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const ext = item.name.split('.').pop().toLowerCase();
         return ext === 'blend' || ext === 'blend1';
       });
+      availableBlendFiles.push(...blendItems.map((item) => item.name).sort((left, right) => left.localeCompare(right)));
+      refreshSimulationRunOptions();
 
       if (!blendItems.length) {
+        refreshSimulationRunOptions();
         objectsList.innerHTML = '<li class="empty-msg">No .blend files uploaded.</li>';
         return;
       }
@@ -861,6 +1030,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error('[objects] Error loading objects:', err);
+      refreshSimulationRunOptions();
       objectsList.innerHTML = `<li class="empty-msg">Error: ${err.code || err.message}</li>`;
     }
   }

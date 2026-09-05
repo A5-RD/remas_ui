@@ -568,3 +568,120 @@ body, html {
 
 #blend-load-btn:hover { background: #00d0ff44 !important; }
 #blend-modal-footer button:hover { border-color: #aaa; }
+
+#simulation-run-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#simulation-run-modal-inner {
+  width: min(560px, calc(100vw - 40px));
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: #151515;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.35);
+}
+
+#simulation-run-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+#simulation-run-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.simulation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #ddd;
+}
+
+.simulation-field select,
+.simulation-field input,
+.simulation-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+}
+
+.simulation-field textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+
+#simulation-run-status {
+  min-height: 38px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #2b5563;
+  background: rgba(0, 208, 255, 0.08);
+  color: #a7ebff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+#simulation-run-video {
+  width: 100%;
+  max-height: 280px;
+  border-radius: 8px;
+  background: #000;
+  border: 1px solid #333;
+}
+
+#simulation-run-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #333;
+}
+
+#simulation-run-modal-footer button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #333;
+  color: #fff;
+  cursor: pointer;
+}
+
+#simulation-run-submit {
+  margin-left: auto;
+  border-color: #00d0ff !important;
+  color: #00d0ff !important;
+  background: rgba(0, 208, 255, 0.12) !important;
+}
+
+#simulation-run-submit:hover,
+#simulation-run-refresh:hover,
+#simulation-run-modal-footer button:hover {
+  border-color: #00d0ff;
+  box-shadow: 0 0 8px rgba(0, 208, 255, 0.4);
+}
