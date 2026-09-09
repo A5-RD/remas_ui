@@ -205,12 +205,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // API INTEGRATION
   const apiBase = "https://remas-api-507506689237.us-central1.run.app";
+  const defaultCameraPresetId = 'full_body';
+  const fallbackCameraPresets = [
+    { id: 'full_body', label: 'Full Body', description: 'Balanced front view that keeps Ava fully in frame.' },
+    { id: 'medium', label: 'Medium Shot', description: 'Closer framing from the waist up.' },
+    { id: 'close_up', label: 'Close-Up', description: "Portrait framing focused on Ava's upper body and face." },
+    { id: 'wide', label: 'Wide Shot', description: 'Pulls the camera back to show more of the scene.' },
+    { id: 'three_quarter', label: 'Three-Quarter Angle', description: 'Slightly angled view for more depth.' },
+  ];
+  let availableCameraPresets = [...fallbackCameraPresets];
 
   const simulationRunModal = document.getElementById('simulation-run-modal');
   const simulationBlendSelect = document.getElementById('simulation-blend-select');
   const simulationMemorySelect = document.getElementById('simulation-memory-select');
   const simulationDurationInput = document.getElementById('simulation-duration-input');
   const simulationArmatureInput = document.getElementById('simulation-armature-input');
+  const simulationCameraPresetSelect = document.getElementById('simulation-camera-preset-select');
   const simulationPromptInput = document.getElementById('simulation-prompt-input');
   const simulationRunStatus = document.getElementById('simulation-run-status');
   const simulationRunVideo = document.getElementById('simulation-run-video');
@@ -251,6 +261,44 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function fillCameraPresetOptions(selectedPreset = defaultCameraPresetId) {
+    simulationCameraPresetSelect.innerHTML = '';
+
+    availableCameraPresets.forEach((preset) => {
+      const option = document.createElement('option');
+      option.value = preset.id;
+      option.textContent = `${preset.label} — ${preset.description}`;
+      simulationCameraPresetSelect.appendChild(option);
+    });
+
+    const validSelectedPreset = availableCameraPresets.some((preset) => preset.id === selectedPreset)
+      ? selectedPreset
+      : (availableCameraPresets[0]?.id || defaultCameraPresetId);
+    simulationCameraPresetSelect.value = validSelectedPreset;
+    simulationCameraPresetSelect.disabled = availableCameraPresets.length === 0;
+  }
+
+  async function loadCameraPresets() {
+    try {
+      const response = await fetch(`${apiBase}/api/blender/camera-presets`);
+      if (!response.ok) throw new Error(`Camera preset lookup failed (${response.status})`);
+      const payload = await response.json();
+      const presets = Array.isArray(payload?.presets) ? payload.presets : [];
+      availableCameraPresets = presets.length
+        ? presets.map((preset) => ({
+            id: preset.id,
+            label: preset.label,
+            description: preset.description,
+          }))
+        : [...fallbackCameraPresets];
+      fillCameraPresetOptions(payload?.default || simulationCameraPresetSelect.value || defaultCameraPresetId);
+    } catch (error) {
+      console.warn('[simulation] using fallback camera presets', error);
+      availableCameraPresets = [...fallbackCameraPresets];
+      fillCameraPresetOptions(simulationCameraPresetSelect.value || defaultCameraPresetId);
+    }
+  }
+
   function getPreferredMemorySelection() {
     if (selectedFiles.size === 1) return [...selectedFiles][0];
     return availableMemoryFiles[0] || '';
@@ -264,6 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function refreshSimulationRunOptions() {
     fillSelectOptions(simulationBlendSelect, availableBlendFiles, 'No .blend files available');
     fillSelectOptions(simulationMemorySelect, availableMemoryFiles, 'No memories available');
+    fillCameraPresetOptions(simulationCameraPresetSelect.value || defaultCameraPresetId);
 
     const preferredBlend = getPreferredBlendSelection();
     if (preferredBlend) simulationBlendSelect.value = preferredBlend;
@@ -276,8 +325,9 @@ document.addEventListener("DOMContentLoaded", () => {
     simulationRunModal.style.display = 'none';
   }
 
-  function openSimulationRunModal() {
+  async function openSimulationRunModal() {
     refreshSimulationRunOptions();
+    await loadCameraPresets();
     simulationRunVideo.pause();
     simulationRunVideo.removeAttribute('src');
     simulationRunVideo.load();
@@ -296,6 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const memoryFilename = simulationMemorySelect.value || null;
     const durationSeconds = Number(simulationDurationInput.value || 0);
     const armatureName = simulationArmatureInput.value.trim() || null;
+    const cameraPreset = simulationCameraPresetSelect.value || defaultCameraPresetId;
     const prompt = simulationPromptInput.value.trim() || null;
 
     if (!blendFilename) {
@@ -325,6 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
           memory_filename: memoryFilename,
           duration_seconds: durationSeconds,
           armature_name: armatureName,
+          camera_preset: cameraPreset,
           prompt,
         }),
       });
@@ -347,8 +399,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const summary = payload.plan?.memory_summary?.description || memoryFilename || 'No memory summary';
       const profile = payload.plan?.motion_profile || 'custom';
+      const cameraLabel = availableCameraPresets.find((preset) => preset.id === (payload.plan?.camera_preset || cameraPreset))?.label
+        || payload.plan?.camera?.label
+        || payload.plan?.camera_preset
+        || cameraPreset;
       setSimulationStatus(
-        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nMemory: ${summary}`,
+        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nCamera: ${cameraLabel}\nMemory: ${summary}`,
         'success'
       );
     } catch (error) {
@@ -411,6 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!userEmail) return;
     loadUserFiles(userEmail);
     loadObjectsList(userEmail);
+    loadCameraPresets();
     setSimulationStatus('Refreshing memories and .blend files…', 'info');
   });
   simulationRunSubmit?.addEventListener('click', runAvaSimulation);

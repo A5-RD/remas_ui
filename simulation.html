@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20260905a"></script>
+  <script type="module" src="simulation.js?v=20260909a"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -152,6 +152,10 @@
         <label class="simulation-field">
           <span>Armature name (optional)</span>
           <input id="simulation-armature-input" type="text" placeholder="Auto-detect first armature">
+        </label>
+        <label class="simulation-field">
+          <span>Camera placement</span>
+          <select id="simulation-camera-preset-select"></select>
         </label>
         <label class="simulation-field">
           <span>Scene prompt (optional)</span>
