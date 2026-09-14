@@ -1,11 +1,29 @@
 import { auth, storage } from "./firebase.js?v=20260605";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, getMetadata, uploadString, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
   const availableMemoryFiles = [];
   const availableBlendFiles = [];
+
+  async function getAuthToken() {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
+    return user.getIdToken();
+  }
+
+  async function fetchApi(path, options = {}) {
+    const token = await getAuthToken();
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    };
+    return fetch(`${apiBase}${path}`, {
+      ...options,
+      headers,
+    });
+  }
 
   // Hide container until authenticated
   simContainer.style.display = "none";
@@ -19,63 +37,58 @@ document.addEventListener("DOMContentLoaded", () => {
       loadObjectsList(user.email);
     }
   });
-  function loadUserFiles(email) {
-    const storageRef = ref(storage, `users/${email}/memories`);
+  async function loadUserFiles(email) {
     const fileList = document.getElementById("file-list");
     fileList.innerHTML = "<li>Loading files...</li>";
     availableMemoryFiles.length = 0;
 
-    listAll(storageRef)
-      .then(result => {
-        fileList.innerHTML = "";
-        availableMemoryFiles.push(...result.items.map((fileRef) => fileRef.name).sort((left, right) => left.localeCompare(right)));
-        refreshSimulationRunOptions();
+    try {
+      const response = await fetchApi(`/${encodeURIComponent(email)}/memories`);
+      if (!response.ok) throw new Error(`Memory list failed (${response.status})`);
+      const filenames = await response.json();
+      const sortedFilenames = [...filenames].sort((left, right) => left.localeCompare(right));
 
-        if (result.items.length === 0) {
-          fileList.innerHTML = "<li>No files found.</li>";
-        } else {
-          result.items.forEach(fileRef => {
-            const li = document.createElement("li");
-            li.textContent = fileRef.name;
-            li.classList.add("file-item");
-            li.dataset.filename = fileRef.name;
+      fileList.innerHTML = "";
+      availableMemoryFiles.push(...sortedFilenames);
+      refreshSimulationRunOptions();
 
-            li.addEventListener("click", async (e) => {
-              if (e.shiftKey) {
-                console.log("Shift-click detected for file:", fileRef.name);
-                try {
-                  const bytes = await getBytes(fileRef);
-                  const text = new TextDecoder().decode(bytes);
-                  const data = JSON.parse(text);
+      if (sortedFilenames.length === 0) {
+        fileList.innerHTML = "<li>No files found.</li>";
+        return;
+      }
 
-                  // Set editor contents
-                  document.getElementById('json-filename').textContent = `Editing: ${fileRef.name}`;
-                  document.getElementById('json-textarea').value = JSON.stringify(data, null, 2);
+      sortedFilenames.forEach((filename) => {
+        const li = document.createElement("li");
+        li.textContent = filename;
+        li.classList.add("file-item");
+        li.dataset.filename = filename;
 
-                  // Show editor
-                  const ed = document.getElementById('json-editor');
-                  ed.style.display = 'flex';
-                  ed.dataset.filename = fileRef.name; // Save for later (e.g. saving)
-                } catch (err) {
-                  console.error("Error fetching file contents:", err);
-                }
-              }
-            });
+        li.addEventListener("click", async (e) => {
+          if (!e.shiftKey) return;
+          console.log("Shift-click detected for file:", filename);
+          try {
+            const fileResponse = await fetchApi(`/${encodeURIComponent(email)}/memories/${encodeURIComponent(filename)}`);
+            if (!fileResponse.ok) throw new Error(`Memory read failed (${fileResponse.status})`);
+            const data = await fileResponse.json();
 
+            document.getElementById('json-filename').textContent = `Editing: ${filename}`;
+            document.getElementById('json-textarea').value = JSON.stringify(data, null, 2);
 
-            fileList.appendChild(li);
-          });
-        }
-      })
-      .catch(error => {
-        console.error("Error loading files:", error);
-        refreshSimulationRunOptions();
-        if (error?.code === "storage/unauthorized") {
-          fileList.innerHTML = "<li>Permission denied. Check Firebase Storage Rules for users/{email}/memories.</li>";
-        } else {
-          fileList.innerHTML = "<li>Error loading files. Check console.</li>";
-        }
+            const ed = document.getElementById('json-editor');
+            ed.style.display = 'flex';
+            ed.dataset.filename = filename;
+          } catch (err) {
+            console.error("Error fetching file contents:", err);
+          }
+        });
+
+        fileList.appendChild(li);
       });
+    } catch (error) {
+      console.error("Error loading files:", error);
+      refreshSimulationRunOptions();
+      fileList.innerHTML = `<li>Error loading local memories from REMAS_local_dev/memories.</li>`;
+    }
   }
 
 
@@ -364,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const traceId = `sim-${Date.now()}-${crypto.randomUUID()}`;
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = await getAuthToken();
       const response = await fetch(`${apiBase}/api/blender/simulate/${encodeURIComponent(blendFilename)}`, {
         method: 'POST',
         headers: {
@@ -443,11 +456,16 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("filename", filename);
     formData.append("file", file);
 
-    const res = await fetch("https://remas-api-507506689237.us-central1.run.app/add-map", {
+    const token = await getAuthToken();
+    const res = await fetch(`${apiBase}/add-map`, {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     });
 
+    if (!res.ok) throw new Error(`Upload failed (${res.status})`);
     const result = await res.json();
     return result;
   }
@@ -501,7 +519,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   async function getExistingFilenames(user) {
-    const res = await fetch(`https://remas-api-507506689237.us-central1.run.app/${user}/memories`);
+    const res = await fetchApi(`/${encodeURIComponent(user)}/memories`);
+    if (!res.ok) throw new Error(`Could not load filenames (${res.status})`);
     const data = await res.json();
     return data;
   }
@@ -524,6 +543,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const result = await uploadFile(user, file);
+      await loadUserFiles(user);
       alert("Uploaded successfully as " + result.filename);
     } catch (err) {
       console.error(err);
@@ -1356,7 +1376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const fileName of filesToDelete) {
       try {
         const encodedFile = encodeURIComponent(fileName);
-        const res = await fetch(`https://remas-api-507506689237.us-central1.run.app/${user}/memories/${encodedFile}`, {
+        const res = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodedFile}`, {
           method: "DELETE"
         });
 
@@ -1518,16 +1538,27 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   document.getElementById('save-json-btn').onclick = async () => {
-    const id = document.getElementById('json-editor').dataset.nodeId;
+    const filename = document.getElementById('json-editor').dataset.filename;
     try {
       const data = JSON.parse(document.getElementById('json-textarea').value);
-      await uploadString(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`), JSON.stringify(data));
+      if (!filename) throw new Error('Missing memory filename');
+      const user = auth.currentUser?.email;
+      if (!user) throw new Error('User not authenticated');
+      const response = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodeURIComponent(filename)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error(`Save failed (${response.status})`);
+      await loadUserFiles(user);
       document.getElementById('json-editor').style.display = 'none';
     } catch(e) { alert('Save error'); console.error(e); }
   };
 
   document.getElementById('download-json-btn').onclick = () => {
-    const filename = document.getElementById('json-editor').dataset.nodeId + '.json';
+    const filename = document.getElementById('json-editor').dataset.filename || 'memory.json';
     const json = document.getElementById('json-textarea').value;
 
     const blob = new Blob([json], { type: 'application/json' });
@@ -1542,10 +1573,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   document.getElementById('delete-json-btn').onclick = () => {
-    const id = document.getElementById('json-editor').dataset.nodeId;
+    const filename = document.getElementById('json-editor').dataset.filename;
 
     // Dispatch a custom event or simulate click if integrated in same DOM
-    const event = new CustomEvent('delete-file', { detail: { filename: id + '.json' } });
+    const event = new CustomEvent('delete-file', { detail: { filename } });
     window.dispatchEvent(event); // or window.parent if this page is inside an iframe
 
     document.getElementById('json-editor').style.display = 'none';
