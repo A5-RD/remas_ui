@@ -201,11 +201,34 @@
         loadedModels.delete(name);
         tag.remove();
         if (loadedModels.size === 0) dropHint.style.display = 'block';
+        publishSceneState();
       });
 
       tag.appendChild(label);
       tag.appendChild(rm);
       modelListEl.appendChild(tag);
+    }
+
+    function serializeLoadedModel(filename, object) {
+      return {
+        filename,
+        position: [object.position.x, object.position.y, object.position.z],
+        rotation: [object.rotation.x, object.rotation.y, object.rotation.z],
+        scale: [object.scale.x, object.scale.y, object.scale.z],
+        visible: object.visible !== false,
+      };
+    }
+
+    function getSceneState() {
+      return [...loadedModels.entries()].map(([filename, object]) => serializeLoadedModel(filename, object));
+    }
+
+    function publishSceneState(requestId = null) {
+      window.parent.postMessage({
+        type: 'sigma-scene-state',
+        requestId,
+        sceneObjects: getSceneState(),
+      }, '*');
     }
 
     function loadModelFromURL(url, filename) {
@@ -232,6 +255,7 @@
         camera.position.set(center.x + dist * 0.6, center.y + dist * 0.5, center.z + dist);
         controls.target.copy(center);
         controls.update();
+        publishSceneState();
       };
 
       const onError = (err) => {
@@ -274,6 +298,11 @@
           filename: filename ?? null,
         }, '*');
         if (url && filename) loadModelFromURL(url, filename);
+        return;
+      }
+
+      if (event.data?.type === 'get-scene-state') {
+        publishSceneState(event.data.requestId ?? null);
       }
     });
 </script>

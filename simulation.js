@@ -218,6 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // API INTEGRATION
   const apiBase = "https://remas-api-507506689237.us-central1.run.app";
+  const defaultSimulationBlendFilename = 'ava_1.8_dress_packed.blend';
   const defaultCameraPresetId = 'full_body';
   const fallbackCameraPresets = [
     { id: 'full_body', label: 'Full Body', description: 'Balanced front view that keeps Ava fully in frame.' },
@@ -227,9 +228,12 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: 'three_quarter', label: 'Three-Quarter Angle', description: 'Slightly angled view for more depth.' },
   ];
   let availableCameraPresets = [...fallbackCameraPresets];
+  let latestSigmaSceneState = [];
+  let sigmaSceneRequestId = 0;
+  const pendingSigmaSceneResolvers = new Map();
 
   const simulationRunModal = document.getElementById('simulation-run-modal');
-  const simulationBlendSelect = document.getElementById('simulation-blend-select');
+  const simulationSceneSummary = document.getElementById('simulation-scene-summary');
   const simulationMemorySelect = document.getElementById('simulation-memory-select');
   const simulationDurationInput = document.getElementById('simulation-duration-input');
   const simulationArmatureInput = document.getElementById('simulation-armature-input');
@@ -317,21 +321,30 @@ document.addEventListener("DOMContentLoaded", () => {
     return availableMemoryFiles[0] || '';
   }
 
-  function getPreferredBlendSelection() {
-    if (selectedObjectLi?.dataset?.filename) return selectedObjectLi.dataset.filename;
-    return availableBlendFiles[0] || '';
-  }
-
   function refreshSimulationRunOptions() {
-    fillSelectOptions(simulationBlendSelect, availableBlendFiles, 'No .blend files available');
     fillSelectOptions(simulationMemorySelect, availableMemoryFiles, 'No memories available');
     fillCameraPresetOptions(simulationCameraPresetSelect.value || defaultCameraPresetId);
 
-    const preferredBlend = getPreferredBlendSelection();
-    if (preferredBlend) simulationBlendSelect.value = preferredBlend;
-
     const preferredMemory = getPreferredMemorySelection();
     if (preferredMemory) simulationMemorySelect.value = preferredMemory;
+  }
+
+  function updateSimulationSceneSummary(sceneObjects = latestSigmaSceneState) {
+    if (!simulationSceneSummary) return;
+
+    const objectCount = Array.isArray(sceneObjects) ? sceneObjects.length : 0;
+    if (!objectCount) {
+      simulationSceneSummary.textContent = `Ava uses ${defaultSimulationBlendFilename} with no extra scene objects loaded yet.`;
+      return;
+    }
+
+    const preview = sceneObjects
+      .slice(0, 3)
+      .map((item) => item.filename)
+      .filter(Boolean)
+      .join(', ');
+    const suffix = objectCount > 3 ? ` +${objectCount - 3} more` : '';
+    simulationSceneSummary.textContent = `Ava uses ${defaultSimulationBlendFilename} plus ${objectCount} loaded scene object${objectCount === 1 ? '' : 's'}: ${preview}${suffix}.`;
   }
 
   function closeSimulationRunModal() {
@@ -341,12 +354,37 @@ document.addEventListener("DOMContentLoaded", () => {
   async function openSimulationRunModal() {
     refreshSimulationRunOptions();
     await loadCameraPresets();
+    latestSigmaSceneState = await requestSigmaSceneState().catch((error) => {
+      console.warn('[simulation] unable to fetch Sigma scene state before opening modal', error);
+      return latestSigmaSceneState;
+    });
+    updateSimulationSceneSummary(latestSigmaSceneState);
     simulationRunVideo.pause();
     simulationRunVideo.removeAttribute('src');
     simulationRunVideo.load();
     simulationRunVideo.style.display = 'none';
-    setSimulationStatus('Choose a .blend and memory, then run the render.', 'info');
+    setSimulationStatus('Choose a memory and duration, then run Ava with every object currently loaded in Sigma.', 'info');
     simulationRunModal.style.display = 'flex';
+  }
+
+  async function requestSigmaSceneState() {
+    const sigmaFrame = document.getElementById('sigma-iframe');
+    if (!sigmaFrame?.contentWindow) return [];
+
+    const requestId = `scene-${++sigmaSceneRequestId}-${Date.now()}`;
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        pendingSigmaSceneResolvers.delete(requestId);
+        reject(new Error('Timed out waiting for Sigma scene state'));
+      }, 2000);
+
+      pendingSigmaSceneResolvers.set(requestId, (sceneObjects) => {
+        window.clearTimeout(timeoutId);
+        resolve(sceneObjects);
+      });
+
+      sigmaFrame.contentWindow.postMessage({ type: 'get-scene-state', requestId }, '*');
+    });
   }
 
   async function resolveStoragePathUrl(storagePath) {
@@ -355,30 +393,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function runAvaSimulation() {
-    const blendFilename = simulationBlendSelect.value;
     const memoryFilename = simulationMemorySelect.value || null;
     const durationSeconds = Number(simulationDurationInput.value || 0);
     const armatureName = simulationArmatureInput.value.trim() || null;
     const cameraPreset = simulationCameraPresetSelect.value || defaultCameraPresetId;
     const prompt = simulationPromptInput.value.trim() || null;
-
-    if (!blendFilename) {
-      setSimulationStatus('Select an Ava .blend file first.', 'error');
-      return;
-    }
     if (!durationSeconds || durationSeconds < 1 || durationSeconds > 30) {
       setSimulationStatus('Duration must be between 1 and 30 seconds.', 'error');
       return;
     }
 
     simulationRunSubmit.disabled = true;
-    setSimulationStatus('Rendering Ava armature motion in Blender… This can take a minute.', 'info');
+    setSimulationStatus('Rendering Ava and the currently loaded scene objects in Blender… This can take a minute.', 'info');
     simulationRunVideo.style.display = 'none';
 
     const traceId = `sim-${Date.now()}-${crypto.randomUUID()}`;
     try {
+      latestSigmaSceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
+      updateSimulationSceneSummary(latestSigmaSceneState);
+
       const token = await getAuthToken();
-      const response = await fetch(`${apiBase}/api/blender/simulate/${encodeURIComponent(blendFilename)}`, {
+      const response = await fetch(`${apiBase}/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -391,6 +426,8 @@ document.addEventListener("DOMContentLoaded", () => {
           armature_name: armatureName,
           camera_preset: cameraPreset,
           prompt,
+          embodiment_mode: 'simulation',
+          scene_objects: latestSigmaSceneState,
         }),
       });
 
@@ -412,12 +449,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const summary = payload.plan?.memory_summary?.description || memoryFilename || 'No memory summary';
       const profile = payload.plan?.motion_profile || 'custom';
+      const sceneObjectCount = payload.scene_object_count ?? latestSigmaSceneState.length;
       const cameraLabel = availableCameraPresets.find((preset) => preset.id === (payload.plan?.camera_preset || cameraPreset))?.label
         || payload.plan?.camera?.label
         || payload.plan?.camera_preset
         || cameraPreset;
       setSimulationStatus(
-        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nCamera: ${cameraLabel}\nMemory: ${summary}`,
+        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nCamera: ${cameraLabel}\nScene objects: ${sceneObjectCount}\nMemory: ${summary}`,
         'success'
       );
     } catch (error) {
@@ -926,6 +964,20 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error('[sigma]', event.data.message, event.data.detail || '');
       } else {
         console.info('[sigma]', event.data.message, event.data.detail || '');
+      }
+      return;
+    }
+
+    if (event.data?.type === 'sigma-scene-state') {
+      const requestId = event.data.requestId;
+      const sceneObjects = Array.isArray(event.data.sceneObjects) ? event.data.sceneObjects : [];
+      latestSigmaSceneState = sceneObjects;
+      updateSimulationSceneSummary(sceneObjects);
+
+      const resolver = pendingSigmaSceneResolvers.get(requestId);
+      if (resolver) {
+        pendingSigmaSceneResolvers.delete(requestId);
+        resolver(sceneObjects);
       }
     }
   });
