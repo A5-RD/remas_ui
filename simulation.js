@@ -235,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const simulationRunModal = document.getElementById('simulation-run-modal');
   const simulationSceneSummary = document.getElementById('simulation-scene-summary');
   const simulationMemorySelect = document.getElementById('simulation-memory-select');
+  const simulationMemoryManual = document.getElementById('simulation-memory-manual');
   const simulationDurationInput = document.getElementById('simulation-duration-input');
   const simulationArmatureInput = document.getElementById('simulation-armature-input');
   const simulationCameraPresetSelect = document.getElementById('simulation-camera-preset-select');
@@ -242,8 +243,108 @@ document.addEventListener("DOMContentLoaded", () => {
   const simulationRunStatus = document.getElementById('simulation-run-status');
   const simulationRunVideo = document.getElementById('simulation-run-video');
   const simulationRunSubmit = document.getElementById('simulation-run-submit');
+  const simulationRunPlay = document.getElementById('simulation-run-play');
+  const simulationRunLive = document.getElementById('simulation-run-live');
+  const simulationLiveFps = document.getElementById('simulation-live-fps');
+  const simulationLiveConsent = document.getElementById('simulation-live-consent');
+  const simulationRunStop = document.getElementById('simulation-run-stop');
   const simulationRunRefresh = document.getElementById('simulation-run-refresh');
   const simulationRunClose = document.getElementById('simulation-run-modal-close');
+  let simulationSession = null;
+  let simulationSessionToken = 0;
+  let modalOpenToken = 0;
+
+  function setSimulationBusy(busy) {
+    simulationRunSubmit.disabled = busy;
+    simulationRunPlay.disabled = busy;
+    simulationRunLive.disabled = busy;
+    simulationRunRefresh.disabled = busy;
+    simulationRunStop.disabled = !busy;
+  }
+
+  function isCurrentSession(session) {
+    return simulationSession === session && session.token === simulationSessionToken && !session.controller.signal.aborted;
+  }
+
+  function beginSimulationSession() {
+    if (simulationSession) return null;
+    const session = { token: ++simulationSessionToken, controller: new AbortController() };
+    simulationSession = session;
+    setSimulationBusy(true);
+    simulationRunVideo.pause();
+    simulationRunVideo.style.display = 'none';
+    return session;
+  }
+
+  function stopSimulation() {
+    ++modalOpenToken;
+    ++simulationSessionToken;
+    const session = simulationSession;
+    simulationSession = null;
+    session?.controller.abort();
+    if (session?.live) {
+      clearTimeout(session.ackTimeout);
+      document.getElementById('sigma-iframe')?.contentWindow?.postMessage({ type: 'live-stop', requestId: session.liveId }, window.location.origin);
+    }
+    simulationRunModal.classList.remove('live-preview');
+    simulationRunVideo.pause();
+    setSimulationBusy(false);
+    setSimulationStatus('Stopped in the browser. A server render already started may continue.', 'info');
+  }
+
+  function finishSimulationSession(session) {
+    if (!isCurrentSession(session)) return;
+    simulationSession = null;
+    setSimulationBusy(false);
+  }
+
+  function readSimulationSettings(requireMemory = false) {
+    const memoryFilename = simulationMemoryManual.value.trim() || simulationMemorySelect.value || null;
+    const durationSeconds = Number(simulationDurationInput.value || 0);
+    if (!Number.isFinite(durationSeconds) || durationSeconds < 1 || durationSeconds > 30) {
+      throw new Error('Duration must be between 1 and 30 seconds.');
+    }
+    if (requireMemory && !memoryFilename) throw new Error('Choose a starting memory.');
+    if (requireMemory && !/^[a-z]{5}[0-9]{5}\.json$/.test(memoryFilename)) {
+      throw new Error('Enter a memory filename with five lowercase letters, five digits, and .json.');
+    }
+    return {
+      memoryFilename,
+      durationSeconds,
+      armatureName: simulationArmatureInput.value.trim() || null,
+      cameraPreset: simulationCameraPresetSelect.value || defaultCameraPresetId,
+    };
+  }
+
+  async function readApiResponse(response, operation) {
+    const raw = await response.text();
+    let payload;
+    try { payload = JSON.parse(raw); } catch (_) { payload = null; }
+    if (!response.ok) {
+      const detail = payload?.detail ?? payload?.message ?? payload?.error ?? (typeof payload === 'string' ? payload : (payload === null ? raw.trim() : ''));
+      const readable = typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : '');
+      throw new Error(`${operation} failed (${response.status})${readable ? `: ${readable}` : ''}`);
+    }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new Error(`${operation} returned an invalid response.`);
+    }
+    return payload;
+  }
+
+  async function postSimulationJson(path, body, session, traceId) {
+    const token = await getAuthToken();
+    if (!isCurrentSession(session)) throw new DOMException('Stopped', 'AbortError');
+    return fetch(`${apiBase}${path}`, {
+      method: 'POST',
+      signal: session.controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-REMAS-Trace-ID': traceId,
+      },
+      body: JSON.stringify(body),
+    });
+  }
 
   function setSimulationStatus(message, tone = 'info') {
     simulationRunStatus.textContent = message;
@@ -348,23 +449,29 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function closeSimulationRunModal() {
+    stopSimulation();
     simulationRunModal.style.display = 'none';
   }
 
   async function openSimulationRunModal() {
+    if (simulationRunModal.style.display === 'flex') return;
+    const openToken = ++modalOpenToken;
     refreshSimulationRunOptions();
-    await loadCameraPresets();
-    latestSigmaSceneState = await requestSigmaSceneState().catch((error) => {
-      console.warn('[simulation] unable to fetch Sigma scene state before opening modal', error);
-      return latestSigmaSceneState;
-    });
-    updateSimulationSceneSummary(latestSigmaSceneState);
     simulationRunVideo.pause();
     simulationRunVideo.removeAttribute('src');
     simulationRunVideo.load();
     simulationRunVideo.style.display = 'none';
     setSimulationStatus('Choose a memory and duration, then run Ava with every object currently loaded in Sigma.', 'info');
     simulationRunModal.style.display = 'flex';
+    await loadCameraPresets();
+    if (openToken !== modalOpenToken || simulationSession) return;
+    const sceneState = await requestSigmaSceneState().catch((error) => {
+      console.warn('[simulation] unable to fetch Sigma scene state before opening modal', error);
+      return latestSigmaSceneState;
+    });
+    if (openToken !== modalOpenToken || simulationSession) return;
+    latestSigmaSceneState = sceneState;
+    updateSimulationSceneSummary(latestSigmaSceneState);
   }
 
   async function requestSigmaSceneState() {
@@ -383,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resolve(sceneObjects);
       });
 
-      sigmaFrame.contentWindow.postMessage({ type: 'get-scene-state', requestId }, '*');
+      sigmaFrame.contentWindow.postMessage({ type: 'get-scene-state', requestId }, window.location.origin);
     });
   }
 
@@ -392,77 +499,205 @@ document.addEventListener("DOMContentLoaded", () => {
     return getDownloadURL(ref(storage, storagePath));
   }
 
-  async function runAvaSimulation() {
-    const memoryFilename = simulationMemorySelect.value || null;
-    const durationSeconds = Number(simulationDurationInput.value || 0);
-    const armatureName = simulationArmatureInput.value.trim() || null;
-    const cameraPreset = simulationCameraPresetSelect.value || defaultCameraPresetId;
-    const prompt = simulationPromptInput.value.trim() || null;
-    if (!durationSeconds || durationSeconds < 1 || durationSeconds > 30) {
-      setSimulationStatus('Duration must be between 1 and 30 seconds.', 'error');
+  async function runLiveRigPreview() {
+    let settings;
+    let fps;
+    try {
+      settings = readSimulationSettings(true);
+      fps = Number(simulationLiveFps.value);
+      if (!Number.isInteger(fps) || fps < 12 || fps > 60) throw new Error('Live preview FPS must be an integer from 12 to 60.');
+      if (!simulationLiveConsent.checked) throw new Error('Confirm the experimental axis and rest-pose approximation first.');
+      if (!document.getElementById('sigma-iframe')?.contentWindow) throw new Error('Sigma is unavailable.');
+    } catch (error) {
+      setSimulationStatus(error.message, 'error');
       return;
     }
+    const session = beginSimulationSession();
+    if (!session) return;
+    session.live = true;
+    session.liveId = `live-${session.token}-${Date.now()}`;
+    setSimulationStatus('Requesting an experimental live plan…', 'info');
+    try {
+      const response = await postSimulationJson('/playback/live-plan', {
+        start_memory_filename: settings.memoryFilename,
+        duration_seconds: settings.durationSeconds,
+        fps,
+        armature_name: settings.armatureName,
+        camera_preset: settings.cameraPreset,
+      }, session, session.liveId);
+      const payload = await readApiResponse(response, 'Live planning');
+      if (!isCurrentSession(session)) return;
+      if (payload.version !== 1 || !payload.plan || typeof payload.plan !== 'object') throw new Error('Unsupported or invalid live plan version.');
+      sigmaBtn.click();
+      simulationRunModal.classList.add('live-preview');
+      setSimulationStatus('Sending plan to Sigma…', 'info');
+      session.ackTimeout = setTimeout(() => {
+        if (!isCurrentSession(session)) return;
+        stopSimulation();
+        setSimulationStatus('Sigma did not acknowledge the live plan. Reload Sigma and try again.', 'error');
+      }, 5000);
+      document.getElementById('sigma-iframe').contentWindow.postMessage({
+        type: 'live-plan', requestId: session.liveId, payload, approximateMappingConfirmed: true,
+      }, window.location.origin);
+    } catch (error) {
+      if (!isCurrentSession(session)) return;
+      stopSimulation();
+      setSimulationStatus(`Live preview failed: ${error?.message || error}`, 'error');
+    }
+  }
 
-    simulationRunSubmit.disabled = true;
+  async function runAvaSimulation() {
+    let settings;
+    try { settings = readSimulationSettings(); } catch (error) {
+      setSimulationStatus(error.message, 'error');
+      return;
+    }
+    const prompt = simulationPromptInput.value.trim() || null;
+    const session = beginSimulationSession();
+    if (!session) return;
     setSimulationStatus('Rendering Ava and the currently loaded scene objects in Blender… This can take a minute.', 'info');
-    simulationRunVideo.style.display = 'none';
 
     const traceId = `sim-${Date.now()}-${crypto.randomUUID()}`;
     try {
-      latestSigmaSceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
+      const sceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
+      if (!isCurrentSession(session)) return;
+      latestSigmaSceneState = sceneState;
       updateSimulationSceneSummary(latestSigmaSceneState);
 
-      const token = await getAuthToken();
-      const response = await fetch(`${apiBase}/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'X-REMAS-Trace-ID': traceId,
-        },
-        body: JSON.stringify({
-          memory_filename: memoryFilename,
-          duration_seconds: durationSeconds,
-          armature_name: armatureName,
-          camera_preset: cameraPreset,
-          prompt,
-          embodiment_mode: 'simulation',
-          scene_objects: latestSigmaSceneState,
-        }),
-      });
-
-      if (!response.ok) {
-        const raw = await response.text();
-        let detail = '';
-        try {
-          detail = JSON.parse(raw)?.detail || '';
-        } catch (_) {
-          detail = raw?.trim?.() || '';
-        }
-        throw new Error(detail || `Simulation failed (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
+        memory_filename: settings.memoryFilename,
+        duration_seconds: settings.durationSeconds,
+        armature_name: settings.armatureName,
+        camera_preset: settings.cameraPreset,
+        prompt,
+        embodiment_mode: 'simulation',
+        scene_objects: sceneState,
+      }, session, traceId);
+      const payload = await readApiResponse(response, 'Simulation');
+      if (!isCurrentSession(session)) return;
       const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
+      if (!isCurrentSession(session)) return;
       simulationRunVideo.src = videoUrl;
       simulationRunVideo.style.display = 'block';
 
-      const summary = payload.plan?.memory_summary?.description || memoryFilename || 'No memory summary';
+      const summary = payload.plan?.memory_summary?.description || settings.memoryFilename || 'No memory summary';
       const profile = payload.plan?.motion_profile || 'custom';
       const sceneObjectCount = payload.scene_object_count ?? latestSigmaSceneState.length;
-      const cameraLabel = availableCameraPresets.find((preset) => preset.id === (payload.plan?.camera_preset || cameraPreset))?.label
+      const cameraLabel = availableCameraPresets.find((preset) => preset.id === (payload.plan?.camera_preset || settings.cameraPreset))?.label
         || payload.plan?.camera?.label
         || payload.plan?.camera_preset
-        || cameraPreset;
+        || settings.cameraPreset;
       setSimulationStatus(
         `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nCamera: ${cameraLabel}\nScene objects: ${sceneObjectCount}\nMemory: ${summary}`,
         'success'
       );
     } catch (error) {
+      if (!isCurrentSession(session)) return;
       console.error('[simulation] render failed', { traceId, error });
       setSimulationStatus(`Render failed (${traceId}): ${error?.message || error}`, 'error');
     } finally {
-      simulationRunSubmit.disabled = false;
+      finishSimulationSession(session);
+    }
+  }
+
+  function playBufferedVideo(session, segment) {
+    return new Promise((resolve, reject) => {
+      const signal = session.controller.signal;
+      let settled = false;
+      const cleanup = () => {
+        settled = true;
+        simulationRunVideo.removeEventListener('ended', onEnded);
+        simulationRunVideo.removeEventListener('error', onError);
+        simulationRunVideo.removeEventListener('playing', onPlaying);
+        simulationRunVideo.removeEventListener('waiting', onWaiting);
+        signal.removeEventListener('abort', onAbort);
+      };
+      const onEnded = () => { cleanup(); resolve(); };
+      const onError = () => { cleanup(); reject(new Error('The rendered video could not be played.')); };
+      const onAbort = () => { cleanup(); reject(new DOMException('Stopped', 'AbortError')); };
+      const onPlaying = () => {
+        if (isCurrentSession(session)) setSimulationStatus(`Playing clip ${segment}. The next clip will be planned and rendered after this one ends.`, 'success');
+      };
+      const onWaiting = () => {
+        if (isCurrentSession(session)) setSimulationStatus(`Buffering clip ${segment}…`, 'info');
+      };
+      simulationRunVideo.addEventListener('ended', onEnded);
+      simulationRunVideo.addEventListener('error', onError);
+      simulationRunVideo.addEventListener('playing', onPlaying);
+      simulationRunVideo.addEventListener('waiting', onWaiting);
+      signal.addEventListener('abort', onAbort, { once: true });
+      if (signal.aborted) { onAbort(); return; }
+      (async () => {
+        try {
+          await simulationRunVideo.play();
+        } catch (error) {
+          if (settled || !isCurrentSession(session)) return;
+          if (error?.name === 'NotAllowedError') {
+            setSimulationStatus(`Autoplay was blocked for clip ${segment}. Use the video controls to play it; the next clip will be rendered after it ends.`, 'info');
+          } else {
+            cleanup();
+            reject(error);
+          }
+        }
+      })();
+    });
+  }
+
+  async function playBufferedClips() {
+    let settings;
+    try { settings = readSimulationSettings(true); } catch (error) {
+      setSimulationStatus(error.message, 'error');
+      return;
+    }
+    const session = beginSimulationSession();
+    if (!session) return;
+    let segment = 0;
+    let traceId = '';
+    try {
+      setSimulationStatus('Preparing scene for buffered playback…', 'info');
+      const sceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
+      if (!isCurrentSession(session)) return;
+      latestSigmaSceneState = sceneState;
+      updateSimulationSceneSummary(sceneState);
+
+      while (isCurrentSession(session)) {
+        segment += 1;
+        traceId = `buffer-${Date.now()}-${crypto.randomUUID()}`;
+        setSimulationStatus(`Planning clip ${segment} from ${settings.memoryFilename}…`, 'info');
+        const planResponse = await postSimulationJson('/playback/plan', {
+          start_memory_filename: settings.memoryFilename,
+          duration_seconds: settings.durationSeconds,
+          armature_name: settings.armatureName,
+          camera_preset: settings.cameraPreset,
+        }, session, traceId);
+        await readApiResponse(planResponse, 'Playback planning');
+        if (!isCurrentSession(session)) return;
+
+        setSimulationStatus(`Rendering and buffering clip ${segment}… This may take a while.`, 'info');
+        const renderResponse = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
+          memory_filename: settings.memoryFilename,
+          duration_seconds: settings.durationSeconds,
+          armature_name: settings.armatureName,
+          camera_preset: settings.cameraPreset,
+          force_rerender: true,
+          embodiment_mode: 'simulation',
+          scene_objects: sceneState,
+        }, session, traceId);
+        const payload = await readApiResponse(renderResponse, 'Simulation');
+        if (!isCurrentSession(session)) return;
+        const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
+        if (!isCurrentSession(session)) return;
+        simulationRunVideo.src = videoUrl;
+        simulationRunVideo.style.display = 'block';
+        setSimulationStatus(`Buffering clip ${segment} for playback…`, 'info');
+        await playBufferedVideo(session, segment);
+      }
+    } catch (error) {
+      if (!isCurrentSession(session)) return;
+      console.error('[simulation] buffered playback failed', { traceId, error });
+      setSimulationStatus(`Buffered playback stopped${traceId ? ` (${traceId})` : ''}: ${error?.message || error}`, 'error');
+    } finally {
+      finishSimulationSession(session);
     }
   }
 
@@ -472,17 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Stop Simulation
-  document.getElementById("stop").addEventListener("click", async () => {
-    try {
-      const response = await fetch(`${apiBase}/stop`, {
-        method: "POST"
-      });
-      if (!response.ok) throw new Error("Stop failed");
-      console.log("Simulation stopped");
-    } catch (error) {
-      console.error("Error stopping simulation:", error);
-    }
-  });
+  document.getElementById("stop").addEventListener("click", stopSimulation);
 
 
   // Add File
@@ -527,6 +752,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setSimulationStatus('Refreshing memories and .blend files…', 'info');
   });
   simulationRunSubmit?.addEventListener('click', runAvaSimulation);
+  simulationRunPlay?.addEventListener('click', playBufferedClips);
+  simulationRunLive?.addEventListener('click', runLiveRigPreview);
+  simulationRunStop?.addEventListener('click', stopSimulation);
 
 
   async function getUniqueFilename(user) {
@@ -943,6 +1171,20 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSelectedObjectButton?.addEventListener('click', loadSelectedObject);
 
   window.addEventListener('message', (event) => {
+    if (event.source !== document.getElementById('sigma-iframe')?.contentWindow || event.origin !== window.location.origin) return;
+    if (event.data?.type === 'sigma-live-status') {
+      const session = simulationSession;
+      if (!session?.live || !isCurrentSession(session) || event.data.requestId !== session.liveId) return;
+      clearTimeout(session.ackTimeout);
+      if (event.data.level === 'error') {
+        const message = String(event.data.message || 'Sigma live preview failed.');
+        stopSimulation();
+        setSimulationStatus(message, 'error');
+      } else {
+        setSimulationStatus(String(event.data.message || 'Live preview running.'), 'info');
+      }
+      return;
+    }
     if (event.data?.type === 'sigma-ready') {
       sigmaReady = true;
       if (pendingSigmaModel) {
@@ -995,7 +1237,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function _sendToSigma(url, filename, requestId = 0) {
     const sigmaIframe = document.getElementById('sigma-iframe');
     if (sigmaIframe?.contentWindow) {
-      sigmaIframe.contentWindow.postMessage({ type: 'load-model', url, filename, requestId }, '*');
+      sigmaIframe.contentWindow.postMessage({ type: 'load-model', url, filename, requestId }, window.location.origin);
       return true;
     }
     return false;

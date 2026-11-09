@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css?v=20260905a" />
+  <link rel="stylesheet" href="styles.css?v=20261109b" />
   <!-- Firebase SDKs -->
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20260909a"></script>
+  <script type="module" src="simulation.js?v=20261109b"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -106,7 +106,7 @@
       </div>
 
       <div id="sigma-container" class="simulation-container">
-        <iframe id="sigma-iframe" src="sigma.html?v=20260719" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
+        <iframe id="sigma-iframe" src="sigma.html?v=20261109b" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
     </div>
   </div>
@@ -144,10 +144,15 @@
         <label class="simulation-field">
           <span>Starting memory</span>
           <select id="simulation-memory-select"></select>
+          <input id="simulation-memory-manual" type="text" placeholder="Or enter a memory filename, e.g. walkw12001.json" autocomplete="off">
         </label>
         <label class="simulation-field">
           <span>Duration (seconds)</span>
           <input id="simulation-duration-input" type="number" min="1" max="30" step="1" value="6">
+        </label>
+        <label class="simulation-field">
+          <span>Live preview FPS</span>
+          <input id="simulation-live-fps" type="number" min="12" max="60" step="1" value="12">
         </label>
         <label class="simulation-field">
           <span>Armature name (optional)</span>
@@ -161,12 +166,18 @@
           <span>Scene prompt (optional)</span>
           <textarea id="simulation-prompt-input" rows="3" placeholder="Ex: Ava plays the piano with focused, joyful energy."></textarea>
         </label>
-        <div id="simulation-run-status">Choose a starting memory and duration, then run the render with Ava and the currently loaded scene objects.</div>
+        <div class="simulation-field">Buffered clips are planned and rendered one at a time, with waits between clips. Each starts from the same memory and pose; there is no continuity. The scene prompt is not used for buffered clips, and the separate render is not guaranteed to use the returned plan.</div>
+        <div class="simulation-field">Experimental live rig preview requires one compatible rigged GLB or glTF already loaded in Sigma. Bone axes and rest semantics are approximated when converting Blender Z-up to glTF Y-up; this is not a Blender match or physics. Root motion, scene prompt and camera placement are not applied in Sigma. One precomputed plan plays once; there is no continuous AI or stimulus processing.</div>
+        <label class="simulation-field"><span><input id="simulation-live-consent" type="checkbox" style="width:auto;"> I understand and opt in to the approximate axis and rest-pose mapping.</span></label>
+        <div id="simulation-run-status" role="status" aria-live="polite">Choose a starting memory and duration, then run the render with Ava and the currently loaded scene objects.</div>
         <video id="simulation-run-video" controls playsinline style="display:none;"></video>
       </div>
-      <div id="simulation-run-modal-footer">
+      <div id="simulation-run-modal-footer" style="flex-wrap:wrap;">
         <button id="simulation-run-refresh" type="button">Refresh Lists</button>
         <button id="simulation-run-submit" type="button">Render Clip</button>
+        <button id="simulation-run-play" type="button">Play buffered clips</button>
+        <button id="simulation-run-live" type="button">Live rig preview</button>
+        <button id="simulation-run-stop" type="button" disabled>Stop</button>
       </div>
     </div>
   </div>

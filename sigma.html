@@ -100,6 +100,7 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { createLivePreview } from './sigma-live.js?v=20261109b';
 
     // Scene
     const scene = new THREE.Scene();
@@ -148,16 +149,28 @@
 
     function animate() {
       requestAnimationFrame(animate);
+      try {
+        livePreview.update(performance.now());
+      } catch (error) {
+        livePreview.stop();
+        if (liveRequestId) reportLive(liveRequestId, 'error', `Live preview failed: ${error.message || error}`);
+        liveRequestId = null;
+      }
       controls.update();
       renderer.render(scene, camera);
     }
-    animate();
 
     // Model loading
     const gltfLoader = new GLTFLoader();
     const objLoader = new OBJLoader();
 
     const loadedModels = new Map();
+    let liveRequestId = null;
+    function reportLive(requestId, level, message) {
+      window.parent.postMessage({ type: 'sigma-live-status', requestId, level, message }, window.location.origin);
+    }
+    const livePreview = createLivePreview(THREE, () => loadedModels, reportLive);
+    animate();
     const modelListEl = document.getElementById('model-list');
     const dropHint = document.getElementById('drop-hint');
     const statusEl = document.getElementById('status');
@@ -187,6 +200,7 @@
     function addModelTag(name, object) {
       const tag = document.createElement('div');
       tag.className = 'model-tag';
+      tag.dataset.filename = name;
 
       const label = document.createElement('span');
       label.textContent = name.length > 22 ? name.slice(0, 20) + '…' : name;
@@ -197,6 +211,7 @@
       rm.textContent = '×';
       rm.title = 'Remove from scene';
       rm.addEventListener('click', () => {
+        livePreview.modelRemoved(object);
         scene.remove(object);
         loadedModels.delete(name);
         tag.remove();
@@ -228,7 +243,7 @@
         type: 'sigma-scene-state',
         requestId,
         sceneObjects: getSceneState(),
-      }, '*');
+      }, window.location.origin);
     }
 
     function loadModelFromURL(url, filename) {
@@ -238,6 +253,14 @@
       setStatus(`Loading ${filename}…`);
 
       const onLoad = (object) => {
+        const previous = loadedModels.get(filename);
+        if (previous) {
+          livePreview.modelRemoved(previous);
+          scene.remove(previous);
+          for (const tag of modelListEl.children) {
+            if (tag.dataset.filename === filename) tag.remove();
+          }
+        }
         centerAndScale(object);
         scene.add(object);
         loadedModels.set(filename, object);
@@ -245,7 +268,7 @@
         dropHint.style.display = 'none';
         loadingOverlay.style.display = 'none';
         setStatus(`Loaded: ${filename}`);
-        window.parent.postMessage({ type: 'sigma-status', level: 'info', message: `Loaded ${filename}` }, '*');
+        window.parent.postMessage({ type: 'sigma-status', level: 'info', message: `Loaded ${filename}` }, window.location.origin);
 
         // Frame camera on new model
         const box = new THREE.Box3().setFromObject(object);
@@ -267,7 +290,7 @@
           level: 'error',
           message: `Failed to load ${filename}`,
           detail: err?.message || String(err),
-        }, '*');
+        }, window.location.origin);
       };
 
       if (ext === 'glb' || ext === 'gltf') {
@@ -281,22 +304,41 @@
           type: 'sigma-status',
           level: 'error',
           message: `Unsupported extension .${ext}`,
-        }, '*');
+        }, window.location.origin);
       }
     }
 
     // Tell parent we are ready
-    window.parent.postMessage({ type: 'sigma-ready' }, '*');
+    window.parent.postMessage({ type: 'sigma-ready' }, window.location.origin);
 
     // Receive model from parent (simulation.js)
     window.addEventListener('message', (event) => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return;
+      if (event.data?.type === 'live-stop') {
+        if (event.data.requestId === liveRequestId) {
+          livePreview.stop();
+          liveRequestId = null;
+        }
+        return;
+      }
+      if (event.data?.type === 'live-plan') {
+        liveRequestId = event.data.requestId;
+        try {
+          livePreview.start(event.data.payload, liveRequestId, event.data.approximateMappingConfirmed);
+        } catch (error) {
+          livePreview.stop();
+          reportLive(liveRequestId, 'error', `Live preview failed: ${error.message || error}`);
+          liveRequestId = null;
+        }
+        return;
+      }
       if (event.data?.type === 'load-model') {
         const { url, filename, requestId } = event.data;
         window.parent.postMessage({
           type: 'sigma-load-ack',
           requestId: requestId ?? null,
           filename: filename ?? null,
-        }, '*');
+        }, window.location.origin);
         if (url && filename) loadModelFromURL(url, filename);
         return;
       }
