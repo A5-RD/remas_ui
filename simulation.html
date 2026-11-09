@@ -162,6 +162,13 @@
           <span>Camera placement</span>
           <select id="simulation-camera-preset-select"></select>
         </label>
+        <div class="simulation-field">
+          <label for="simulation-scene-config">Initial scene configuration (JSON)</label>
+          <input id="simulation-scene-config" type="file" accept=".json,application/json">
+          <button id="simulation-scene-upload" type="button">Upload scene configuration</button>
+          <small id="simulation-scene-upload-status" role="status" aria-live="polite">Upload a camera preset file to set Ava and scene starting transforms for Blender renders.</small>
+          <small>Sigma object transforms override matching uploaded object transforms. The uploaded scene is not applied in Sigma's live preview.</small>
+        </div>
         <label class="simulation-field">
           <span>Scene prompt (optional)</span>
           <textarea id="simulation-prompt-input" rows="3" placeholder="Ex: Ava plays the piano with focused, joyful energy."></textarea>

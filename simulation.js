@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const simContainer = document.getElementById("simulation-container");
   const availableMemoryFiles = [];
   const availableBlendFiles = [];
+  let sceneConfigRequest = 0;
+  let sceneConfigUid = null;
+  let availableCameraPresets = [];
 
   async function getAuthToken() {
     const user = auth.currentUser;
@@ -29,6 +32,13 @@ document.addEventListener("DOMContentLoaded", () => {
   simContainer.style.display = "none";
 
   onAuthStateChanged(auth, user => {
+    if (sceneConfigUid !== (user?.uid || null)) {
+      sceneConfigUid = user?.uid || null;
+      sceneConfigRequest++;
+      availableCameraPresets = [];
+      const presetSelect = document.getElementById('simulation-camera-preset-select');
+      if (presetSelect) { presetSelect.replaceChildren(); presetSelect.disabled = true; }
+    }
     if (!user) {
       window.location.href = "index.html";
     } else {
@@ -219,15 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // API INTEGRATION
   const apiBase = "https://remas-api-507506689237.us-central1.run.app";
   const defaultSimulationBlendFilename = 'ava_1.8_dress_packed.blend';
-  const defaultCameraPresetId = 'full_body';
-  const fallbackCameraPresets = [
-    { id: 'full_body', label: 'Full Body', description: 'Balanced front view that keeps Ava fully in frame.' },
-    { id: 'medium', label: 'Medium Shot', description: 'Closer framing from the waist up.' },
-    { id: 'close_up', label: 'Close-Up', description: "Portrait framing focused on Ava's upper body and face." },
-    { id: 'wide', label: 'Wide Shot', description: 'Pulls the camera back to show more of the scene.' },
-    { id: 'three_quarter', label: 'Three-Quarter Angle', description: 'Slightly angled view for more depth.' },
-  ];
-  let availableCameraPresets = [...fallbackCameraPresets];
+  const defaultCameraPresetId = 'frame';
   let latestSigmaSceneState = [];
   let sigmaSceneRequestId = 0;
   const pendingSigmaSceneResolvers = new Map();
@@ -239,6 +241,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const simulationDurationInput = document.getElementById('simulation-duration-input');
   const simulationArmatureInput = document.getElementById('simulation-armature-input');
   const simulationCameraPresetSelect = document.getElementById('simulation-camera-preset-select');
+  const sceneConfigInput = document.getElementById('simulation-scene-config');
+  const sceneConfigUpload = document.getElementById('simulation-scene-upload');
+  const sceneConfigStatus = document.getElementById('simulation-scene-upload-status');
   const simulationPromptInput = document.getElementById('simulation-prompt-input');
   const simulationRunStatus = document.getElementById('simulation-run-status');
   const simulationRunVideo = document.getElementById('simulation-run-video');
@@ -307,6 +312,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (requireMemory && !memoryFilename) throw new Error('Choose a starting memory.');
     if (requireMemory && !/^[a-z]{5}[0-9]{5}\.json$/.test(memoryFilename)) {
       throw new Error('Enter a memory filename with five lowercase letters, five digits, and .json.');
+    }
+    if (!simulationCameraPresetSelect.value || !availableCameraPresets.length) {
+      throw new Error('Load a scene configuration before starting a simulation.');
     }
     return {
       memoryFilename,
@@ -397,25 +405,54 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadCameraPresets() {
+    const requestId = ++sceneConfigRequest;
+    const user = auth.currentUser;
     try {
-      const response = await fetch(`${apiBase}/api/blender/camera-presets`);
+      const response = await fetchApi('/api/blender/scene-config');
       if (!response.ok) throw new Error(`Camera preset lookup failed (${response.status})`);
       const payload = await response.json();
+      if (requestId !== sceneConfigRequest || auth.currentUser !== user) return;
       const presets = Array.isArray(payload?.presets) ? payload.presets : [];
-      availableCameraPresets = presets.length
-        ? presets.map((preset) => ({
+      availableCameraPresets = presets.map((preset) => ({
             id: preset.id,
             label: preset.label,
             description: preset.description,
-          }))
-        : [...fallbackCameraPresets];
+          }));
       fillCameraPresetOptions(payload?.default || simulationCameraPresetSelect.value || defaultCameraPresetId);
+      sceneConfigStatus.textContent = payload.source === 'uploaded'
+        ? 'Using your uploaded scene configuration for Blender renders.'
+        : 'Using the default scene configuration.';
     } catch (error) {
-      console.warn('[simulation] using fallback camera presets', error);
-      availableCameraPresets = [...fallbackCameraPresets];
-      fillCameraPresetOptions(simulationCameraPresetSelect.value || defaultCameraPresetId);
+      if (requestId !== sceneConfigRequest || auth.currentUser !== user) return;
+      availableCameraPresets = [];
+      fillCameraPresetOptions('');
+      sceneConfigStatus.textContent = `Could not load scene configuration: ${error.message}`;
     }
   }
+
+  sceneConfigUpload?.addEventListener('click', async () => {
+    const file = sceneConfigInput.files?.[0];
+    if (!file) { sceneConfigStatus.textContent = 'Choose a JSON file first.'; return; }
+    if (file.size > 131072) { sceneConfigStatus.textContent = 'Configuration must be at most 128 KiB.'; return; }
+    const user = auth.currentUser;
+    sceneConfigUpload.disabled = true;
+    sceneConfigStatus.textContent = 'Uploading scene configuration…';
+    try {
+      if (!user) throw new Error('User not authenticated');
+      const [token, body] = await Promise.all([user.getIdToken(), file.text()]);
+      if (auth.currentUser !== user) return;
+      const response = await fetch(`${apiBase}/api/blender/scene-config`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body,
+      });
+      await readApiResponse(response, 'Scene configuration upload');
+      if (auth.currentUser !== user) return;
+      await loadCameraPresets();
+    } catch (error) {
+      if (auth.currentUser === user) sceneConfigStatus.textContent = error.message;
+    } finally {
+      sceneConfigUpload.disabled = false;
+    }
+  });
 
   function getPreferredMemorySelection() {
     if (selectedFiles.size === 1) return [...selectedFiles][0];
@@ -523,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
         duration_seconds: settings.durationSeconds,
         fps,
         armature_name: settings.armatureName,
-        camera_preset: settings.cameraPreset,
+        camera_preset: null,
       }, session, session.liveId);
       const payload = await readApiResponse(response, 'Live planning');
       if (!isCurrentSession(session)) return;
@@ -668,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
           start_memory_filename: settings.memoryFilename,
           duration_seconds: settings.durationSeconds,
           armature_name: settings.armatureName,
-          camera_preset: settings.cameraPreset,
+          camera_preset: null,
         }, session, traceId);
         await readApiResponse(planResponse, 'Playback planning');
         if (!isCurrentSession(session)) return;
