@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css?v=20261109b" />
+  <link rel="stylesheet" href="styles.css?v=20261110a" />
   <!-- Firebase SDKs -->
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20261109d"></script>
+  <script type="module" src="simulation.js?v=20261110a"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -186,6 +186,11 @@
         <label class="simulation-field"><span><input id="simulation-live-consent" type="checkbox" style="width:auto;"> I understand and opt in to the approximate axis and rest-pose mapping.</span></label>
         </div>
         <div id="simulation-run-status" role="status" aria-live="polite">Choose a starting memory and duration, then run the render with Ava and the currently loaded scene objects.</div>
+        <div id="simulation-run-progress" hidden>
+          <div class="simulation-progress-heading"><span>Working</span><span id="simulation-run-elapsed">Elapsed 0:00</span></div>
+          <progress aria-label="Simulation request in progress"></progress>
+          <small>Time remaining is unknown. The bar does not show percentage completed.</small>
+        </div>
         <video id="simulation-run-video" controls playsinline style="display:none;"></video>
       </div>
       <div id="simulation-run-modal-footer" style="flex-wrap:wrap;">

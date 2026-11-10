@@ -664,6 +664,20 @@ body, html {
   white-space: pre-wrap;
 }
 
+#simulation-run-progress {
+  padding: 10px 12px;
+  border: 1px solid #2b5563;
+  border-radius: 6px;
+  background: rgba(0, 208, 255, 0.05);
+  color: #a7ebff;
+  font-size: 12px;
+}
+
+#simulation-run-progress[hidden] { display: none; }
+.simulation-progress-heading { display: flex; justify-content: space-between; gap: 12px; }
+#simulation-run-progress progress { display: block; width: 100%; height: 7px; margin: 8px 0; accent-color: #00d0ff; }
+#simulation-run-progress small { color: #aab8bf; }
+
 #simulation-run-video {
   width: 100%;
   max-height: 280px;

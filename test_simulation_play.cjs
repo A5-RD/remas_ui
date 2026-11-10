@@ -41,6 +41,7 @@ function harness() {
     auth: { currentUser: user }, apiBase: '', crypto: { randomUUID: () => 'test' }, DOMException, AbortController,
     simulationSession: null, simulationSessionToken: 0, modalOpenToken: 0,
     simulationRunModal: { style: {}, classList: { remove() {} } }, simulationRunVideo: video,
+    simulationRunProgress: { hidden: true }, simulationRunElapsed: {},
     simulationRunSubmit: {}, simulationRunPlay: {}, simulationRunLive: {}, simulationRunRefresh: {}, simulationRunStop: {},
     memoryZipInput: { files: [{ name: 'memory.zip' }], value: 'selected' },
     sceneConfigInput: { files: [{ name: 'scene.json' }], value: 'selected' },
@@ -52,6 +53,8 @@ function harness() {
     resolveStoragePathUrl: async () => 'fallback',
     document: { getElementById: () => null }, window: { location: { origin: '' } },
     console: { error() {}, warn() {} }, clearTimeout,
+    setInterval(fn) { c.progressTick = fn; return 42; },
+    clearInterval(id) { assert.equal(id, 42); c.progressTick = null; },
     fetch: async (url, opts = {}) => {
       requests.push({ url, ...opts });
       if (c.fetchOverride) return c.fetchOverride(url, opts);
@@ -75,6 +78,7 @@ const renders = requests => requests.filter(r => r.method === 'RENDER');
 test('HTML IDs are unique', () => {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   assert.equal(new Set(ids).size, ids.length);
+  assert.match(html, /<progress aria-label="Simulation request in progress"><\/progress>/);
 });
 
 test('uploads raw files to authoritative validation endpoints and renders selected memory', async () => {
@@ -91,6 +95,37 @@ test('uploads raw files to authoritative validation endpoints and renders select
   assert.equal(video.loop, true);
   assert.equal(video.playCount, 1);
   assert.equal(c.simulationRunStop.disabled, false);
+  assert.equal(c.simulationRunProgress.hidden, true);
+  assert.equal(c.progressTick, null);
+});
+
+test('waiting for rendering shows indeterminate elapsed progress and clears it on stop', async () => {
+  const { c } = harness();
+  const pending = deferred(), started = deferred();
+  c.renderOverride = () => { started.resolve(); return pending.promise; };
+  const run = c.run();
+  await started.promise;
+  assert.equal(c.simulationRunProgress.hidden, false);
+  assert.match(c.status, /server is preparing and rendering/);
+  assert.match(c.simulationRunElapsed.textContent, /^Elapsed \d+:\d\d$/);
+  c.progressTick();
+  c.stop();
+  assert.equal(c.simulationRunProgress.hidden, true);
+  assert.equal(c.progressTick, null);
+  pending.resolve(response({ url: 'old-video' }));
+  await run;
+  assert.match(c.status, /Stopped/);
+});
+
+test('render timeout explains failure and preserves saved snapshot', async () => {
+  const { c } = harness();
+  c.renderOverride = () => response({ detail: 'Blender timed out while rendering simulation' }, 504);
+  await c.run();
+  assert.match(c.status, /timed out \(504\)/);
+  assert.match(c.status, /saved ZIP is still available/);
+  assert.equal(c.savedMemorySnapshot.memory_snapshot_id, snapshot().memory_snapshot_id);
+  assert.equal(c.simulationRunProgress.hidden, true);
+  assert.equal(c.progressTick, null);
 });
 
 test('reuse fetches current snapshot, selects sorted first memory and plays once', async () => {

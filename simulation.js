@@ -262,6 +262,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const sceneConfigStatus = document.getElementById('simulation-scene-upload-status');
   const simulationPromptInput = document.getElementById('simulation-prompt-input');
   const simulationRunStatus = document.getElementById('simulation-run-status');
+  const simulationRunProgress = document.getElementById('simulation-run-progress');
+  const simulationRunElapsed = document.getElementById('simulation-run-elapsed');
   const simulationRunVideo = document.getElementById('simulation-run-video');
   const simulationRunSubmit = document.getElementById('simulation-run-submit');
   const simulationRunPlay = document.getElementById('simulation-run-play');
@@ -289,6 +291,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return simulationSession === session && session.token === simulationSessionToken && !session.controller.signal.aborted && auth.currentUser === session.user;
   }
 
+  function startSimulationProgress(session) {
+    const started = Date.now();
+    simulationRunProgress.hidden = false;
+    const update = () => {
+      if (!isCurrentSession(session)) return;
+      const seconds = Math.floor((Date.now() - started) / 1000);
+      simulationRunElapsed.textContent = `Elapsed ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    };
+    update();
+    session.progressTimer = setInterval(update, 1000);
+  }
+
+  function stopSimulationProgress(session) {
+    if (session?.progressTimer != null) clearInterval(session.progressTimer);
+    simulationRunProgress.hidden = true;
+  }
+
   function beginSimulationSession() {
     if (simulationSession) return null;
     ++modalOpenToken;
@@ -310,6 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const session = simulationSession;
     simulationSession = null;
     session?.controller.abort();
+    stopSimulationProgress(session);
     if (session?.live) {
       clearTimeout(session.ackTimeout);
       document.getElementById('sigma-iframe')?.contentWindow?.postMessage({ type: 'live-stop', requestId: session.liveId }, window.location.origin);
@@ -326,6 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function finishSimulationSession(session) {
     if (!isCurrentSession(session)) return;
+    stopSimulationProgress(session);
     simulationSession = null;
     setSimulationBusy(false);
   }
@@ -358,6 +379,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!response.ok) {
       const detail = payload?.detail ?? payload?.message ?? payload?.error ?? (typeof payload === 'string' ? payload : (payload === null ? raw.trim() : ''));
       const readable = typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : '');
+      if (operation === 'Simulation' && response.status === 504) {
+        throw new Error('Simulation timed out (504). Blender did not finish in time. Try a shorter or simpler scene; your saved ZIP is still available.');
+      }
       throw new Error(`${operation} failed (${response.status})${readable ? `: ${readable}` : ''}`);
     }
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
@@ -643,6 +667,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!user) { setSimulationStatus('User not authenticated.', 'error'); return; }
     const session = beginSimulationSession();
     if (!session) return;
+    startSimulationProgress(session);
+    setSimulationStatus('Preparing simulation and checking your account…', 'info');
     const check = () => {
       if (!isCurrentSession(session) || auth.currentUser !== user) throw new DOMException('Stopped', 'AbortError');
     };
@@ -680,6 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: configFile,
         });
       } else {
+        setSimulationStatus('Loading saved scene configuration…', 'info');
         configResponse = await fetch(`${apiBase}/api/blender/scene-config`, {
           signal: session.controller.signal, headers: { Authorization: `Bearer ${token}` },
         });
@@ -708,12 +735,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const startMemory = settings.start_memory_filename || [...names].sort()[0];
       if (!names.includes(startMemory)) throw new Error(`Starting memory ${startMemory} is not in the ZIP.`);
       const repeat = settings.duration_seconds === 'N/A';
-      setSimulationStatus(`Starting with ${startMemory}. Rendering in Blender; this can take a while…`, 'info');
+      setSimulationStatus(`Preparing the scene for ${startMemory}…`, 'info');
       const sceneState = await requestSigmaSceneState();
       check();
       latestSigmaSceneState = sceneState;
       updateSimulationSceneSummary(latestSigmaSceneState);
 
+      setSimulationStatus(`Starting with ${startMemory}. The server is preparing and rendering the video; this can take several minutes. Progress and remaining time are unavailable.`, 'info');
       const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
         memory_snapshot_id: savedMemorySnapshot.memory_snapshot_id,
         start_memory_filename: startMemory,
@@ -724,6 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }, session, traceId);
       const payload = await readApiResponse(response, 'Simulation');
       check();
+      setSimulationStatus('Render finished. Preparing video playback…', 'info');
       const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
       check();
       simulationRunVideo.src = videoUrl;
