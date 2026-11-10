@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let sceneConfigRequest = 0;
   let sceneConfigUid = null;
   let availableCameraPresets = [];
+  let savedMemorySnapshot = null;
 
   async function getAuthToken() {
     const user = auth.currentUser;
@@ -32,7 +33,19 @@ document.addEventListener("DOMContentLoaded", () => {
   simContainer.style.display = "none";
 
   onAuthStateChanged(auth, user => {
+    if (simulationSession && simulationSession.user !== user && sceneConfigUid === (user?.uid || null)) {
+      stopSimulation();
+    }
     if (sceneConfigUid !== (user?.uid || null)) {
+      if (sceneConfigUid !== null) {
+        stopSimulation();
+        simulationRunModal.style.display = 'none';
+        memoryZipInput.value = '';
+        sceneConfigInput.value = '';
+        snapshotStatus.textContent = 'Checking for a saved starting snapshot…';
+        zipRequirement.textContent = '(checking)';
+      }
+      savedMemorySnapshot = null;
       sceneConfigUid = user?.uid || null;
       sceneConfigRequest++;
       availableCameraPresets = [];
@@ -242,6 +255,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const simulationArmatureInput = document.getElementById('simulation-armature-input');
   const simulationCameraPresetSelect = document.getElementById('simulation-camera-preset-select');
   const sceneConfigInput = document.getElementById('simulation-scene-config');
+  const memoryZipInput = document.getElementById('simulation-memory-zip');
+  const snapshotStatus = document.getElementById('simulation-snapshot-status');
+  const zipRequirement = document.getElementById('simulation-zip-requirement');
   const sceneConfigUpload = document.getElementById('simulation-scene-upload');
   const sceneConfigStatus = document.getElementById('simulation-scene-upload-status');
   const simulationPromptInput = document.getElementById('simulation-prompt-input');
@@ -265,18 +281,25 @@ document.addEventListener("DOMContentLoaded", () => {
     simulationRunLive.disabled = busy;
     simulationRunRefresh.disabled = busy;
     simulationRunStop.disabled = !busy;
+    memoryZipInput.disabled = busy;
+    sceneConfigInput.disabled = busy;
   }
 
   function isCurrentSession(session) {
-    return simulationSession === session && session.token === simulationSessionToken && !session.controller.signal.aborted;
+    return simulationSession === session && session.token === simulationSessionToken && !session.controller.signal.aborted && auth.currentUser === session.user;
   }
 
   function beginSimulationSession() {
     if (simulationSession) return null;
-    const session = { token: ++simulationSessionToken, controller: new AbortController() };
+    ++modalOpenToken;
+    const session = { token: ++simulationSessionToken, controller: new AbortController(), user: auth.currentUser };
     simulationSession = session;
     setSimulationBusy(true);
     simulationRunVideo.pause();
+    simulationRunVideo.onerror = null;
+    simulationRunVideo.removeAttribute('src');
+    simulationRunVideo.load();
+    simulationRunVideo.loop = false;
     simulationRunVideo.style.display = 'none';
     return session;
   }
@@ -293,6 +316,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     simulationRunModal.classList.remove('live-preview');
     simulationRunVideo.pause();
+    simulationRunVideo.onerror = null;
+    simulationRunVideo.removeAttribute('src');
+    simulationRunVideo.load();
+    simulationRunVideo.style.display = 'none';
     setSimulationBusy(false);
     setSimulationStatus('Stopped in the browser. A server render already started may continue.', 'info');
   }
@@ -498,8 +525,26 @@ document.addEventListener("DOMContentLoaded", () => {
     simulationRunVideo.removeAttribute('src');
     simulationRunVideo.load();
     simulationRunVideo.style.display = 'none';
-    setSimulationStatus('Choose a memory and duration, then run Ava with every object currently loaded in Sigma.', 'info');
+    memoryZipInput.value = '';
+    sceneConfigInput.value = '';
+    setSimulationStatus('Choose files to upload or reuse saved settings, then press Play.', 'info');
     simulationRunModal.style.display = 'flex';
+    const user = auth.currentUser;
+    savedMemorySnapshot = null;
+    snapshotStatus.textContent = 'Checking for a saved starting snapshot…';
+    zipRequirement.textContent = '(checking)';
+    try {
+      const response = await fetchApi('/api/blender/memory-snapshots/current');
+      const snapshot = response.status !== 404 ? validateSnapshot(await readApiResponse(response, 'Memory snapshot lookup')) : null;
+      if (auth.currentUser !== user || openToken !== modalOpenToken || simulationSession) return;
+      savedMemorySnapshot = snapshot;
+      snapshotStatus.textContent = savedMemorySnapshot ? `Saved starting snapshot: ${savedMemorySnapshot.filenames.length} memories. Choose a ZIP to replace it.` : 'A memory ZIP is required for the first run.';
+      zipRequirement.textContent = savedMemorySnapshot ? '(optional replacement)' : '(required)';
+    } catch (error) {
+      if (auth.currentUser !== user || openToken !== modalOpenToken || simulationSession) return;
+      snapshotStatus.textContent = `Unable to load saved snapshot: ${error.message}`;
+      zipRequirement.textContent = '(unknown)';
+    }
     await loadCameraPresets();
     if (openToken !== modalOpenToken || simulationSession) return;
     const sceneState = await requestSigmaSceneState().catch((error) => {
@@ -534,6 +579,16 @@ document.addEventListener("DOMContentLoaded", () => {
   async function resolveStoragePathUrl(storagePath) {
     if (!storagePath) throw new Error('Missing storage path for simulation result');
     return getDownloadURL(ref(storage, storagePath));
+  }
+
+  function validateSnapshot(snapshot) {
+    if (!snapshot || !/^[0-9a-f]{64}$/.test(snapshot.memory_snapshot_id) ||
+        !Array.isArray(snapshot.filenames) || !snapshot.filenames.length ||
+        snapshot.filenames.some(name => typeof name !== 'string' || !/^[a-z]{5}[0-9]{5}\.json$/.test(name)) ||
+        new Set(snapshot.filenames).size !== snapshot.filenames.length) {
+      throw new Error('Invalid memory snapshot response.');
+    }
+    return snapshot;
   }
 
   async function runLiveRigPreview() {
@@ -584,56 +639,127 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function runAvaSimulation() {
-    let settings;
-    try { settings = readSimulationSettings(); } catch (error) {
-      setSimulationStatus(error.message, 'error');
-      return;
-    }
-    const prompt = simulationPromptInput.value.trim() || null;
+    const user = auth.currentUser;
+    if (!user) { setSimulationStatus('User not authenticated.', 'error'); return; }
     const session = beginSimulationSession();
     if (!session) return;
-    setSimulationStatus('Rendering Ava and the currently loaded scene objects in Blender… This can take a minute.', 'info');
-
+    const check = () => {
+      if (!isCurrentSession(session) || auth.currentUser !== user) throw new DOMException('Stopped', 'AbortError');
+    };
     const traceId = `sim-${Date.now()}-${crypto.randomUUID()}`;
     try {
-      const sceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
-      if (!isCurrentSession(session)) return;
+      const token = await user.getIdToken();
+      check();
+      const configFile = sceneConfigInput.files?.[0];
+      const zipFile = memoryZipInput.files?.[0];
+      snapshotStatus.textContent = zipFile ? 'The selected ZIP will be validated by the server.' : 'Checking for a saved starting snapshot…';
+      zipRequirement.textContent = zipFile ? '(selected)' : '(checking)';
+      if (!zipFile) {
+        setSimulationStatus('Checking saved memory snapshot…', 'info');
+        const snapshotResponse = await fetch(`${apiBase}/api/blender/memory-snapshots/current`, {
+          signal: session.controller.signal, headers: { Authorization: `Bearer ${token}` },
+        });
+        if (snapshotResponse.status === 404) {
+          check();
+          savedMemorySnapshot = null;
+          snapshotStatus.textContent = 'A memory ZIP is required for the first run.';
+          zipRequirement.textContent = '(required)';
+          throw new Error('A memories ZIP is required for the first run.');
+        }
+        const snapshot = validateSnapshot(await readApiResponse(snapshotResponse, 'Memory snapshot lookup'));
+        check();
+        savedMemorySnapshot = snapshot;
+        snapshotStatus.textContent = `Saved starting snapshot: ${snapshot.filenames.length} memories.`;
+        zipRequirement.textContent = '(optional replacement)';
+      }
+      let configResponse;
+      if (configFile) {
+        setSimulationStatus('Validating and uploading scene JSON…', 'info');
+        configResponse = await fetch(`${apiBase}/api/blender/scene-config`, {
+          method: 'PUT', signal: session.controller.signal,
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: configFile,
+        });
+      } else {
+        configResponse = await fetch(`${apiBase}/api/blender/scene-config`, {
+          signal: session.controller.signal, headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+      const config = await readApiResponse(configResponse, 'Scene configuration');
+      check();
+      if (configFile) {
+        sceneConfigInput.value = '';
+        sceneConfigStatus.textContent = 'Scene configuration saved. ZIP uploads and renders are separate.';
+      }
+      if (zipFile) {
+        setSimulationStatus('Validating and uploading memory ZIP…', 'info');
+        const zipResponse = await fetch(`${apiBase}/api/blender/memory-snapshots`, {
+          method: 'POST', signal: session.controller.signal,
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/zip' }, body: zipFile,
+        });
+        const uploadedSnapshot = validateSnapshot(await readApiResponse(zipResponse, 'Memory ZIP upload'));
+        check();
+        savedMemorySnapshot = uploadedSnapshot;
+        memoryZipInput.value = '';
+        snapshotStatus.textContent = `Saved starting snapshot: ${savedMemorySnapshot.filenames.length} memories.`;
+        zipRequirement.textContent = '(optional replacement)';
+      }
+      const names = savedMemorySnapshot.filenames;
+      const settings = config.simulation || {};
+      const startMemory = settings.start_memory_filename || [...names].sort()[0];
+      if (!names.includes(startMemory)) throw new Error(`Starting memory ${startMemory} is not in the ZIP.`);
+      const repeat = settings.duration_seconds === 'N/A';
+      setSimulationStatus(`Starting with ${startMemory}. Rendering in Blender; this can take a while…`, 'info');
+      const sceneState = await requestSigmaSceneState();
+      check();
       latestSigmaSceneState = sceneState;
       updateSimulationSceneSummary(latestSigmaSceneState);
 
       const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
-        memory_filename: settings.memoryFilename,
-        duration_seconds: settings.durationSeconds,
-        armature_name: settings.armatureName,
-        camera_preset: settings.cameraPreset,
-        prompt,
+        memory_snapshot_id: savedMemorySnapshot.memory_snapshot_id,
+        start_memory_filename: startMemory,
+        duration_seconds: repeat ? null : settings.duration_seconds,
+        camera_preset: config.default,
         embodiment_mode: 'simulation',
         scene_objects: sceneState,
       }, session, traceId);
       const payload = await readApiResponse(response, 'Simulation');
-      if (!isCurrentSession(session)) return;
+      check();
       const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
-      if (!isCurrentSession(session)) return;
+      check();
       simulationRunVideo.src = videoUrl;
+      simulationRunVideo.loop = repeat;
       simulationRunVideo.style.display = 'block';
-
-      const summary = payload.plan?.memory_summary?.description || settings.memoryFilename || 'No memory summary';
-      const profile = payload.plan?.motion_profile || 'custom';
-      const sceneObjectCount = payload.scene_object_count ?? latestSigmaSceneState.length;
-      const cameraLabel = availableCameraPresets.find((preset) => preset.id === (payload.plan?.camera_preset || settings.cameraPreset))?.label
-        || payload.plan?.camera?.label
-        || payload.plan?.camera_preset
-        || settings.cameraPreset;
-      setSimulationStatus(
-        `Rendered ${payload.cached ? 'cached' : 'new'} clip: ${payload.filename}\nMotion profile: ${profile}\nCamera: ${cameraLabel}\nScene objects: ${sceneObjectCount}\nMemory: ${summary}`,
-        'success'
-      );
+      simulationRunVideo.onerror = () => {
+        if (session.token !== simulationSessionToken || session.controller.signal.aborted || auth.currentUser !== user) return;
+        simulationRunStop.disabled = true;
+        setSimulationStatus('The rendered video could not be played.', 'error');
+      };
+      const mode = repeat ? 'Repeating the same clip; this is not live streaming.' : 'Playing once.';
+      setSimulationStatus(`Starting memory: ${startMemory}. ${mode}`, 'success');
+      try { await simulationRunVideo.play(); }
+      catch (error) {
+        check();
+        if (error?.name !== 'NotAllowedError') throw error;
+        setSimulationStatus(`Autoplay was blocked; use the video controls. ${mode}`, 'info');
+      }
     } catch (error) {
-      if (!isCurrentSession(session)) return;
+      if (!isCurrentSession(session) || auth.currentUser !== user) return;
       console.error('[simulation] render failed', { traceId, error });
+      if (zipRequirement.textContent === '(checking)') {
+        snapshotStatus.textContent = `Unable to load saved snapshot: ${error?.message || error}`;
+        zipRequirement.textContent = '(unknown)';
+      }
+      simulationRunVideo.onerror = null;
+      simulationRunVideo.pause();
+      simulationRunVideo.removeAttribute('src');
+      simulationRunVideo.load();
+      simulationRunVideo.style.display = 'none';
       setSimulationStatus(`Render failed (${traceId}): ${error?.message || error}`, 'error');
     } finally {
-      finishSimulationSession(session);
+      if (isCurrentSession(session) && auth.currentUser === user) {
+        finishSimulationSession(session);
+        if (simulationRunVideo.style.display !== 'none' && !simulationRunVideo.error) simulationRunStop.disabled = false;
+      }
     }
   }
 

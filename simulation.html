@@ -12,7 +12,7 @@
   <!-- Your Firebase init -->
   <script type="module" src="firebase.js?v=20260722"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20261109b"></script>
+  <script type="module" src="simulation.js?v=20261109d"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Thin&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -101,8 +101,6 @@
     <div id="main-content">
       <div id="psi-container" class="simulation-container">
         <iframe id="psi-iframe" src="psi.html?v=20260605" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
-        <iframe id="psi-iframe" src="psi.html?v=20260605"></iframe>
-
       </div>
 
       <div id="sigma-container" class="simulation-container">
@@ -138,6 +136,18 @@
       </div>
       <div id="simulation-run-modal-body">
         <label class="simulation-field">
+          <span>Starting memories ZIP <span id="simulation-zip-requirement">(required on first run)</span></span>
+          <input id="simulation-memory-zip" type="file" accept=".zip,application/zip">
+          <small id="simulation-snapshot-status">A saved ZIP can be reused on the next run.</small>
+        </label>
+        <div class="simulation-field">
+          <label for="simulation-scene-config">Scene configuration JSON (optional replacement)</label>
+          <input id="simulation-scene-config" type="file" accept=".json,application/json">
+          <small id="simulation-scene-upload-status" role="status" aria-live="polite">Leave empty to reuse your saved configuration or the default.</small>
+        </div>
+        <div class="simulation-field">Play uploads selected files and starts automatically. The scene JSON chooses the starting memory; otherwise the first filename in sorted ZIP order is used. JSON and ZIP uploads are saved separately, even if a later step fails. N/A repeats a rendered clip; it is not continuous simulation or streaming. Sigma object transforms override matching scene configuration transforms.</div>
+        <div style="display:none">
+        <label class="simulation-field">
           <span>Simulation avatar</span>
           <div id="simulation-scene-summary">Ava uses the default local simulation body and any 3D objects currently loaded in Sigma.</div>
         </label>
@@ -164,9 +174,7 @@
         </label>
         <div class="simulation-field">
           <label for="simulation-scene-config">Initial scene configuration (JSON)</label>
-          <input id="simulation-scene-config" type="file" accept=".json,application/json">
           <button id="simulation-scene-upload" type="button">Upload scene configuration</button>
-          <small id="simulation-scene-upload-status" role="status" aria-live="polite">Upload a camera preset file to set Ava and scene starting transforms for Blender renders.</small>
           <small>Sigma object transforms override matching uploaded object transforms. The uploaded scene is not applied in Sigma's live preview.</small>
         </div>
         <label class="simulation-field">
@@ -176,14 +184,15 @@
         <div class="simulation-field">Buffered clips are planned and rendered one at a time, with waits between clips. Each starts from the same memory and pose; there is no continuity. The scene prompt is not used for buffered clips, and the separate render is not guaranteed to use the returned plan.</div>
         <div class="simulation-field">Experimental live rig preview requires one compatible rigged GLB or glTF already loaded in Sigma. Bone axes and rest semantics are approximated when converting Blender Z-up to glTF Y-up; this is not a Blender match or physics. Root motion, scene prompt and camera placement are not applied in Sigma. One precomputed plan plays once; there is no continuous AI or stimulus processing.</div>
         <label class="simulation-field"><span><input id="simulation-live-consent" type="checkbox" style="width:auto;"> I understand and opt in to the approximate axis and rest-pose mapping.</span></label>
+        </div>
         <div id="simulation-run-status" role="status" aria-live="polite">Choose a starting memory and duration, then run the render with Ava and the currently loaded scene objects.</div>
         <video id="simulation-run-video" controls playsinline style="display:none;"></video>
       </div>
       <div id="simulation-run-modal-footer" style="flex-wrap:wrap;">
-        <button id="simulation-run-refresh" type="button">Refresh Lists</button>
-        <button id="simulation-run-submit" type="button">Render Clip</button>
-        <button id="simulation-run-play" type="button">Play buffered clips</button>
-        <button id="simulation-run-live" type="button">Live rig preview</button>
+        <button id="simulation-run-refresh" type="button" style="display:none">Refresh Lists</button>
+        <button id="simulation-run-submit" type="button">Play</button>
+        <button id="simulation-run-play" type="button" style="display:none">Play buffered clips</button>
+        <button id="simulation-run-live" type="button" style="display:none">Live rig preview</button>
         <button id="simulation-run-stop" type="button" disabled>Stop</button>
       </div>
     </div>
