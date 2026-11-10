@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REMAS · Local workspace</title>
+  <link rel="stylesheet" href="/local.css">
+  <script type="module" src="/local.js"></script>
+</head>
+<body>
+  <header><div><span class="eyebrow">REMAS / LOCAL WORKSPACE</span><h1>Simulation studio</h1></div><span class="badge">● Local only</span></header>
+  <main>
+    <section class="card run">
+      <div class="section-heading"><div><span class="eyebrow">01 / PLAY</span><h2>Run a simulation</h2></div></div>
+      <p>Upload starting memories and an optional scene configuration. Saved uploads are reused on subsequent runs.</p>
+      <form id="run-form">
+        <label>Starting memories ZIP <input id="zip" type="file" accept=".zip,application/zip"><small id="snapshot-status">Checking saved snapshot…</small></label>
+        <label>Scene configuration JSON <input id="config" type="file" accept=".json,application/json"><small id="config-status">Checking saved configuration…</small></label>
+        <p class="note">Ava starts seated at the included grand piano, without an automatic key press or sound. The seated pose is static: memory-driven body and hand motion is not played. The scene configuration chooses the starting memory, camera and duration; N/A repeats a rendered clip. Uploads are saved separately, even if a later step fails.</p>
+        <div class="actions"><button id="play" type="submit">▶ &nbsp; Play</button><button id="stop" type="button" class="secondary" disabled>Stop playback / wait</button></div>
+      </form>
+      <p id="status" role="status" aria-live="polite">Ready.</p><progress id="progress" hidden></progress>
+      <video id="video" controls playsinline hidden></video>
+    </section>
+    <section class="card objects">
+      <div class="section-heading"><div><span class="eyebrow">02 / SCENE</span><h2>Local objects</h2></div><button id="refresh-objects" class="secondary">Refresh</button></div>
+      <p>The local seated pose requires Grand_Piano_Full_rigged_rev_02_audio_static.blend in local objects; it is included automatically at the reference transform. Select additional objects below; their transforms come from the scene JSON, or default to the origin.</p>
+      <form id="object-form"><input id="object-file" type="file" accept=".blend,.blend1,.glb,.gltf,.obj,.fbx" required><button>Upload</button></form>
+      <ul id="objects"></ul>
+    </section>
+    <section class="card memories">
+      <div class="section-heading"><div><span class="eyebrow">03 / EXPLORE</span><h2>Local memories</h2></div><button id="refresh-memories" class="secondary">Refresh</button></div>
+      <p>Browse the local memory directory. Play uses the uploaded ZIP snapshot, not these files.</p>
+      <div class="memory-browser"><select id="memory-list" size="10" aria-label="Local memory files"></select><pre id="memory-content">Select a memory to inspect it.</pre></div>
+    </section>
+  </main>
+  <footer>Isolated local session · No Firebase sign-in or production storage</footer>
+</body>
+</html>
