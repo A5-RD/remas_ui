@@ -4,11 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - REMAS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet" />
-
-  <!-- Firebase Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+  <script src="page-resources.js"></script>
 
   <style>
     * {
@@ -139,19 +135,15 @@
     <img id="logo" src="logo.png" alt="Logo" onerror="console.error('logo.png not found');" />
   </div>
 
-  <script>
-    // Initialize Firebase
-    var firebaseConfig = {
-      apiKey: "AIzaSyDv3KzWRT2nje-GR_kvb7XCnLXsrJrG_D8",
-      authDomain: "remas-storage.firebaseapp.com",
-      projectId: "remas-storage",
-      storageBucket: "remas-storage.firebasestorage.app",
-      messagingSenderId: "157514987438",
-      appId: "1:157514987438:web:3044502cd36513dc1cfa3f",
-      measurementId: "G-3R53FPDSE5"
-    };
-    firebase.initializeApp(firebaseConfig);
-    var auth = firebase.auth();
+  <script type="module">
+    import { auth, isLocal, signInWithEmailAndPassword, sendPasswordResetEmail } from './firebase-adapter.js';
+    if (isLocal) {
+      document.querySelector('#login-container h2').textContent = 'Local session';
+      document.getElementById('email').hidden = true;
+      document.getElementById('password').hidden = true;
+      document.getElementById('forgot-password').hidden = true;
+      document.getElementById('login-btn').textContent = 'Continue locally';
+    }
 
     // Intro Animation
     function playIntroAnimation(callback) {
@@ -192,12 +184,12 @@
       var errorDiv = document.getElementById("error-message");
       errorDiv.textContent = "";
 
-      if (!email || !password) {
+      if (!isLocal && (!email || !password)) {
         errorDiv.textContent = "Please enter both email and password.";
         return;
       }
 
-      auth.signInWithEmailAndPassword(email, password)
+      signInWithEmailAndPassword(auth, email, password)
         .then(() => {
           playIntroAnimation(() => {
             setTimeout(() => { window.location.href = "simulation.html"; }, 500);
@@ -224,7 +216,7 @@
         return;
       }
 
-      auth.sendPasswordResetEmail(resetEmail)
+      sendPasswordResetEmail(auth, resetEmail)
         .then(() => {
           resetMsg.textContent = "Check your inbox for reset instructions.";
           setTimeout(() => { document.getElementById("reset-popup").style.display = "none"; }, 2000);

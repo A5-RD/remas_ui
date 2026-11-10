@@ -5,13 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Psi Network</title>
 
-  <!-- Roboto Thin font from Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
-
-  <!-- 3D Force Graph library -->
-  <script src="https://unpkg.com/3d-force-graph"></script>
+  <script src="page-resources.js" data-three="true"></script>
 
   <style>
     body, html {
@@ -98,9 +92,20 @@
 
 
   <script type="module">
-    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
-    import { getStorage, ref, listAll, getBytes, uploadString } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js';
-    import { app, auth, storage } from './firebase.js?v=20260605';
+    import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, uploadString, deleteObject } from './firebase-adapter.js';
+    let ForceGraph3D;
+    if (isLocal) {
+      ({ ForceGraph3D } = await import('./local-graph.js'));
+    } else {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/3d-force-graph';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      ForceGraph3D = window.ForceGraph3D;
+    }
 
     const highlightedNodes = new Set();
     let adjacency = {};
@@ -115,7 +120,11 @@
           const data = JSON.parse(text);
           return { filename: item.name.split('.')[0], data };
         }));
-      } catch (e) { console.error(e); return []; }
+      } catch (e) {
+        console.error(e);
+        if (isLocal) throw e;
+        return [];
+      }
     }
 
 
@@ -203,7 +212,15 @@
       const { nodes, links } = buildAdjacency(memories);
 
 
-      buildAdjacency(nodes, links);
+      if (isLocal) {
+        adjacency = Object.fromEntries(nodes.map(node => [node.id, []]));
+        links.forEach(({ source, target }) => {
+          adjacency[source]?.push(target);
+          adjacency[target]?.push(source);
+        });
+      } else {
+        buildAdjacency(nodes, links);
+      }
 
       let lastClick = 0, lastId = null;
       const Graph = ForceGraph3D()(graphElem)
@@ -260,7 +277,10 @@
         document.getElementById('loading').textContent = 'Waiting for authenticated user...';
         return;
       }
-      buildGraph(user);
+      buildGraph(user).catch(error => {
+        console.error(error);
+        document.getElementById('loading').textContent = `Unable to load memory graph: ${error.message}`;
+      });
     });
 
     document.getElementById('close-controls').onclick = () => document.getElementById('controls-info').style.display = 'none';
@@ -271,6 +291,10 @@
         const data = JSON.parse(document.getElementById('json-textarea').value);
         await uploadString(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`), JSON.stringify(data));
         document.getElementById('json-editor').style.display = 'none';
+        if (isLocal) {
+          await buildGraph(auth.currentUser);
+          if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
+        }
       } catch(e) { alert('Save error'); console.error(e); }
     };
 
@@ -289,8 +313,19 @@
       URL.revokeObjectURL(url); // clean up
     };
 
-    document.getElementById('delete-json-btn').onclick = () => {
+    document.getElementById('delete-json-btn').onclick = async () => {
       const id = document.getElementById('json-editor').dataset.nodeId;
+
+      if (isLocal) {
+        if (!confirm(`Delete ${id}.json?`)) return;
+        try {
+          await deleteObject(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`));
+          document.getElementById('json-editor').style.display = 'none';
+          await buildGraph(auth.currentUser);
+          if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
+        } catch (error) { alert(`Delete failed: ${error.message}`); }
+        return;
+      }
 
       // Dispatch a custom event or simulate click if integrated in same DOM
       const event = new CustomEvent('delete-file', { detail: { filename: id + '.json' } });

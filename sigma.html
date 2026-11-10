@@ -4,14 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sigma - 3D Viewer</title>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
+  <script src="page-resources.js" data-three="true"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #111; overflow: hidden; width: 100vw; height: 100vh; font-family: 'Roboto', sans-serif; }
@@ -101,6 +94,16 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
     import { createLivePreview } from './sigma-live.js?v=20261109b';
+
+    if (location.hostname === '127.0.0.1') {
+      THREE.DefaultLoadingManager.setURLModifier(url => {
+        const resolved = new URL(url, location.href);
+        if (resolved.origin !== location.origin && resolved.protocol !== 'data:') {
+          throw new Error('External model resources are disabled in local mode');
+        }
+        return url;
+      });
+    }
 
     // Scene
     const scene = new THREE.Scene();

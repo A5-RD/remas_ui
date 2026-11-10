@@ -1,8 +1,6 @@
-import { auth, storage } from "./firebase.js?v=20260605";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "./firebase-adapter.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+function initializeSimulation() {
   const simContainer = document.getElementById("simulation-container");
   const availableMemoryFiles = [];
   const availableBlendFiles = [];
@@ -11,6 +9,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let availableCameraPresets = [];
   let savedMemorySnapshot = null;
 
+  function safeResultUrl(url) {
+    if (isLocal && new URL(url, window.location.origin).origin !== window.location.origin) {
+      throw new Error('Local mode cannot load an external URL');
+    }
+    return url;
+  }
+
   async function getAuthToken() {
     const user = auth.currentUser;
     if (!user) throw new Error('User not authenticated');
@@ -18,6 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function fetchApi(path, options = {}) {
+    if (isLocal) {
+      const memoryPrefix = `/${encodeURIComponent(auth.currentUser.email)}/memories`;
+      if (path === memoryPrefix || path.startsWith(`${memoryPrefix}/`)) {
+        path = `/local/memories${path.slice(memoryPrefix.length)}`;
+      }
+    }
     const token = await getAuthToken();
     const headers = {
       Authorization: `Bearer ${token}`,
@@ -240,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // API INTEGRATION
-  const apiBase = "https://remas-api-507506689237.us-central1.run.app";
+  const apiBase = isLocal ? window.location.origin : "https://remas-api-507506689237.us-central1.run.app";
   const defaultSimulationBlendFilename = 'ava_1.8_dress_packed.blend';
   const defaultCameraPresetId = 'frame';
   let latestSigmaSceneState = [];
@@ -755,7 +766,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setSimulationStatus('Render finished. Preparing video playback…', 'info');
       const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
       check();
-      simulationRunVideo.src = videoUrl;
+      simulationRunVideo.src = safeResultUrl(videoUrl);
       simulationRunVideo.loop = repeat;
       simulationRunVideo.style.display = 'block';
       simulationRunVideo.onerror = () => {
@@ -879,7 +890,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!isCurrentSession(session)) return;
         const videoUrl = payload.url || await resolveStoragePathUrl(payload.storage_path);
         if (!isCurrentSession(session)) return;
-        simulationRunVideo.src = videoUrl;
+        simulationRunVideo.src = safeResultUrl(videoUrl);
         simulationRunVideo.style.display = 'block';
         setSimulationStatus(`Buffering clip ${segment} for playback…`, 'info');
         await playBufferedVideo(session, segment);
@@ -905,6 +916,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Add File
   async function uploadFile(user, file) {
     const filename = await getUniqueFilename(user);
+
+    if (isLocal) {
+      const response = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodeURIComponent(filename)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: file,
+      });
+      if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+      return { filename };
+    }
 
     const formData = new FormData();
     formData.append("user", user);
@@ -1190,7 +1209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function resolveConvertedModelUrl(convertResponse) {
-    if (convertResponse?.url) return convertResponse.url;
+    if (convertResponse?.url) return safeResultUrl(convertResponse.url);
 
     const userEmail = auth.currentUser?.email;
     const storagePath = convertResponse?.storage_path
@@ -1363,6 +1382,11 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSelectedObjectButton?.addEventListener('click', loadSelectedObject);
 
   window.addEventListener('message', (event) => {
+    if (isLocal && event.source === document.getElementById('psi-iframe')?.contentWindow &&
+        event.origin === window.location.origin && event.data?.type === 'local-memories-changed') {
+      loadUserFiles(auth.currentUser.email);
+      return;
+    }
     if (event.source !== document.getElementById('sigma-iframe')?.contentWindow || event.origin !== window.location.origin) return;
     if (event.data?.type === 'sigma-live-status') {
       const session = simulationSession;
@@ -1436,6 +1460,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function loadObjectInSigma(downloadURL, filename) {
+    downloadURL = safeResultUrl(downloadURL);
     const requestId = ++lastSigmaRequestId;
     const sent = _sendToSigma(downloadURL, filename, requestId);
     if (!sent) {
@@ -2071,4 +2096,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeSimulation, { once: true });
+else initializeSimulation();

@@ -1,3 +1,8 @@
+/* Material Symbols is intentionally not fetched in local mode. */
+.local-mode .material-symbols-outlined { font-size: 0; }
+.local-mode .material-symbols-outlined::after { font-size: 18px; }
+.local-mode #start::after, .local-mode #load-selected-object::after { content: '▶'; }
+.local-mode #find::after, .local-mode #find-objects::after { content: '⌕'; }
 /* General Styles */
 body, html {
   margin: 0;
