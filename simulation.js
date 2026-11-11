@@ -921,7 +921,6 @@ function initializeSimulation() {
   const fileInput = document.getElementById("file-input");
   const uploadBlendButton = document.getElementById("upload-blend");
   const blendFileInput = document.getElementById("blend-file-input");
-  const loadSelectedObjectButton = document.getElementById("load-selected-object");
 
   simulationRunClose?.addEventListener('click', closeSimulationRunModal);
   simulationRunModal?.addEventListener('click', (event) => {
@@ -1332,22 +1331,6 @@ function initializeSimulation() {
     if (selectedObjectLi) selectedObjectLi.classList.add('selected');
   }
 
-  function preserveObjectSelection(li) {
-    if (selectedObjectLi !== li) setSelectedObject(li);
-  }
-
-  function loadSelectedObject() {
-    if (!selectedObjectLi) {
-      alert('Select an object first.');
-      return;
-    }
-
-    console.info('[objects] loading selected object:', selectedObjectLi.dataset.filename);
-    selectedObjectLi.loadSelected?.();
-  }
-
-  loadSelectedObjectButton?.addEventListener('click', loadSelectedObject);
-
   window.addEventListener('message', (event) => {
     if (isLocal && event.source === document.getElementById('psi-iframe')?.contentWindow &&
         event.origin === window.location.origin && event.data?.type === 'local-memories-changed') {
@@ -1485,16 +1468,10 @@ function initializeSimulation() {
     li.dataset.filename = filename;
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
-    li.title = 'Click to select, then use the Objects play button to load';
-    li.addEventListener('click', () => {
-      preserveObjectSelection(li);
+    li.title = 'Double-click to select or deselect';
+    li.addEventListener('dblclick', () => {
+      setSelectedObject(li);
     });
-    li.loadSelected = () => {
-      const url = li.dataset.url;
-      if (!url) return;
-      sigmaBtn.click();
-      loadObjectInSigma(url, filename);
-    };
     objectsList.appendChild(li);
     return li;
   }
@@ -1603,9 +1580,7 @@ function initializeSimulation() {
     if (existing) {
       existing.dataset.converted = hasConverted ? '1' : existing.dataset.converted || '0';
       if (convertedFilename) existing.dataset.convertedFilename = convertedFilename;
-      existing.title = hasConverted
-        ? `Select, then use play to load cached conversion: ${convertedFilename}`
-        : 'Select, then use play to choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+      existing.title = 'Double-click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
       return existing;
     }
 
@@ -1617,49 +1592,16 @@ function initializeSimulation() {
     li.dataset.loading = '0';
     li.classList.add('file-item');
     li.classList.add('blend-item');
-    li.title = hasConverted
-      ? `Select, then use play to load cached conversion: ${convertedFilename}`
-      : 'Select, then use play to choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+    li.title = 'Double-click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
-      preserveObjectSelection(li);
     });
-    li.loadSelected = async () => {
-      if (li.dataset.converted === '1') {
-        if (li.dataset.loading === '1') return;
-        try {
-          await loadCachedBlendOutput(li);
-        } catch (err) {
-          console.error('[objects] failed to load cached conversion:', err);
-          li.style.color = '#ff6666';
-          li.title = `Could not load cached conversion: ${err?.message || err}`;
-        }
-        return;
-      }
-      openBlendModal(filename, async (selectedObjects) => {
-        li.textContent = `Converting ${filename}…`;
-        li.style.color = '#00d0ff';
-        try {
-          const convertResponse = await convertBlendOnBackend(filename, selectedObjects);
-          const glbName = convertResponse.filename;
-          const url = await resolveConvertedModelUrl(convertResponse);
-          li.textContent = filename + ' ⚙';
-          li.style.color = '';
-          li.dataset.converted = '1';
-          li.dataset.convertedFilename = glbName;
-          li.title = `Select, then use play to load cached conversion: ${glbName}`;
-          sigmaBtn.click();
-          loadObjectInSigma(url, glbName);
-        } catch (err) {
-          li.textContent = filename + ' ⚙ (failed)';
-          li.style.color = '#ff6666';
-          console.error(err);
-        }
-      });
-    };
+    li.addEventListener('dblclick', (e) => {
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) setSelectedObject(li);
+    });
     objectsList.appendChild(li);
   }
 
@@ -1727,7 +1669,7 @@ function initializeSimulation() {
 
       if (NEEDS_CONVERSION_EXTS.has(ext)) {
         addBlendToList(filename);
-        upsertUploadStatus(filename, 'uploaded ✓ (select and click load)', '#7CFC00');
+        upsertUploadStatus(filename, 'uploaded ✓ (double-click to select)', '#7CFC00');
       } else {
         upsertUploadStatus(filename, 'uploaded ✓ (hidden from list; only .blend rows shown)', '#7CFC00');
         sigmaBtn.click();

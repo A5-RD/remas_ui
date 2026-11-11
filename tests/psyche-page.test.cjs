@@ -32,7 +32,7 @@ test('Map graph uses descriptions and safely handles missing data and HTML', () 
 });
 
 function objectHarness(convertedFilename) {
-  const listeners = new Map(), rows = [];
+  const rows = [];
   const list = {
     querySelector: () => null,
     querySelectorAll: () => rows,
@@ -42,12 +42,16 @@ function objectHarness(convertedFilename) {
     console, alert: message => { context.alert = message; },
     document: {
       getElementById: () => list,
-      createElement: () => ({
-        dataset: {}, style: {}, classList: { add() {}, remove() {} },
-        addEventListener(type, handler) { listeners.set(type, handler); },
-      }),
+      createElement: () => {
+        const classes = new Set(), listeners = new Map();
+        return {
+          dataset: {}, style: {},
+          classList: { add: name => classes.add(name), remove: name => classes.delete(name), contains: name => classes.has(name) },
+          addEventListener(type, handler) { listeners.set(type, handler); },
+          fire(type, event = {}) { listeners.get(type)?.({ ctrlKey: false, metaKey: false, altKey: false, ...event }); },
+        };
+      },
     },
-    loadSelectedObjectButton: { addEventListener() {} },
     debugGetBlendHeader: () => { context.inspections++; }, inspections: 0,
     loadCachedBlendOutput: async () => { context.loads++; }, loads: 0,
     openBlendModal: () => { context.modals++; }, modals: 0,
@@ -55,32 +59,43 @@ function objectHarness(convertedFilename) {
   vm.createContext(context);
   const selection = section(simulation, '  let selectedObjectLi = null;', "  window.addEventListener('message'");
   const blend = section(simulation, '  function addBlendToList(', '  function upsertUploadStatus(');
-  vm.runInContext(selection + blend + '\nthis.add = addBlendToList; this.play = loadSelectedObject;', context);
+  vm.runInContext(selection + blend + '\nthis.add = addBlendToList; this.selected = () => selectedObjectLi;', context);
   context.add('scene.blend', { convertedFilename });
-  return { context, click: event => listeners.get('click')({ ctrlKey: false, metaKey: false, altKey: false, ...event }) };
+  return { context, rows };
 }
 
-test('object double-click only selects; object play loads cached conversion', async () => {
-  const { context, click } = objectHarness('scene.glb');
-  click({}); click({});
+test('double-click toggles object selection without loading', () => {
+  const { context, rows } = objectHarness('scene.glb');
+  const row = rows[0];
+  row.fire('click'); row.fire('click');
+  assert.equal(context.selected(), null);
+  row.fire('dblclick');
+  assert.equal(context.selected(), row);
+  assert.equal(row.classList.contains('selected'), true);
   assert.equal(context.loads, 0);
   assert.equal(context.modals, 0);
-  context.play();
-  await Promise.resolve();
-  assert.equal(context.loads, 1);
+  row.fire('dblclick');
+  assert.equal(context.selected(), null);
+  assert.equal(row.classList.contains('selected'), false);
 });
 
-test('object play opens conversion when needed, not on selection', () => {
-  const { context, click } = objectHarness(null);
-  click({}); click({});
+test('double-click switches selection and modifier inspection does not select', () => {
+  const { context, rows } = objectHarness(null);
+  context.add('another.blend');
+  rows[0].fire('dblclick');
+  rows[1].fire('dblclick');
+  assert.equal(context.selected(), rows[1]);
+  assert.equal(rows[0].classList.contains('selected'), false);
+  assert.equal(rows[1].classList.contains('selected'), true);
   assert.equal(context.modals, 0);
-  context.play();
-  assert.equal(context.modals, 1);
-  click({ ctrlKey: true });
+  rows[0].fire('click', { ctrlKey: true });
+  rows[0].fire('dblclick', { ctrlKey: true });
   assert.equal(context.inspections, 1);
+  assert.equal(context.selected(), rows[1]);
 });
 
 test('sidebar uses Maps and Objects labels', () => {
   assert.match(html, /<span class="explorer-title">Maps<\/span>/);
   assert.match(html, /<span class="explorer-title">Objects<\/span>/);
+  assert.doesNotMatch(html, /id="load-selected-object"/);
 });

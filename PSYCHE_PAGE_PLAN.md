@@ -18,12 +18,11 @@ offline spherical layout; production uses a force-directed layout.
 
 ## Objects and play
 
-The **Objects** panel lists available Blender files. Click an entry to select
-it; clicking or double-clicking the entry does not load it. Use the play button
-in the Objects header to load the selected entry into Σ. If needed, choose the
-objects to convert; otherwise the existing cached conversion is used. This is
-separate from the main simulation Play button, which starts a render using a
-memory snapshot and scene configuration.
+The **Objects** panel lists available Blender files. Double-click an entry to
+highlight it for actions such as deletion; double-click it again to deselect
+it. A single click does not select or load an object, and double-clicking does
+not load it into Σ. There is no Objects-panel play button. The main simulation
+Play button starts a render using a memory snapshot and scene configuration.
 
 Currently Σ normalizes each loaded model independently to a largest dimension
 of 3, centers it horizontally, and places its lowest point on the grid. It
