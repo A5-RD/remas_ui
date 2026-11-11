@@ -84,6 +84,7 @@ test('converted blend rows use plain filenames and retain double-click selection
   assert.equal(row.dataset.convertedFilename, 'avatar.glb');
   assert.doesNotMatch(css, /#objects-list\s+li\.blend-item\[data-converted[^\]]*\]::after/);
   assert.match(css, /#objects-list li\.selected\s*\{/);
+  assert.match(css, /#objects-list li\.selected:hover\s*\{\s*background:\s*#e0e0e0;/);
   row.listeners.dblclick({});
   assert.equal(c.selected(), row);
   assert.ok(row.classList.contains('selected'));

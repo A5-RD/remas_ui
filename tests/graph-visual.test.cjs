@@ -47,6 +47,7 @@ function pageHarness(isLocal) {
     return () => {
       const graph = { _scene: new Object3D(), scene() { return this._scene; }, _destructor() { this.destroyed = true; } };
       for (const method of ['nodeRelSize', 'nodeOpacity', 'linkWidth', 'linkOpacity', 'linkDirectionalParticleWidth', 'backgroundColor', 'enableNodeDrag']) graph[method] = function (value) { this[method + 'Value'] = value; return this; };
+      graph.cameraPosition = function (position, target, duration) { this.camera = { position, target, duration }; return this; };
       for (const method of ['graphData', 'nodeColor', 'nodeLabel', 'linkColor', 'linkVisibility', 'linkDirectionalParticles', 'onNodeClick', 'onNodeRightClick']) graph[method] = function (value) { if (value === undefined) return this[method + 'Value']; this[method + 'Value'] = value; return this; };
       graphs.push(graph);
       return graph;
@@ -102,7 +103,10 @@ for (const isLocal of [true, false]) {
     assert.deepEqual(boundary.scale.values, [4, 5, 6]);
     assert.equal(boundary.raycast(), undefined);
     assert.equal(graph.linkDirectionalParticles() === 0, isLocal);
-    if (!isLocal) assert.equal(graph.enableNodeDragValue, false);
+    if (!isLocal) {
+      assert.equal(graph.enableNodeDragValue, false);
+      assert.ok(graph.camera.position.z > 0);
+    }
 
     // Force-graph may replace endpoint IDs with node objects.
     links[0].source = nodes[0]; links[0].target = nodes[1];

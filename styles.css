@@ -443,6 +443,12 @@ body, html {
   color: #00d0ff;
 }
 
+#objects-list li.selected,
+#objects-list li.selected:hover {
+  background: #e0e0e0;
+  color: #000;
+}
+
 #objects-list li.empty-msg {
   cursor: default;
   color: #888;

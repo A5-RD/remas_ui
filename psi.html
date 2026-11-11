@@ -85,6 +85,22 @@
 
   <div id="loading">Authenticating and loading network data...</div>
 
+  <script>
+    // Module bootstrap errors otherwise leave the initial loading message onscreen.
+    window.addEventListener('error', event => {
+      const loading = document.getElementById('loading');
+      if (loading && loading.style.display !== 'none') {
+        loading.textContent = 'Unable to load the Map graph. Check the browser console and restart the local application if using localhost.';
+      }
+    }, true);
+    window.addEventListener('unhandledrejection', event => {
+      const loading = document.getElementById('loading');
+      if (loading && loading.style.display !== 'none') {
+        loading.textContent = `Unable to load the Map graph: ${event.reason?.message || 'Check the browser console.'}`;
+      }
+    });
+  </script>
+
   <div id="graph-filters" aria-label="Graph connection controls">
     <label><input id="show-connections" type="checkbox" checked> Show connections</label>
     <button id="show-all" type="button">Show All</button>
@@ -131,7 +147,7 @@
     import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, uploadString, deleteObject } from './firebase-adapter.js';
     let ForceGraph3D;
     if (isLocal) {
-      ({ ForceGraph3D } = await import('./local-graph.js?v=20261110e'));
+      ({ ForceGraph3D } = await import('./local-graph.js?v=20261110f'));
     } else {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -445,7 +461,14 @@
 
       activeGraph = Graph;
       // Prevent production force-graph dragging from changing fixed locations.
-      if (!isLocal) Graph.enableNodeDrag(false);
+      if (!isLocal) {
+        Graph.enableNodeDrag(false);
+        const aspect = Math.max(graphElem.clientWidth || 1, 1) / Math.max(graphElem.clientHeight || 1, 1);
+        const verticalHalfFov = 50 * Math.PI / 360;
+        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect);
+        const distance = 47 * 1.15 / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov));
+        Graph.cameraPosition({ x: 0, y: 0, z: distance }, { x: 0, y: 0, z: 0 }, 0);
+      }
       addRegionBoundaries(Graph);
 
       document.getElementById('loading').style.display = 'none';

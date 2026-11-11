@@ -119,7 +119,12 @@ export function ForceGraph3D() {
         });
         let extent = radius;
         for (const position of byId.values()) extent = Math.max(extent, position.length());
-        camera.position.z = Math.max(45, extent * 3);
+        // Frame the whole illustrative brain, including the unassigned region,
+        // even in narrow viewports where the horizontal field of view is smaller.
+        extent = Math.max(extent, 47);
+        const verticalHalfFov = 50 * Math.PI / 360;
+        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * camera.aspect);
+        camera.position.z = extent * 1.15 / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov));
         return graph;
       },
       nodeColor(value) {
