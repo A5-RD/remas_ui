@@ -1585,7 +1585,7 @@ function initializeSimulation() {
     }
 
     const li = document.createElement('li');
-    li.textContent = filename + ' ⚙';
+    li.textContent = filename;
     li.dataset.filename = filename;
     li.dataset.converted = hasConverted ? '1' : '0';
     li.dataset.convertedFilename = convertedFilename || '';
@@ -1669,11 +1669,14 @@ function initializeSimulation() {
 
       if (NEEDS_CONVERSION_EXTS.has(ext)) {
         addBlendToList(filename);
-        upsertUploadStatus(filename, 'uploaded ✓ (double-click to select)', '#7CFC00');
       } else {
-        upsertUploadStatus(filename, 'uploaded ✓ (hidden from list; only .blend rows shown)', '#7CFC00');
         sigmaBtn.click();
         loadObjectInSigma(downloadURL, filename);
+      }
+      statusItem.remove();
+      const objectsList = document.getElementById('objects-list');
+      if (!objectsList.querySelector('li')) {
+        objectsList.innerHTML = '<li class="empty-msg">No .blend files uploaded.</li>';
       }
 
       return { filename, result: 'uploaded' };
@@ -1721,16 +1724,9 @@ function initializeSimulation() {
       const previousLabel = uploadBlendButton.textContent;
       uploadBlendButton.textContent = '…';
 
-      let uploaded = 0;
-      let failed = 0;
-      let skipped = 0;
-
       try {
         for (const file of files) {
-          const result = await processObjectUploadFile(file, userEmail);
-          if (result.result === 'uploaded') uploaded += 1;
-          else if (result.result === 'failed') failed += 1;
-          else skipped += 1;
+          await processObjectUploadFile(file, userEmail);
         }
       } catch (err) {
         console.error(err);
@@ -1739,7 +1735,6 @@ function initializeSimulation() {
         uploadBlendButton.disabled = false;
         uploadBlendButton.textContent = previousLabel;
         blendFileInput.value = "";
-        alert(`Upload complete. Uploaded: ${uploaded}, Failed: ${failed}, Skipped: ${skipped}`);
       }
     });
   }

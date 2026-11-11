@@ -13,8 +13,33 @@ Selecting a graph point highlights its connected component. Double-clicking a
 Map point opens its JSON editor; it does not load an object into the scene.
 The panel also supports searching filenames, adding and removing Maps, and
 Shift-clicking a Map to edit its JSON. Editing a Map changes its stored data;
-the graph is a visualization, not the simulation itself. Local Ψ uses an
-offline spherical layout; production uses a force-directed layout.
+the graph is a visualization, not the simulation itself.
+
+## Brain-region view
+
+Ψ places Maps deterministically inside illustrative, color-coded region
+boundaries. Hovering shows both the Map description and its region. The
+boundaries are conceptual ellipsoids, **not an anatomical atlas**; positions
+do not imply measured locations or that a Map is exclusively stored in one
+brain structure. Region names refer to functional folders in the REMAS central
+nervous system, not a medical classification.
+
+The local initial set has a reviewed, provisional filename-to-region registry
+in [brain-regions.js](brain-regions.js). Four mixed or ambiguous Maps are
+explicitly unassigned, and missing association targets also appear in the
+unassigned area. The registry does not modify Map JSON: the persisted Map
+schema does not support a reliable extra label field, and other serializers may
+discard it. Review these annotations when a Map's contents change. Local
+filename labels are never applied to cloud users, whose files could reuse IDs;
+new or cloud Maps are assigned only when an association explicitly references
+a single supported region, otherwise they remain unassigned. Assignments are
+display-only and do not affect Map traversal or simulation.
+
+Use **Show connections** to hide or show all graph lines. Right-click a Map and
+choose **Show Neighbors**: a positive depth displays edges among nodes up to
+that many association hops from the chosen Map. A blank depth shows all edges,
+including other components. **Show All** clears the neighbor filter and turns
+connections back on. Connection controls do not change the stored Maps.
 
 ## Objects and play
 

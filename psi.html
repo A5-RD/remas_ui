@@ -31,6 +31,25 @@
     }
     #loading { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
     #controls-info { bottom:20px; left:20px; display:none; max-width:300px; }
+    #graph-filters, #neighbor-menu {
+      position: absolute; z-index: 110; background: rgba(25, 30, 38, 0.94);
+      border: 1px solid #71808e; border-radius: 8px; padding: 12px;
+      font: 14px sans-serif; color: white;
+    }
+    #graph-filters { top: 16px; left: 16px; display: flex; align-items: center; gap: 12px; }
+    #graph-filters button { margin: 0; }
+    #neighbor-menu[hidden] { display: none; }
+    #neighbor-menu { max-width: calc(100vw - 48px); }
+    #neighbor-menu label { display: block; margin-top: 10px; }
+    #neighbor-depth { display: block; width: 8em; margin-top: 5px; }
+    #neighbor-error { color: #ffb6b6; margin: 6px 0 0; }
+    #region-legend {
+      position: absolute; top: 16px; right: 16px; z-index: 105;
+      padding: 10px 12px; border: 1px solid #71808e; border-radius: 8px;
+      background: rgba(25, 30, 38, 0.9); font: 12px sans-serif; color: white;
+    }
+    #region-legend strong { display: block; margin-bottom: 6px; }
+    #region-legend span { display: block; margin: 4px 0; }
     #json-editor {
       top:50%; left:50%;
       transform:translate(-50%,-50%);
@@ -66,15 +85,30 @@
 
   <div id="loading">Authenticating and loading network data...</div>
 
+  <div id="graph-filters" aria-label="Graph connection controls">
+    <label><input id="show-connections" type="checkbox" checked> Show connections</label>
+    <button id="show-all" type="button">Show All</button>
+  </div>
+  <div id="region-legend" aria-label="Illustrative brain regions"><strong>Illustrative regions</strong></div>
+
+  <form id="neighbor-menu" aria-label="Show neighbors" hidden>
+    <strong id="neighbor-title"></strong>
+    <label for="neighbor-depth">Depth (blank for all connections)</label>
+    <input id="neighbor-depth" type="text" inputmode="numeric" autocomplete="off" aria-describedby="neighbor-error">
+    <p id="neighbor-error" role="alert"></p>
+    <button type="submit">Show Neighbors</button>
+    <button id="neighbor-cancel" type="button">Cancel</button>
+  </form>
 
   <div id="controls-info">
-    <button id="close-controls" class="close-btn">×</button>
+    <button id="close-controls" class="close-btn" aria-label="Close controls">×</button>
     <h3>Controls</h3>
     <p>• Rotate: Right-click and drag</p>
     <p>• Pan: Shift + right-click and drag</p>
     <p>• Zoom: Mouse wheel</p>
     <p>• Single-click: Highlight network component</p>
     <p>• Double-click: Edit memory</p>
+    <p>• Right-click a Map: Show Neighbors</p>
   </div>
 
   <div id="json-editor">
@@ -92,10 +126,12 @@
 
 
   <script type="module">
+    import * as THREE from 'three';
+    import { REGIONS, classifyMap, positionMap, neighborhood } from './brain-regions.js?v=20261110e';
     import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, uploadString, deleteObject } from './firebase-adapter.js';
     let ForceGraph3D;
     if (isLocal) {
-      ({ ForceGraph3D } = await import('./local-graph.js'));
+      ({ ForceGraph3D } = await import('./local-graph.js?v=20261110e'));
     } else {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -109,6 +145,20 @@
 
     const highlightedNodes = new Set();
     let adjacency = {};
+    let activeGraph = null, regionBoundaries = null, neighborIds = null, menuNodeId = null;
+    let graphBuildVersion = 0;
+    const showConnections = document.getElementById('show-connections');
+    const neighborMenu = document.getElementById('neighbor-menu');
+    const neighborDepth = document.getElementById('neighbor-depth');
+    const neighborError = document.getElementById('neighbor-error');
+
+    const regionLegend = document.getElementById('region-legend');
+    for (const region of REGIONS) {
+      const item = document.createElement('span');
+      item.textContent = `● ${region.label}`;
+      item.style.color = region.color;
+      regionLegend.appendChild(item);
+    }
 
     async function fetchMemoryFiles(email) {
       try {
@@ -197,6 +247,7 @@
       links.forEach(link => {
         if (!existing.has(link.target)) {
           nodes.push({ id: link.target, val: 4, placeholder: true });
+          existing.add(link.target);
         }
       });
 
@@ -205,19 +256,142 @@
 
     function graphNodeLabel(node) {
       const description = node.description || (node.placeholder ? 'Referenced Map not found' : 'No description available');
+      const label = node.regionLabel ? `${description}\nRegion: ${node.regionLabel}` : description;
       // The production graph treats labels as HTML; local graph uses a plain title.
-      return isLocal ? description : description.replace(/[&<>"']/g, char => ({
+      return isLocal ? label : label.replace(/[&<>"']/g, char => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       })[char]);
     }
 
+    function disposeRegionBoundaries() {
+      if (!regionBoundaries) return;
+      regionBoundaries.parent?.remove(regionBoundaries);
+      regionBoundaries.traverse(object => {
+        object.geometry?.dispose();
+        object.material?.dispose();
+      });
+      regionBoundaries = null;
+    }
+
+    function addRegionBoundaries(graph) {
+      const group = new THREE.Group();
+      for (const region of REGIONS) {
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 16, 10),
+          new THREE.MeshBasicMaterial({ color: region.color, wireframe: true, transparent: true, opacity: 0.12, depthWrite: false })
+        );
+        mesh.position.set(...region.center);
+        mesh.scale.set(...region.radii);
+        // The graph's picking must only see nodes, not these decorative overlays.
+        mesh.raycast = () => {};
+        group.add(mesh);
+      }
+      graph.scene().add(group);
+      regionBoundaries = group;
+    }
+
+    function endpointId(endpoint) {
+      return typeof endpoint === 'object' && endpoint !== null ? endpoint.id : endpoint;
+    }
+
+    function connectionVisible(link) {
+      return showConnections.checked && (!neighborIds ||
+        (neighborIds.has(endpointId(link.source)) && neighborIds.has(endpointId(link.target))));
+    }
+
+    function refreshConnectionVisibility() {
+      // Use a fresh accessor so both adapters re-evaluate existing links.
+      activeGraph?.linkVisibility(link => connectionVisible(link));
+      // Force-graph's particle objects are separate from its link lines.
+      if (activeGraph && !isLocal) activeGraph.linkDirectionalParticles(link => connectionVisible(link) ? 1 : 0);
+    }
+
+    function closeNeighborMenu() {
+      neighborMenu.hidden = true;
+      menuNodeId = null;
+    }
+
+    function openNeighborMenu(node, event) {
+      event.preventDefault();
+      menuNodeId = node.id;
+      document.getElementById('neighbor-title').textContent = `Neighbors of ${node.id}`;
+      neighborDepth.value = '';
+      neighborError.textContent = '';
+      neighborMenu.hidden = false;
+      neighborMenu.style.left = `${Math.max(0, Math.min(event.clientX, window.innerWidth - neighborMenu.offsetWidth))}px`;
+      neighborMenu.style.top = `${Math.max(0, Math.min(event.clientY, window.innerHeight - neighborMenu.offsetHeight))}px`;
+      neighborDepth.focus();
+    }
+
+    function setupGraphControls() {
+      showConnections.addEventListener('change', refreshConnectionVisibility);
+      document.getElementById('show-all').addEventListener('click', () => {
+        neighborIds = null;
+        showConnections.checked = true;
+        highlightedNodes.clear();
+        if (activeGraph) refreshGraphStyles(activeGraph);
+        refreshConnectionVisibility();
+        closeNeighborMenu();
+      });
+      neighborMenu.addEventListener('submit', event => {
+        event.preventDefault();
+        const value = neighborDepth.value.trim();
+        const depth = value === '' ? null : Number(value);
+        if (value !== '' && (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(depth) || depth < 1)) {
+          neighborError.textContent = 'Enter a positive whole number or leave blank.';
+          neighborDepth.focus();
+          return;
+        }
+        // Blank means all graph edges, including disconnected components.
+        neighborIds = depth === null ? null : neighborhood(menuNodeId, activeGraph.graphData().links, depth);
+        refreshConnectionVisibility();
+        closeNeighborMenu();
+      });
+      document.getElementById('neighbor-cancel').addEventListener('click', closeNeighborMenu);
+      document.addEventListener('pointerdown', event => {
+        if (!neighborMenu.hidden && !neighborMenu.contains(event.target)) closeNeighborMenu();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !neighborMenu.hidden) closeNeighborMenu();
+      });
+    }
+
+    function graphNodeColor(node) {
+      return highlightedNodes.has(node.id) ? 'white' : '#bbb';
+    }
+
+    function graphLinkColor(link) {
+      return highlightedNodes.has(endpointId(link.source)) && highlightedNodes.has(endpointId(link.target)) ? 'orange' : 'white';
+    }
+
+    function refreshGraphStyles(graph) {
+      graph.nodeColor(node => graphNodeColor(node)).linkColor(link => graphLinkColor(link));
+    }
 
     async function buildGraph(user) {
+      const version = ++graphBuildVersion;
       const memories = await fetchMemoryFiles(user.email);
+      if (version !== graphBuildVersion) return;
       const graphElem = document.getElementById('3d-graph');
+      disposeRegionBoundaries();
+      activeGraph?._destructor?.();
+      activeGraph = null;
       graphElem.innerHTML = '';
 
       const { nodes, links } = buildAdjacency(memories);
+      const dataById = new Map(memories.map(memory => [memory.filename, memory.data]));
+      const regionsById = new Map(REGIONS.map(region => [region.id, region]));
+      for (const node of nodes) {
+        const regionId = node.placeholder ? 'unknown' : classifyMap(node.id, dataById.get(node.id), isLocal);
+        const region = regionsById.get(regionId);
+        node.regionId = regionId;
+        node.regionLabel = region?.label || regionId || 'Unknown';
+        const [x, y, z] = positionMap(node.id, regionId);
+        Object.assign(node, { x, y, z, fx: x, fy: y, fz: z });
+      }
+      highlightedNodes.clear();
+      neighborIds = null;
+      closeNeighborMenu();
 
 
       adjacency = Object.fromEntries(nodes.map(node => [node.id, []]));
@@ -230,21 +404,18 @@
       const Graph = ForceGraph3D()(graphElem)
         .graphData({ nodes, links })
         .nodeRelSize(2)
-        .nodeColor(n => highlightedNodes.has(n.id) ? 'white' : '#bbb')  // #bbb = light grey
+        .nodeColor(graphNodeColor)
         .nodeOpacity(1)
         .nodeLabel(graphNodeLabel)
 
 
-        .linkColor(link => {
-          const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-          const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-          return (highlightedNodes.has(sourceId) && highlightedNodes.has(targetId)) ? 'orange' : 'white';
-        })
+        .linkColor(graphLinkColor)
         .linkWidth(0.5)
 
         .linkOpacity(0.2)
-        .linkDirectionalParticles(1)
+        .linkDirectionalParticles(isLocal ? 0 : link => connectionVisible(link) ? 1 : 0)
         .linkDirectionalParticleWidth(1)
+        .linkVisibility(connectionVisible)
 
         .backgroundColor('black')
 
@@ -266,16 +437,22 @@
             // single-click: highlight component
             highlightedNodes.clear();
             getComponent(node.id).forEach(id => highlightedNodes.add(id));
-            Graph.nodeColor(Graph.nodeColor()).linkColor(Graph.linkColor());
+            refreshGraphStyles(Graph);
           }
           lastClick = now; lastId = node.id;
         })
+        .onNodeRightClick(openNeighborMenu);
 
+      activeGraph = Graph;
+      // Prevent production force-graph dragging from changing fixed locations.
+      if (!isLocal) Graph.enableNodeDrag(false);
+      addRegionBoundaries(Graph);
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('controls-info').style.display = 'block';
     }
 
+    setupGraphControls();
     onAuthStateChanged(auth, user => {
       if (!user || !user.email) {
         document.getElementById('loading').textContent = 'Waiting for authenticated user...';
