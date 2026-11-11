@@ -1,4 +1,4 @@
-import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "./firebase-adapter.js";
+import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, uploadString, getDownloadURL, deleteObject } from "./firebase-adapter.js";
 
 function initializeSimulation() {
   const simContainer = document.getElementById("simulation-container");
@@ -23,12 +23,6 @@ function initializeSimulation() {
   }
 
   async function fetchApi(path, options = {}) {
-    if (isLocal) {
-      const memoryPrefix = `/${encodeURIComponent(auth.currentUser.email)}/memories`;
-      if (path === memoryPrefix || path.startsWith(`${memoryPrefix}/`)) {
-        path = `/local/memories${path.slice(memoryPrefix.length)}`;
-      }
-    }
     const token = await getAuthToken();
     const headers = {
       Authorization: `Bearer ${token}`,
@@ -77,10 +71,7 @@ function initializeSimulation() {
     availableMemoryFiles.length = 0;
 
     try {
-      const response = await fetchApi(`/${encodeURIComponent(email)}/memories`);
-      if (!response.ok) throw new Error(`Memory list failed (${response.status})`);
-      const filenames = await response.json();
-      const sortedFilenames = [...filenames].sort((left, right) => left.localeCompare(right));
+      const sortedFilenames = (await getExistingFilenames(email)).sort((left, right) => left.localeCompare(right));
 
       fileList.innerHTML = "";
       availableMemoryFiles.push(...sortedFilenames);
@@ -101,9 +92,8 @@ function initializeSimulation() {
           if (!e.shiftKey) return;
           console.log("Shift-click detected for file:", filename);
           try {
-            const fileResponse = await fetchApi(`/${encodeURIComponent(email)}/memories/${encodeURIComponent(filename)}`);
-            if (!fileResponse.ok) throw new Error(`Memory read failed (${fileResponse.status})`);
-            const data = await fileResponse.json();
+            const bytes = await getBytes(ref(storage, `users/${email}/memories/${filename}`));
+            const data = JSON.parse(new TextDecoder().decode(bytes));
 
             document.getElementById('json-filename').textContent = `Editing: ${filename}`;
             document.getElementById('json-textarea').value = JSON.stringify(data, null, 2);
@@ -121,7 +111,12 @@ function initializeSimulation() {
     } catch (error) {
       console.error("Error loading files:", error);
       refreshSimulationRunOptions();
-      fileList.innerHTML = `<li>Error loading local memories from REMAS_local_dev/memories.</li>`;
+      fileList.innerHTML = '';
+      const message = document.createElement('li');
+      message.textContent = isLocal
+        ? 'Unable to load local Maps. Check the local memory directory and server.'
+        : 'Unable to load Maps from cloud storage. Check your connection and storage access.';
+      fileList.appendChild(message);
     }
   }
 
@@ -916,32 +911,10 @@ function initializeSimulation() {
   // Add File
   async function uploadFile(user, file) {
     const filename = await getUniqueFilename(user);
-
-    if (isLocal) {
-      const response = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodeURIComponent(filename)}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: file,
-      });
-      if (!response.ok) throw new Error(`Upload failed (${response.status})`);
-      return { filename };
-    }
-
-    const formData = new FormData();
-    formData.append("user", user);
-    formData.append("filename", filename);
-    formData.append("file", file);
-
-    const token = await getAuthToken();
-    const res = await fetch(`${apiBase}/add-map`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-    const result = await res.json();
-    return result;
+    const text = await file.text();
+    JSON.parse(text);
+    await uploadString(ref(storage, `users/${user}/memories/${filename}`), text, 'raw', { contentType: 'application/json' });
+    return { filename };
   }
 
   const addMapButton = document.getElementById("add-map");
@@ -996,10 +969,8 @@ function initializeSimulation() {
 
 
   async function getExistingFilenames(user) {
-    const res = await fetchApi(`/${encodeURIComponent(user)}/memories`);
-    if (!res.ok) throw new Error(`Could not load filenames (${res.status})`);
-    const data = await res.json();
-    return data;
+    const result = await listAll(ref(storage, `users/${user}/memories`));
+    return result.items.map(item => item.name);
   }
 
   addMapButton.addEventListener("click", () => {
@@ -1887,21 +1858,10 @@ function initializeSimulation() {
 
     for (const fileName of filesToDelete) {
       try {
-        const encodedFile = encodeURIComponent(fileName);
-        const res = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodedFile}`, {
-          method: "DELETE"
-        });
-
-        if (res.ok) {
-          // Remove from list
-          const li = [...fileList.children].find(li => li.textContent === fileName);
-          if (li) li.remove();
-
-          // Remove from selection
-          selectedFiles.delete(fileName);
-        } else {
-          alert(`Failed to delete ${fileName}`);
-        }
+        await deleteObject(ref(storage, `users/${user}/memories/${fileName}`));
+        const li = [...fileList.children].find(li => li.textContent === fileName);
+        if (li) li.remove();
+        selectedFiles.delete(fileName);
       } catch (err) {
         console.error(`Error deleting ${fileName}:`, err);
         alert(`Error deleting ${fileName}`);
@@ -1917,7 +1877,8 @@ function initializeSimulation() {
     const fileItems = document.querySelectorAll('#file-list .file-item');
     fileItems.forEach(item => {
       if (item.textContent.trim() === filename) {
-        item.classList.add('selected'); // If your delete button depends on this
+        item.classList.add('selected');
+        selectedFiles.add(filename);
         document.getElementById('remove-map').click(); // Simulate the delete click
       }
     });
@@ -2056,14 +2017,7 @@ function initializeSimulation() {
       if (!filename) throw new Error('Missing memory filename');
       const user = auth.currentUser?.email;
       if (!user) throw new Error('User not authenticated');
-      const response = await fetchApi(`/${encodeURIComponent(user)}/memories/${encodeURIComponent(filename)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error(`Save failed (${response.status})`);
+      await uploadString(ref(storage, `users/${user}/memories/${filename}`), JSON.stringify(data), 'raw', { contentType: 'application/json' });
       await loadUserFiles(user);
       document.getElementById('json-editor').style.display = 'none';
     } catch(e) { alert('Save error'); console.error(e); }

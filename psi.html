@@ -122,8 +122,7 @@
         }));
       } catch (e) {
         console.error(e);
-        if (isLocal) throw e;
-        return [];
+        throw e;
       }
     }
 
@@ -284,7 +283,7 @@
       }
       buildGraph(user).catch(error => {
         console.error(error);
-        document.getElementById('loading').textContent = `Unable to load memory graph: ${error.message}`;
+        document.getElementById('loading').textContent = `Unable to load Map graph: ${error.message}`;
       });
     });
 
