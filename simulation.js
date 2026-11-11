@@ -793,7 +793,7 @@ function initializeSimulation() {
         check();
         savedMemorySnapshot = uploadedSnapshot;
         memoryZipInput.value = '';
-        snapshotStatus.textContent = `Saved starting snapshot: ${savedMemorySnapshot.filenames.length} memories.`;
+        snapshotStatus.textContent = `Saved snapshot and replaced Maps: ${savedMemorySnapshot.filenames.length} memories.`;
         zipRequirement.textContent = '(optional replacement)';
       }
       const names = savedMemorySnapshot.filenames;

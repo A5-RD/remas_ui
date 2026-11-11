@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css?v=20261111c" />
   <script src="page-resources.js"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20261111a"></script>
+  <script type="module" src="simulation.js?v=20261111b"></script>
 
 </head>
 <body>
@@ -150,7 +150,7 @@
           <input id="simulation-scene-config" type="file" accept=".json,application/json">
           <small id="simulation-scene-upload-status" role="status" aria-live="polite">Leave empty to reuse your saved configuration or the default.</small>
         </div>
-        <div class="simulation-field">Play uploads selected files and starts automatically. The scene JSON chooses the starting memory; otherwise the first filename in sorted ZIP order is used. JSON and ZIP uploads are saved separately, even if a later step fails. N/A repeats a rendered clip; it is not continuous simulation or streaming. Sigma object transforms override matching scene configuration transforms.</div>
+        <div class="simulation-field">Uploading a memories ZIP replaces all Maps in the active memories folder (Firebase when deployed, local files in local mode); it does not merge them. The ZIP is also saved as the snapshot used for this render. The scene JSON chooses the starting memory; otherwise the first filename in sorted ZIP order is used. JSON and ZIP uploads are saved separately, even if a later step fails. N/A repeats a rendered clip; it is not continuous simulation or streaming. Sigma object transforms override matching scene configuration transforms.</div>
         <div style="display:none">
         <label class="simulation-field">
           <span>Simulation avatar</span>

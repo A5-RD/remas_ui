@@ -39,9 +39,12 @@ API; do not redirect this interface to `local.html`.
   must serve objects; `HEAD` must report content length and type. Converted
   model and render URLs returned by the backend must be same-origin. A range
   request is used only for optional post-upload diagnostic verification.
-* The existing render endpoint requires a snapshot. Play uploads or reuses the
-  ZIP via the existing snapshot API; its contents are independent of the memory
-  browser. Existing local render behavior may force a seated Ava and piano.
+* The existing render endpoint requires a snapshot. Uploading a ZIP in Play
+  replaces all valid JSON Maps in the active memories directory (Firebase in
+  production, local files in loopback mode); it does not merge. The same ZIP is
+  saved as the immutable snapshot used for rendering. Reusing the saved snapshot
+  without choosing a ZIP does not replace the memories directory. Existing local
+  render behavior may force a seated Ava and piano.
 
 Backend path validation, safe writes, object limits, secure Blender execution,
 and access controls must be enforced server-side. The adapter's name checks are
