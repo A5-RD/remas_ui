@@ -1,0 +1,52 @@
+# Ψ page: Maps and scene workflow
+
+## Maps in Ψ
+
+The right-hand **Maps** panel lists the user's persisted JSON Maps (called
+memories by the storage and backend APIs). The name change is a UI label, not a
+file or API migration. Each graph point represents a Map, and links represent
+Map IDs found in its `associations`. References to missing Maps appear as
+placeholder points; they do not supply Map data. Hovering over a point shows
+its top-level `description`, or a clear fallback when one is unavailable.
+
+Selecting a graph point highlights its connected component. Double-clicking a
+Map point opens its JSON editor; it does not load an object into the scene.
+The panel also supports searching filenames, adding and removing Maps, and
+Shift-clicking a Map to edit its JSON. Editing a Map changes its stored data;
+the graph is a visualization, not the simulation itself. Local Ψ uses an
+offline spherical layout; production uses a force-directed layout.
+
+## Objects and play
+
+The **Objects** panel lists available Blender files. Click an entry to select
+it; clicking or double-clicking the entry does not load it. Use the play button
+in the Objects header to load the selected entry into Σ. If needed, choose the
+objects to convert; otherwise the existing cached conversion is used. This is
+separate from the main simulation Play button, which starts a render using a
+memory snapshot and scene configuration.
+
+Currently Σ normalizes each loaded model independently to a largest dimension
+of 3, centers it horizontally, and places its lowest point on the grid. It
+publishes those preview transforms for the simulation, where matching Σ
+transforms can override scene-configuration transforms. This is a preview
+heuristic, **not** reliable real-world scaling or initial placement for a
+multi-object scene. The simulation also uses a saved or uploaded ZIP snapshot,
+not necessarily the current Maps shown in Ψ.
+
+## Intended scene playback
+
+- An explicit Play action should construct the scene rather than relying on a
+  double-click or independently normalized preview objects.
+- The scene configuration should identify the starting Map and required
+  objects, with explicit scale, initial position, rotation, visibility, units,
+  and coordinate conventions. Preserve relationships between objects (for
+  example, an avatar, bench, and piano) rather than scaling each one to fit.
+- Apply the same authoritative initial transforms in preview and render, and
+  define clearly when user adjustments override the configuration. Validate
+  missing Maps, objects, and unsupported transforms before starting playback.
+- Resolve the starting Map and its associations from the chosen snapshot;
+  document which snapshot is being used and refresh Ψ when the underlying Map
+  set changes. Map traversal and simulation behavior remain backend concerns.
+
+These are design requirements, not a claim that synchronized physical scaling,
+scene placement, or automatic Map-driven object loading is implemented today.

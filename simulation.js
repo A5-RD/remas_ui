@@ -1367,16 +1367,12 @@ function initializeSimulation() {
 
   function loadSelectedObject() {
     if (!selectedObjectLi) {
-      alert('Select a 3D object first.');
+      alert('Select an object first.');
       return;
     }
 
     console.info('[objects] loading selected object:', selectedObjectLi.dataset.filename);
-    selectedObjectLi.dispatchEvent(new MouseEvent('click', {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-    }));
+    selectedObjectLi.loadSelected?.();
   }
 
   loadSelectedObjectButton?.addEventListener('click', loadSelectedObject);
@@ -1518,14 +1514,16 @@ function initializeSimulation() {
     li.dataset.filename = filename;
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
-    li.title = 'Click to select and view in Sigma';
+    li.title = 'Click to select, then use the Objects play button to load';
     li.addEventListener('click', () => {
       preserveObjectSelection(li);
+    });
+    li.loadSelected = () => {
       const url = li.dataset.url;
       if (!url) return;
       sigmaBtn.click();
       loadObjectInSigma(url, filename);
-    });
+    };
     objectsList.appendChild(li);
     return li;
   }
@@ -1573,6 +1571,7 @@ function initializeSimulation() {
 
   async function loadObjectsList(userEmail) {
     const objectsList = document.getElementById('objects-list');
+    selectedObjectLi = null;
     objectsList.innerHTML = '<li class="empty-msg">Loading objects…</li>';
     availableBlendFiles.length = 0;
 
@@ -1634,8 +1633,8 @@ function initializeSimulation() {
       existing.dataset.converted = hasConverted ? '1' : existing.dataset.converted || '0';
       if (convertedFilename) existing.dataset.convertedFilename = convertedFilename;
       existing.title = hasConverted
-        ? `Click to load cached conversion: ${convertedFilename}`
-        : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+        ? `Select, then use play to load cached conversion: ${convertedFilename}`
+        : 'Select, then use play to choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
       return existing;
     }
 
@@ -1648,14 +1647,16 @@ function initializeSimulation() {
     li.classList.add('file-item');
     li.classList.add('blend-item');
     li.title = hasConverted
-      ? `Click to load cached conversion: ${convertedFilename}`
-      : 'Click to select and choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
-    li.addEventListener('click', async (e) => {
+      ? `Select, then use play to load cached conversion: ${convertedFilename}`
+      : 'Select, then use play to choose objects to convert (Ctrl/Cmd/Alt+click to inspect)';
+    li.addEventListener('click', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
       preserveObjectSelection(li);
+    });
+    li.loadSelected = async () => {
       if (li.dataset.converted === '1') {
         if (li.dataset.loading === '1') return;
         try {
@@ -1678,7 +1679,7 @@ function initializeSimulation() {
           li.style.color = '';
           li.dataset.converted = '1';
           li.dataset.convertedFilename = glbName;
-          li.title = `Click to load cached conversion: ${glbName}`;
+          li.title = `Select, then use play to load cached conversion: ${glbName}`;
           sigmaBtn.click();
           loadObjectInSigma(url, glbName);
         } catch (err) {
@@ -1687,7 +1688,7 @@ function initializeSimulation() {
           console.error(err);
         }
       });
-    });
+    };
     objectsList.appendChild(li);
   }
 

@@ -157,7 +157,8 @@
       const ID_PATTERN = /\b[a-z]{5}\d{5}\b/g;
 
       memories.forEach(m => {
-        nodes.push({ id: m.filename, val: 10 });
+        const description = typeof m.data?.description === 'string' ? m.data.description.trim() : '';
+        nodes.push({ id: m.filename, val: 10, description });
 
         // Safely access associations from m.data
         const associations = m.data && m.data.associations;
@@ -203,6 +204,14 @@
       return { nodes, links };
     }
 
+    function graphNodeLabel(node) {
+      const description = node.description || (node.placeholder ? 'Referenced Map not found' : 'No description available');
+      // The production graph treats labels as HTML; local graph uses a plain title.
+      return isLocal ? description : description.replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
 
     async function buildGraph(user) {
       const memories = await fetchMemoryFiles(user.email);
@@ -212,15 +221,11 @@
       const { nodes, links } = buildAdjacency(memories);
 
 
-      if (isLocal) {
-        adjacency = Object.fromEntries(nodes.map(node => [node.id, []]));
-        links.forEach(({ source, target }) => {
-          adjacency[source]?.push(target);
-          adjacency[target]?.push(source);
-        });
-      } else {
-        buildAdjacency(nodes, links);
-      }
+      adjacency = Object.fromEntries(nodes.map(node => [node.id, []]));
+      links.forEach(({ source, target }) => {
+        adjacency[source]?.push(target);
+        adjacency[target]?.push(source);
+      });
 
       let lastClick = 0, lastId = null;
       const Graph = ForceGraph3D()(graphElem)
@@ -228,7 +233,7 @@
         .nodeRelSize(2)
         .nodeColor(n => highlightedNodes.has(n.id) ? 'white' : '#bbb')  // #bbb = light grey
         .nodeOpacity(1)
-        .nodeLabel(d => d.id)
+        .nodeLabel(graphNodeLabel)
 
 
         .linkColor(link => {
