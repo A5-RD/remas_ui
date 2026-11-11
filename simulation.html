@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulation</title>
-  <link rel="stylesheet" href="styles.css?v=20261110f" />
+  <link rel="stylesheet" href="styles.css?v=20261111c" />
   <script src="page-resources.js"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20261110e"></script>
+  <script type="module" src="simulation.js?v=20261111a"></script>
 
 </head>
 <body>
@@ -22,21 +22,23 @@
     display: none;
     background: transparent;
     pointer-events: all;
+    cursor: ew-resize;
   "></div>
   <!-- Right Panel -->
   <div id="right-panel">
+    <div id="right-panel-resize" role="separator" tabindex="0" aria-label="Resize right panel" aria-orientation="vertical" aria-valuemin="140" aria-valuemax="600" aria-valuenow="250" title="Drag to resize panel"></div>
     <!-- Tabs Section (now inside right panel, at the bottom) -->
 
     <div id="right-panel-toolbar">
-      <button id="start" class="material-symbols-outlined">play_arrow</button>
-      <button id="stop" title="Stop Simulation">■</button>
+      <button id="start" type="button" aria-label="Start simulation" title="Start simulation"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7 3v18l14-9z"/></svg></button>
+      <button id="stop" type="button" aria-label="Stop simulation" title="Stop simulation"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg></button>
     </div>
 
     <div id="file-explorer">
       <div id="file-explorer-header">
         <span class="explorer-title">Maps</span>
         <div class="maps-actions">
-          <button id="find" class="sidebar-action-btn material-symbols-outlined" title="Search Maps">search</button>
+          <button id="find" type="button" class="sidebar-action-btn" aria-label="Search Maps" title="Search Maps"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg></button>
           <button id="add-map" class="sidebar-action-btn" title="Add New Map">＋</button>
           <button id="remove-map" class="sidebar-action-btn" title="Remove Map">-</button>
         </div>
@@ -61,7 +63,7 @@
       <div id="objects-section-header">
         <span class="explorer-title">Objects</span>
         <div class="objects-actions">
-          <button id="find-objects" class="sidebar-action-btn material-symbols-outlined" title="Search objects">search</button>
+          <button id="find-objects" type="button" class="sidebar-action-btn" aria-label="Search objects" title="Search objects"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg></button>
           <button id="upload-blend" type="button" class="sidebar-action-btn" title="Upload an object">+</button>
           <button id="remove-object" class="sidebar-action-btn" title="Remove Object">-</button>
         </div>
@@ -73,6 +75,17 @@
         <li>Loading objects...</li>
       </ul>
       <button class="section-resize-handle" type="button" aria-label="Resize Objects section" title="Drag to resize Objects"></button>
+    </div>
+
+    <div class="graph-visual-controls">
+      <label class="graph-connections-control"><input id="show-connections" type="checkbox" checked> Show connections</label>
+      <label class="graph-connections-control"><input id="brighten-nodes" type="checkbox" checked> Brighten Nodes</label>
+      <label class="brain-area-control" for="brain-area-filter">
+        Highlight brain area
+        <select id="brain-area-filter" aria-label="Highlight Maps in brain area" disabled>
+          <option value="">All brain areas</option>
+        </select>
+      </label>
     </div>
 
   </div>
@@ -92,7 +105,7 @@
   <div id="simulation-container">
     <div id="main-content">
       <div id="psi-container" class="simulation-container">
-        <iframe id="psi-iframe" src="psi.html?v=20261110f" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
+        <iframe id="psi-iframe" src="psi.html?v=20261111e" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
 
       <div id="sigma-container" class="simulation-container">
@@ -124,7 +137,7 @@
     <div id="simulation-run-modal-inner">
       <div id="simulation-run-modal-header">
         <span>Run Ava Simulation</span>
-        <button id="simulation-run-modal-close" class="close-btn">×</button>
+        <button id="simulation-run-modal-close" class="simulation-run-close" type="button" aria-label="Close simulation dialog" title="Close">×</button>
       </div>
       <div id="simulation-run-modal-body">
         <label class="simulation-field">

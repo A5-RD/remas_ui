@@ -17,9 +17,9 @@ export function ForceGraph3D() {
     controls.enableDamping = true;
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    let nodeColor = () => '#bbb', linkColor = () => 'white', click = () => {}, rightClick = () => {};
+    let nodeColor = () => '#bbb', linkColor = () => 'white', click = () => {}, backgroundClick = () => {}, rightClick = () => {}, hover = () => {};
     let linkVisible = () => true;
-    let nodes = [], links = [], nodeMeshes = [], linkMeshes = [], frame;
+    let nodes = [], links = [], nodeMeshes = [], nodeHitMeshes = [], linkMeshes = [], frame;
     let nodeLabel = n => n.id;
 
     function resize() {
@@ -41,18 +41,24 @@ export function ForceGraph3D() {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
-      return raycaster.intersectObjects(nodeMeshes)[0]?.object.userData.node;
+      return raycaster.intersectObjects(nodeHitMeshes)[0]?.object.userData.node;
     }
     let rightStart = null;
     renderer.domElement.addEventListener('pointerdown', event => {
       if (event.button === 2) rightStart = { x: event.clientX, y: event.clientY, moved: false, released: false, menuEvent: null };
     });
-    renderer.domElement.addEventListener('click', event => { const node = pick(event); if (node) click(node, event); });
+    renderer.domElement.addEventListener('click', event => {
+      const node = pick(event);
+      if (node) click(node, event);
+      else backgroundClick(event);
+    });
     renderer.domElement.addEventListener('pointermove', event => {
       if (rightStart && Math.hypot(event.clientX - rightStart.x, event.clientY - rightStart.y) > 5) rightStart.moved = true;
       const node = pick(event);
       renderer.domElement.title = node ? nodeLabel(node) : '';
+      hover(node, event);
     });
+    renderer.domElement.addEventListener('pointerleave', () => hover(null));
     function finishRightClick(event) {
       const start = rightStart;
       rightStart = null;
@@ -89,10 +95,13 @@ export function ForceGraph3D() {
         for (const mesh of nodeMeshes) {
           scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose();
         }
+        for (const mesh of nodeHitMeshes) {
+          scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose();
+        }
         for (const { line } of linkMeshes) {
           scene.remove(line); line.geometry.dispose(); line.material.dispose();
         }
-        nodeMeshes = []; linkMeshes = [];
+        nodeMeshes = []; nodeHitMeshes = []; linkMeshes = [];
         nodes = data.nodes.filter((node, index, all) => all.findIndex(other => other.id === node.id) === index);
         links = data.links;
         const byId = new Map();
@@ -104,10 +113,18 @@ export function ForceGraph3D() {
           const position = [node.fx, node.fy, node.fz].every(Number.isFinite)
             ? new THREE.Vector3(node.fx, node.fy, node.fz)
             : new THREE.Vector3(Math.cos(angle) * r * radius, y * radius, Math.sin(angle) * r * radius);
-          const mesh = new THREE.Mesh(new THREE.SphereGeometry(node.placeholder ? 0.45 : 0.8, 12, 8), new THREE.MeshBasicMaterial({ color: nodeColor(node) }));
+          const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshBasicMaterial({ color: nodeColor(node) }));
           mesh.position.copy(position);
           mesh.userData.node = node;
           scene.add(mesh); nodeMeshes.push(mesh); byId.set(node.id, position);
+          const hitMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.65, 8, 6),
+            new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+          );
+          hitMesh.position.copy(position);
+          hitMesh.userData.node = node;
+          scene.add(hitMesh);
+          nodeHitMeshes.push(hitMesh);
         });
         links.forEach(link => {
           const from = byId.get(typeof link.source === 'object' ? link.source.id : link.source);
@@ -117,14 +134,13 @@ export function ForceGraph3D() {
           line.visible = linkVisible(link);
           scene.add(line); linkMeshes.push({ line, link });
         });
-        let extent = radius;
-        for (const position of byId.values()) extent = Math.max(extent, position.length());
-        // Frame the whole illustrative brain, including the unassigned region,
-        // even in narrow viewports where the horizontal field of view is smaller.
-        extent = Math.max(extent, 47);
-        const verticalHalfFov = 50 * Math.PI / 360;
-        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * camera.aspect);
-        camera.position.z = extent * 1.15 / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov));
+        return graph;
+      },
+      cameraPosition(position, target) {
+        camera.position.set(position.x, position.y, position.z);
+        controls.target.set(target.x, target.y, target.z);
+        camera.lookAt(controls.target);
+        controls.update();
         return graph;
       },
       nodeColor(value) {
@@ -147,7 +163,9 @@ export function ForceGraph3D() {
       },
       scene() { return scene; },
       nodeLabel(value) { nodeLabel = value; return graph; },
+      onNodeHover(value) { hover = value; return graph; },
       onNodeClick(value) { click = value; return graph; },
+      onBackgroundClick(value) { backgroundClick = value; return graph; },
       onNodeRightClick(value) { rightClick = value; return graph; },
       backgroundColor(value) { scene.background = new THREE.Color(value); return graph; },
       nodeRelSize() { return graph; }, nodeOpacity() { return graph; },

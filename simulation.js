@@ -2,6 +2,45 @@ import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, get
 
 function initializeSimulation() {
   const simContainer = document.getElementById("simulation-container");
+  const psiFrame = document.getElementById('psi-iframe');
+  const connectionsControl = document.getElementById('show-connections');
+  const brightenNodesControl = document.getElementById('brighten-nodes');
+  const brainAreaControl = document.getElementById('brain-area-filter');
+  const syncPsiConnections = () => {
+    psiFrame.contentWindow?.postMessage({
+      type: 'psi-set-display-options',
+      showConnections: connectionsControl.checked,
+      brightenNodes: brightenNodesControl.checked,
+      brainArea: brainAreaControl.value,
+    }, window.location.origin);
+  };
+  connectionsControl.addEventListener('change', syncPsiConnections);
+  brightenNodesControl.addEventListener('change', syncPsiConnections);
+  brainAreaControl.addEventListener('change', syncPsiConnections);
+  psiFrame.addEventListener('load', syncPsiConnections);
+  window.addEventListener('message', event => {
+    if (event.origin !== window.location.origin || event.source !== psiFrame.contentWindow ||
+        !event.data || typeof event.data !== 'object') return;
+    if (event.data.type === 'psi-map-areas' && Array.isArray(event.data.areas)) {
+      const currentArea = brainAreaControl.value;
+      const areas = event.data.areas.filter(area => area &&
+        typeof area.id === 'string' && /^[a-z][a-z0-9_]*$/.test(area.id) &&
+        typeof area.label === 'string' && area.id !== 'unassigned');
+      brainAreaControl.replaceChildren(new Option('All brain areas', ''));
+      for (const area of areas) brainAreaControl.add(new Option(area.label, area.id));
+      brainAreaControl.disabled = areas.length === 0;
+      brainAreaControl.value = areas.some(area => area.id === currentArea) ? currentArea : '';
+      syncPsiConnections();
+    } else if (event.data.type === 'psi-ready' && typeof event.data.showConnections === 'boolean') {
+      syncPsiConnections();
+    } else if (event.data.type === 'psi-display-options-changed' &&
+        typeof event.data.showConnections === 'boolean' && typeof event.data.brightenNodes === 'boolean') {
+      connectionsControl.checked = event.data.showConnections;
+      brightenNodesControl.checked = event.data.brightenNodes;
+      if (typeof event.data.brainArea === 'string') brainAreaControl.value = event.data.brainArea;
+    }
+  });
+  syncPsiConnections();
   const availableMemoryFiles = [];
   const availableBlendFiles = [];
   let sceneConfigRequest = 0;
@@ -126,34 +165,54 @@ function initializeSimulation() {
 
   // RIGHT PANEL
   const rightPanel = document.getElementById("right-panel");
+  const panelResizeHandle = document.getElementById("right-panel-resize");
   const iframeOverlay = document.getElementById("iframe-overlay");
+  let resizePointerId = null;
 
-  function resizePanel(e) {
-    let newWidth = window.innerWidth - e.clientX;
-
-    if (newWidth < 140) {
-      newWidth = 0;
-    }
-
-    if (newWidth >= 0 && newWidth <= 600) {
-      rightPanel.style.width = newWidth + "px";
-    }
+  function setPanelWidth(width) {
+    const maxWidth = Math.min(600, window.innerWidth);
+    const minWidth = Math.min(140, maxWidth);
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, width));
+    rightPanel.style.width = `${newWidth}px`;
+    panelResizeHandle.setAttribute('aria-valuemin', minWidth);
+    panelResizeHandle.setAttribute('aria-valuemax', maxWidth);
+    panelResizeHandle.setAttribute('aria-valuenow', Math.round(newWidth));
   }
 
-  function stopResize() {
+  function resizePanel(event) {
+    if (event.pointerId === resizePointerId) setPanelWidth(window.innerWidth - event.clientX);
+  }
+
+  function stopResize(event) {
+    if (event?.pointerId != null && event.pointerId !== resizePointerId) return;
+    const pointerId = resizePointerId;
+    resizePointerId = null;
+    if (pointerId !== null && panelResizeHandle.hasPointerCapture(pointerId)) {
+      panelResizeHandle.releasePointerCapture(pointerId);
+    }
     iframeOverlay.style.display = "none";
-    document.removeEventListener("mousemove", resizePanel);
-    document.removeEventListener("mouseup", stopResize);
+    document.removeEventListener("pointermove", resizePanel);
+    document.removeEventListener("pointerup", stopResize);
+    document.removeEventListener("pointercancel", stopResize);
+    window.removeEventListener("blur", stopResize);
   }
 
-  rightPanel.addEventListener("mousedown", (event) => {
-    const panelLeftEdge = rightPanel.getBoundingClientRect().left;
-    if (event.target !== rightPanel || event.clientX > panelLeftEdge + 8) return;
-
+  panelResizeHandle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || resizePointerId !== null) return;
     event.preventDefault();
+    resizePointerId = event.pointerId;
+    panelResizeHandle.setPointerCapture(event.pointerId);
     iframeOverlay.style.display = "block";
-    document.addEventListener("mousemove", resizePanel);
-    document.addEventListener("mouseup", stopResize);
+    document.addEventListener("pointermove", resizePanel);
+    document.addEventListener("pointerup", stopResize);
+    document.addEventListener("pointercancel", stopResize);
+    window.addEventListener("blur", stopResize);
+  });
+  panelResizeHandle.addEventListener("lostpointercapture", stopResize);
+  panelResizeHandle.addEventListener("keydown", (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    setPanelWidth(rightPanel.getBoundingClientRect().width + (event.key === 'ArrowLeft' ? 10 : -10));
   });
 
 
@@ -172,10 +231,9 @@ function initializeSimulation() {
     if (!handle) return;
 
     const resizeSection = (event) => {
-      const newHeight = event.clientY - section.getBoundingClientRect().top;
-      if (newHeight >= 80 && newHeight <= window.innerHeight - 100) {
-        section.style.height = `${newHeight}px`;
-      }
+      const newHeight = Math.max(80, event.clientY - section.getBoundingClientRect().top);
+      section.style.height = `${newHeight}px`;
+      section.style.flexBasis = `${newHeight}px`;
     };
 
     const stopResizeSection = () => {
@@ -187,6 +245,8 @@ function initializeSimulation() {
     handle.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      section.style.flexGrow = '0';
+      section.style.flexShrink = '0';
       handle.setPointerCapture(event.pointerId);
       document.addEventListener('pointermove', resizeSection);
       document.addEventListener('pointerup', stopResizeSection);
@@ -1468,8 +1528,8 @@ function initializeSimulation() {
     li.dataset.filename = filename;
     li.dataset.url = downloadURL || '';
     li.classList.add('file-item');
-    li.title = 'Double-click to select or deselect';
-    li.addEventListener('dblclick', () => {
+    li.title = 'Click to select or deselect';
+    li.addEventListener('click', () => {
       setSelectedObject(li);
     });
     objectsList.appendChild(li);
@@ -1580,7 +1640,7 @@ function initializeSimulation() {
     if (existing) {
       existing.dataset.converted = hasConverted ? '1' : existing.dataset.converted || '0';
       if (convertedFilename) existing.dataset.convertedFilename = convertedFilename;
-      existing.title = 'Double-click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
+      existing.title = 'Click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
       return existing;
     }
 
@@ -1592,15 +1652,13 @@ function initializeSimulation() {
     li.dataset.loading = '0';
     li.classList.add('file-item');
     li.classList.add('blend-item');
-    li.title = 'Double-click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
+    li.title = 'Click to select or deselect (Ctrl/Cmd/Alt+click to inspect)';
     li.addEventListener('click', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         debugGetBlendHeader(filename);
         return;
       }
-    });
-    li.addEventListener('dblclick', (e) => {
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) setSelectedObject(li);
+      setSelectedObject(li);
     });
     objectsList.appendChild(li);
   }

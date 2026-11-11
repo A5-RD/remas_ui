@@ -19,7 +19,7 @@
       font-family: 'Roboto', sans-serif;
       font-weight: 100;
     }
-    #3d-graph { width: 100%; height: 100%; }
+    [id="3d-graph"] { width: 100%; height: 100%; }
     #loading, #controls-info, #json-editor {
       position: absolute;
       background: rgba(50, 50, 50, 0.3);
@@ -31,25 +31,26 @@
     }
     #loading { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
     #controls-info { bottom:20px; left:20px; display:none; max-width:300px; }
-    #graph-filters, #neighbor-menu {
-      position: absolute; z-index: 110; background: rgba(25, 30, 38, 0.94);
+    #neighbor-menu {
+      position: absolute; z-index: 110; background: rgba(25, 30, 38, 0.62);
       border: 1px solid #71808e; border-radius: 8px; padding: 12px;
       font: 14px sans-serif; color: white;
     }
-    #graph-filters { top: 16px; left: 16px; display: flex; align-items: center; gap: 12px; }
-    #graph-filters button { margin: 0; }
+    #neighbor-menu { backdrop-filter: blur(8px); }
     #neighbor-menu[hidden] { display: none; }
     #neighbor-menu { max-width: calc(100vw - 48px); }
     #neighbor-menu label { display: block; margin-top: 10px; }
-    #neighbor-depth { display: block; width: 8em; margin-top: 5px; }
+    #neighbor-distance { display: block; width: 8em; margin-top: 5px; }
     #neighbor-error { color: #ffb6b6; margin: 6px 0 0; }
-    #region-legend {
-      position: absolute; top: 16px; right: 16px; z-index: 105;
-      padding: 10px 12px; border: 1px solid #71808e; border-radius: 8px;
-      background: rgba(25, 30, 38, 0.9); font: 12px sans-serif; color: white;
+    #neighbor-menu button { margin: 10px 6px 0 0; background: #464646; color: #fff; border: 1px solid #777; }
+    #neighbor-menu button:hover { background: #555; }
+    #map-hover-tooltip {
+      position: fixed; z-index: 120; display: none; max-width: min(320px, calc(100vw - 24px));
+      padding: 9px 11px; border: 1px solid #777; border-radius: 6px;
+      background: rgba(70, 70, 70, 0.96); color: #fff; font: 12px/1.45 sans-serif;
+      pointer-events: none; white-space: pre-line; overflow-wrap: anywhere;
     }
-    #region-legend strong { display: block; margin-bottom: 6px; }
-    #region-legend span { display: block; margin: 4px 0; }
+    #map-hover-tooltip strong { display: block; margin-bottom: 3px; }
     #json-editor {
       top:50%; left:50%;
       transform:translate(-50%,-50%);
@@ -101,16 +102,11 @@
     });
   </script>
 
-  <div id="graph-filters" aria-label="Graph connection controls">
-    <label><input id="show-connections" type="checkbox" checked> Show connections</label>
-    <button id="show-all" type="button">Show All</button>
-  </div>
-  <div id="region-legend" aria-label="Illustrative brain regions"><strong>Illustrative regions</strong></div>
-
+  <div id="map-hover-tooltip" role="tooltip"></div>
   <form id="neighbor-menu" aria-label="Show neighbors" hidden>
     <strong id="neighbor-title"></strong>
-    <label for="neighbor-depth">Depth (blank for all connections)</label>
-    <input id="neighbor-depth" type="text" inputmode="numeric" autocomplete="off" aria-describedby="neighbor-error">
+    <label for="neighbor-distance">Distance</label>
+    <input id="neighbor-distance" type="text" inputmode="numeric" autocomplete="off" aria-describedby="neighbor-error">
     <p id="neighbor-error" role="alert"></p>
     <button type="submit">Show Neighbors</button>
     <button id="neighbor-cancel" type="button">Cancel</button>
@@ -122,8 +118,8 @@
     <p>• Rotate: Right-click and drag</p>
     <p>• Pan: Shift + right-click and drag</p>
     <p>• Zoom: Mouse wheel</p>
-    <p>• Single-click: Highlight network component</p>
-    <p>• Double-click: Edit memory</p>
+    <p>• Hover: Description</p>
+    <p>• Double-click a Map: Edit memory</p>
     <p>• Right-click a Map: Show Neighbors</p>
   </div>
 
@@ -143,11 +139,12 @@
 
   <script type="module">
     import * as THREE from 'three';
-    import { REGIONS, classifyMap, positionMap, neighborhood } from './brain-regions.js?v=20261110e';
+    import { REGIONS, classifyMap, positionMap, neighborhood } from './brain-regions.js?v=20261111b';
     import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, uploadString, deleteObject } from './firebase-adapter.js';
+
     let ForceGraph3D;
     if (isLocal) {
-      ({ ForceGraph3D } = await import('./local-graph.js?v=20261110f'));
+      ({ ForceGraph3D } = await import('./local-graph.js?v=20261111a'));
     } else {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -159,151 +156,62 @@
       ForceGraph3D = window.ForceGraph3D;
     }
 
-    const highlightedNodes = new Set();
-    let adjacency = {};
-    let activeGraph = null, regionBoundaries = null, neighborIds = null, menuNodeId = null;
+    let activeGraph = null;
+    let graphResizeObserver = null;
+    let neighborIds = null;
+    let menuNodeId = null;
     let graphBuildVersion = 0;
-    const showConnections = document.getElementById('show-connections');
-    const neighborMenu = document.getElementById('neighbor-menu');
-    const neighborDepth = document.getElementById('neighbor-depth');
-    const neighborError = document.getElementById('neighbor-error');
+    let connectionsEnabled = true;
+    let brightenNodes = true;
+    let pointerPosition = { x: 16, y: 16 };
 
-    const regionLegend = document.getElementById('region-legend');
-    for (const region of REGIONS) {
-      const item = document.createElement('span');
-      item.textContent = `● ${region.label}`;
-      item.style.color = region.color;
-      regionLegend.appendChild(item);
-    }
+    const neighborMenu = document.getElementById('neighbor-menu');
+    const neighborDistance = document.getElementById('neighbor-distance');
+    const neighborError = document.getElementById('neighbor-error');
+    const hoverTooltip = document.getElementById('map-hover-tooltip');
+    let animatedNeighborBeads = [];
+    let beadAnimationFrame = null;
+    let curvedLinkMeshes = [];
+    let selectedBrainArea = null;
+    let availableBrainAreas = new Set();
 
     async function fetchMemoryFiles(email) {
       try {
         const dir = ref(storage, `users/${email}/memories`);
         const result = await listAll(dir);
-        return Promise.all(result.items.map(async item => {
+        return await Promise.all(result.items.map(async item => {
           const bytes = await getBytes(item);
-          const text = new TextDecoder().decode(bytes);
-          const data = JSON.parse(text);
+          const data = JSON.parse(new TextDecoder().decode(bytes));
           return { filename: item.name.split('.')[0], data };
         }));
-      } catch (e) {
-        console.error(e);
-        throw e;
+      } catch (error) {
+        console.error(error);
+        throw error;
       }
     }
-
-
-    function getComponent(start) {
-      const visited = new Set();
-      const queue = [start];
-      while (queue.length) {
-        const u = queue.shift();
-        if (!visited.has(u)) {
-          visited.add(u);
-
-          // Ensure adjacency[u] is defined before calling forEach
-          if (adjacency[u]) {
-            adjacency[u].forEach(v => {
-              if (!visited.has(v)) queue.push(v);
-            });
-          } else {
-            console.warn(`No adjacency list found for node: ${u}`);
-          }
-        }
-      }
-      return visited;
-    }
-
 
     function buildAdjacency(memories) {
       const links = [];
       const nodes = [];
+      const idPattern = /\b[a-z]{5}\d{5}\b/g;
 
-      const ID_PATTERN = /\b[a-z]{5}\d{5}\b/g;
-
-      memories.forEach(m => {
-        const description = typeof m.data?.description === 'string' ? m.data.description.trim() : '';
-        nodes.push({ id: m.filename, val: 10, description });
-
-        // Safely access associations from m.data
-        const associations = m.data && m.data.associations;
-
-        if (associations) {
-          let assocEntries = [];
-
-          if (Array.isArray(associations)) {
-            // If associations is an array, just use it directly
-            assocEntries = associations;
-          } else if (typeof associations === 'object') {
-            // If associations is an object, extract keys and values
-            assocEntries = Object.keys(associations).concat(
-              Object.values(associations).flat().map(String)
-            );
-          } else if (typeof associations === 'string') {
-            // If associations is a string, wrap it in an array
-            assocEntries = [associations];
-          }
-
-          // Process each entry in assocEntries
-          assocEntries.forEach(entry => {
-            // Ensure we match only valid IDs, applying the ID pattern regex
-            const matches = (typeof entry === 'string' ? entry : JSON.stringify(entry)).match(ID_PATTERN);
-
-            if (matches) {
-              // If matches are found, push the association to links
-              matches.forEach(match => links.push({ source: m.filename, target: match }));
-            }
-          });
+      for (const memory of memories) {
+        const description = typeof memory.data?.description === 'string' ? memory.data.description.trim() : '';
+        nodes.push({ id: memory.filename, val: 10, description });
+        const associations = memory.data?.associations;
+        let entries = [];
+        if (Array.isArray(associations)) entries = associations;
+        else if (associations && typeof associations === 'object') {
+          entries = Object.keys(associations).concat(Object.values(associations).flat().map(String));
+        } else if (typeof associations === 'string') entries = [associations];
+        for (const entry of entries) {
+          const matches = (typeof entry === 'string' ? entry : JSON.stringify(entry)).match(idPattern) || [];
+          for (const target of matches) links.push({ source: memory.filename, target });
         }
-      });
-
-
-      // Add placeholder nodes for orphaned IDs (optional)
-      const existing = new Set(nodes.map(n => n.id));
-      links.forEach(link => {
-        if (!existing.has(link.target)) {
-          nodes.push({ id: link.target, val: 4, placeholder: true });
-          existing.add(link.target);
-        }
-      });
-
-      return { nodes, links };
-    }
-
-    function graphNodeLabel(node) {
-      const description = node.description || (node.placeholder ? 'Referenced Map not found' : 'No description available');
-      const label = node.regionLabel ? `${description}\nRegion: ${node.regionLabel}` : description;
-      // The production graph treats labels as HTML; local graph uses a plain title.
-      return isLocal ? label : label.replace(/[&<>"']/g, char => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      })[char]);
-    }
-
-    function disposeRegionBoundaries() {
-      if (!regionBoundaries) return;
-      regionBoundaries.parent?.remove(regionBoundaries);
-      regionBoundaries.traverse(object => {
-        object.geometry?.dispose();
-        object.material?.dispose();
-      });
-      regionBoundaries = null;
-    }
-
-    function addRegionBoundaries(graph) {
-      const group = new THREE.Group();
-      for (const region of REGIONS) {
-        const mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 16, 10),
-          new THREE.MeshBasicMaterial({ color: region.color, wireframe: true, transparent: true, opacity: 0.12, depthWrite: false })
-        );
-        mesh.position.set(...region.center);
-        mesh.scale.set(...region.radii);
-        // The graph's picking must only see nodes, not these decorative overlays.
-        mesh.raycast = () => {};
-        group.add(mesh);
       }
-      graph.scene().add(group);
-      regionBoundaries = group;
+
+      const existing = new Set(nodes.map(node => node.id));
+      return { nodes, links: links.filter(link => existing.has(link.target)) };
     }
 
     function endpointId(endpoint) {
@@ -311,15 +219,116 @@
     }
 
     function connectionVisible(link) {
-      return showConnections.checked && (!neighborIds ||
+      return connectionsEnabled && (!neighborIds ||
         (neighborIds.has(endpointId(link.source)) && neighborIds.has(endpointId(link.target))));
     }
 
-    function refreshConnectionVisibility() {
-      // Use a fresh accessor so both adapters re-evaluate existing links.
-      activeGraph?.linkVisibility(link => connectionVisible(link));
-      // Force-graph's particle objects are separate from its link lines.
-      if (activeGraph && !isLocal) activeGraph.linkDirectionalParticles(link => connectionVisible(link) ? 1 : 0);
+    function graphNodeColor(node) {
+      if (selectedBrainArea) return node.regionId === selectedBrainArea ? '#ffffff' : '#3b3b3b';
+      return brightenNodes ? '#ffffff' : '#747b84';
+    }
+
+    function graphLinkColor(link) {
+      const source = endpointId(link.source), target = endpointId(link.target);
+      return neighborIds && neighborIds.has(source) && neighborIds.has(target) ? '#ffffff' : '#aeb8c2';
+    }
+
+    function clearCurvedLinks() {
+      for (const { line } of curvedLinkMeshes) {
+        line.parent?.remove(line);
+        line.geometry.dispose();
+        line.material.dispose();
+      }
+      curvedLinkMeshes = [];
+    }
+
+    function createCurvedLinks(graph) {
+      clearCurvedLinks();
+      const scene = graph.scene();
+      const nodes = new Map(graph.graphData().nodes.map(node => [node.id, node]));
+      const links = graph.graphData().links;
+      links.forEach((link, index) => {
+        const sourceId = endpointId(link.source), targetId = endpointId(link.target);
+        const fromNode = nodes.get(sourceId), toNode = nodes.get(targetId);
+        if (!fromNode || !toNode) return;
+        const from = new THREE.Vector3(fromNode.x, fromNode.y, fromNode.z);
+        const to = new THREE.Vector3(toNode.x, toNode.y, toNode.z);
+        const direction = to.clone().sub(from);
+        if (direction.lengthSq() < 1e-8) return;
+        direction.normalize();
+
+        const pairKey = [String(sourceId), String(targetId)].sort().join('|');
+        let hash = 0;
+        for (const char of `${pairKey}:${index}`) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+        const axes = [new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)];
+        let normal = axes[Math.abs(hash) % axes.length].clone().cross(direction);
+        if (normal.lengthSq() < 1e-6) normal = axes[(Math.abs(hash) + 1) % axes.length].clone().cross(direction);
+        normal.normalize();
+        const canonicalDirection = String(sourceId) <= String(targetId) ? 1 : -1;
+        const bendSign = (hash & 1 ? 1 : -1) * canonicalDirection;
+        const bend = 1.6 + (Math.abs(hash) % 9) * 0.22;
+        const control = from.clone().add(to).multiplyScalar(0.5).addScaledVector(normal, bend * bendSign);
+        const curve = new THREE.QuadraticBezierCurve3(from, control, to);
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(curve.getPoints(24)),
+          new THREE.LineBasicMaterial({ color: graphLinkColor(link), transparent: true, opacity: 0.25 }),
+        );
+        line.visible = connectionVisible(link);
+        scene.add(line);
+        curvedLinkMeshes.push({ line, link, curve });
+      });
+    }
+
+    function clearNeighborBeads() {
+      if (beadAnimationFrame !== null) cancelAnimationFrame(beadAnimationFrame);
+      beadAnimationFrame = null;
+      for (const { bead } of animatedNeighborBeads) {
+        bead.parent?.remove(bead);
+        bead.geometry.dispose();
+        bead.material.dispose();
+      }
+      animatedNeighborBeads = [];
+    }
+
+    function animateNeighborBeads() {
+      clearNeighborBeads();
+      if (!activeGraph || !neighborIds || !connectionsEnabled) return;
+      const scene = activeGraph.scene();
+      const selectedLinks = curvedLinkMeshes
+        .filter(({ link }) => connectionVisible(link))
+        .sort((a, b) => {
+          const aKey = `${endpointId(a.link.source)}|${endpointId(a.link.target)}`;
+          const bKey = `${endpointId(b.link.source)}|${endpointId(b.link.target)}`;
+          return aKey.localeCompare(bKey);
+        })
+        .filter((_, index) => index % 4 === 0);
+      for (const { curve } of selectedLinks) {
+        const bead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.022, 8, 6),
+          new THREE.MeshBasicMaterial({ color: '#050505' }),
+        );
+        scene.add(bead);
+        animatedNeighborBeads.push({ bead, curve, phase: Math.random() });
+      }
+      if (!animatedNeighborBeads.length) return;
+      const animate = time => {
+        animatedNeighborBeads.forEach(({ bead, curve, phase }) => {
+          const progress = ((time / 2500) + phase) % 1;
+          bead.position.copy(curve.getPoint(progress));
+        });
+        beadAnimationFrame = requestAnimationFrame(animate);
+      };
+      beadAnimationFrame = requestAnimationFrame(animate);
+    }
+
+    function refreshGraphStyles(graph) {
+      graph.nodeColor(node => graphNodeColor(node))
+        .linkVisibility(() => false);
+      for (const { line, link } of curvedLinkMeshes) {
+        line.material.color.set(graphLinkColor(link));
+        line.visible = connectionVisible(link);
+      }
+      animateNeighborBeads();
     }
 
     function closeNeighborMenu() {
@@ -331,36 +340,54 @@
       event.preventDefault();
       menuNodeId = node.id;
       document.getElementById('neighbor-title').textContent = `Neighbors of ${node.id}`;
-      neighborDepth.value = '';
+      neighborDistance.value = '';
       neighborError.textContent = '';
       neighborMenu.hidden = false;
       neighborMenu.style.left = `${Math.max(0, Math.min(event.clientX, window.innerWidth - neighborMenu.offsetWidth))}px`;
       neighborMenu.style.top = `${Math.max(0, Math.min(event.clientY, window.innerHeight - neighborMenu.offsetHeight))}px`;
-      neighborDepth.focus();
+      neighborDistance.focus();
+    }
+
+    let lastBackgroundClick = 0;
+    function handleBackgroundClick() {
+      const now = Date.now();
+      if (now - lastBackgroundClick < 300 && neighborIds) {
+        neighborIds = null;
+        if (activeGraph) refreshGraphStyles(activeGraph);
+      }
+      lastBackgroundClick = now;
     }
 
     function setupGraphControls() {
-      showConnections.addEventListener('change', refreshConnectionVisibility);
-      document.getElementById('show-all').addEventListener('click', () => {
-        neighborIds = null;
-        showConnections.checked = true;
-        highlightedNodes.clear();
+      const embedded = window.parent !== window;
+      const notifyParent = type => {
+        if (embedded) window.parent.postMessage({
+          type, showConnections: connectionsEnabled, brightenNodes, brainArea: selectedBrainArea || '',
+        }, window.location.origin);
+      };
+      window.addEventListener('message', event => {
+        if (!embedded || event.source !== window.parent || event.origin !== window.location.origin ||
+            !event.data || typeof event.data !== 'object' || event.data.type !== 'psi-set-display-options' ||
+            typeof event.data.showConnections !== 'boolean' || typeof event.data.brightenNodes !== 'boolean' ||
+            typeof event.data.brainArea !== 'string' ||
+            (event.data.brainArea !== '' && !availableBrainAreas.has(event.data.brainArea))) return;
+        if (event.data.showConnections) neighborIds = null;
+        connectionsEnabled = event.data.showConnections;
+        brightenNodes = event.data.brightenNodes;
+        selectedBrainArea = event.data.brainArea || null;
         if (activeGraph) refreshGraphStyles(activeGraph);
-        refreshConnectionVisibility();
-        closeNeighborMenu();
       });
       neighborMenu.addEventListener('submit', event => {
         event.preventDefault();
-        const value = neighborDepth.value.trim();
+        const value = neighborDistance.value.trim();
         const depth = value === '' ? null : Number(value);
         if (value !== '' && (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(depth) || depth < 1)) {
           neighborError.textContent = 'Enter a positive whole number or leave blank.';
-          neighborDepth.focus();
+          neighborDistance.focus();
           return;
         }
-        // Blank means all graph edges, including disconnected components.
         neighborIds = depth === null ? null : neighborhood(menuNodeId, activeGraph.graphData().links, depth);
-        refreshConnectionVisibility();
+        refreshGraphStyles(activeGraph);
         closeNeighborMenu();
       });
       document.getElementById('neighbor-cancel').addEventListener('click', closeNeighborMenu);
@@ -370,18 +397,76 @@
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && !neighborMenu.hidden) closeNeighborMenu();
       });
+      document.addEventListener('pointermove', event => {
+        pointerPosition = { x: event.clientX, y: event.clientY };
+        positionHoverTooltip();
+      });
+      notifyParent('psi-ready');
     }
 
-    function graphNodeColor(node) {
-      return highlightedNodes.has(node.id) ? 'white' : '#bbb';
+    function positionHoverTooltip() {
+      if (hoverTooltip.style.display === 'none') return;
+      const left = Math.min(pointerPosition.x + 14, window.innerWidth - hoverTooltip.offsetWidth - 8);
+      const top = Math.min(pointerPosition.y + 14, window.innerHeight - hoverTooltip.offsetHeight - 8);
+      hoverTooltip.style.left = `${Math.max(8, left)}px`;
+      hoverTooltip.style.top = `${Math.max(8, top)}px`;
     }
 
-    function graphLinkColor(link) {
-      return highlightedNodes.has(endpointId(link.source)) && highlightedNodes.has(endpointId(link.target)) ? 'orange' : 'white';
+    function showNodeDescription(node) {
+      hoverTooltip.replaceChildren();
+      if (!node) {
+        hoverTooltip.style.display = 'none';
+        return;
+      }
+      const description = node.description || 'No description available';
+      hoverTooltip.textContent = description;
+      hoverTooltip.style.display = 'block';
+      positionHoverTooltip();
     }
 
-    function refreshGraphStyles(graph) {
-      graph.nodeColor(node => graphNodeColor(node)).linkColor(link => graphLinkColor(link));
+    function observeGraphSize(graph, element, nodes) {
+      let framed = false;
+      const resize = () => {
+        const width = element.clientWidth;
+        const height = element.clientHeight;
+        if (!width || !height) return;
+        if (!isLocal) graph.width(width).height(height);
+        if (framed) return;
+        framed = true;
+        const points = nodes.map(({ x, y, z }) => [x, y, z]);
+        const min = [Infinity, Infinity, Infinity];
+        const max = [-Infinity, -Infinity, -Infinity];
+        for (const point of points) point.forEach((value, i) => {
+          min[i] = Math.min(min[i], value);
+          max[i] = Math.max(max[i], value);
+        });
+        const center = min.map((value, i) => points.length ? (value + max[i]) / 2 : 0);
+        const length = Math.hypot(0.8, 0.3, 1);
+        const direction = [0.8 / length, 0.3 / length, 1 / length];
+        const rightLength = Math.hypot(direction[0], direction[2]);
+        const right = [direction[2] / rightLength, 0, -direction[0] / rightLength];
+        const up = [direction[1] * right[2], rightLength, -direction[1] * right[0]];
+        const dot = (a, b) => a.reduce((sum, value, i) => sum + value * b[i], 0);
+        const vertical = Math.tan(50 * Math.PI / 360);
+        const horizontal = vertical * width / height;
+        let distance = 10;
+        for (const point of points) {
+          const offset = point.map((value, i) => value - center[i]);
+          const depth = dot(offset, direction);
+          distance = Math.max(distance,
+            depth + (Math.abs(dot(offset, right)) + 5) / horizontal,
+            depth + (Math.abs(dot(offset, up)) + 5) / vertical);
+        }
+        distance *= 1.08;
+        graph.cameraPosition({
+          x: center[0] + direction[0] * distance,
+          y: center[1] + direction[1] * distance,
+          z: center[2] + direction[2] * distance,
+        }, { x: center[0], y: center[1], z: center[2] }, 0);
+      };
+      graphResizeObserver = new ResizeObserver(resize);
+      graphResizeObserver.observe(element);
+      resize();
     }
 
     async function buildGraph(user) {
@@ -389,7 +474,10 @@
       const memories = await fetchMemoryFiles(user.email);
       if (version !== graphBuildVersion) return;
       const graphElem = document.getElementById('3d-graph');
-      disposeRegionBoundaries();
+      graphResizeObserver?.disconnect();
+      graphResizeObserver = null;
+      clearNeighborBeads();
+      clearCurvedLinks();
       activeGraph?._destructor?.();
       activeGraph = null;
       graphElem.innerHTML = '';
@@ -397,80 +485,78 @@
       const { nodes, links } = buildAdjacency(memories);
       const dataById = new Map(memories.map(memory => [memory.filename, memory.data]));
       const regionsById = new Map(REGIONS.map(region => [region.id, region]));
+      const nodesByArea = new Map();
       for (const node of nodes) {
-        const regionId = node.placeholder ? 'unknown' : classifyMap(node.id, dataById.get(node.id), isLocal);
-        const region = regionsById.get(regionId);
-        node.regionId = regionId;
-        node.regionLabel = region?.label || regionId || 'Unknown';
-        const [x, y, z] = positionMap(node.id, regionId);
-        Object.assign(node, { x, y, z, fx: x, fy: y, fz: z });
+        const areaId = classifyMap(node.id, dataById.get(node.id), isLocal);
+        node.regionId = areaId;
+        if (!nodesByArea.has(areaId)) nodesByArea.set(areaId, []);
+        nodesByArea.get(areaId).push(node);
       }
-      highlightedNodes.clear();
+
+      availableBrainAreas = new Set(nodesByArea.keys());
+      if (selectedBrainArea && !availableBrainAreas.has(selectedBrainArea)) selectedBrainArea = null;
+      if (window.parent !== window) {
+        const areas = [...availableBrainAreas].sort((a, b) => a.localeCompare(b)).map(id => ({
+          id, label: regionsById.get(id)?.label || id,
+        }));
+        window.parent.postMessage({ type: 'psi-map-areas', areas }, window.location.origin);
+      }
+      for (const [areaId, areaNodes] of nodesByArea) {
+        areaNodes.sort((a, b) => a.id.localeCompare(b.id));
+        areaNodes.forEach((node, index) => {
+          node.regionLabel = regionsById.get(areaId)?.label || areaId;
+          const [x, y, z] = positionMap(node.id, areaId, { index, count: areaNodes.length });
+          Object.assign(node, { x, y, z, fx: x, fy: y, fz: z });
+        });
+      }
+
       neighborIds = null;
       closeNeighborMenu();
 
-
-      adjacency = Object.fromEntries(nodes.map(node => [node.id, []]));
-      links.forEach(({ source, target }) => {
-        adjacency[source]?.push(target);
-        adjacency[target]?.push(source);
-      });
-
-      let lastClick = 0, lastId = null;
+      let lastClick = 0;
+      let lastId = null;
       const Graph = ForceGraph3D()(graphElem)
         .graphData({ nodes, links })
-        .nodeRelSize(2)
+        .nodeRelSize(0.35)
         .nodeColor(graphNodeColor)
         .nodeOpacity(1)
-        .nodeLabel(graphNodeLabel)
-
-
-        .linkColor(graphLinkColor)
-        .linkWidth(0.5)
-
-        .linkOpacity(0.2)
-        .linkDirectionalParticles(isLocal ? 0 : link => connectionVisible(link) ? 1 : 0)
-        .linkDirectionalParticleWidth(1)
-        .linkVisibility(connectionVisible)
-
+        .nodeLabel(node => {
+          const description = node.description || 'No description available';
+          const label = `${description}\nRegion: ${node.regionLabel || 'Unassigned / mixed'}`;
+          return isLocal ? label : label.replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+          })[char]);
+        })
+        .onNodeHover(showNodeDescription)
+        .linkWidth(0.35)
+        .linkOpacity(0.25)
+        .linkDirectionalParticles(0)
+        .linkVisibility(() => false)
         .backgroundColor('black')
-
+        .onBackgroundClick(handleBackgroundClick)
         .onNodeClick(node => {
-          const now = Date.now(), D = 300;
-          if (node.id === lastId && now - lastClick < D) {
-            // double-click: open editor
+          const now = Date.now();
+          if (node.id === lastId && now - lastClick < 500) {
             fetchMemoryFiles(auth.currentUser.email).then(files => {
-              const f = files.find(x => x.filename === node.id);
-              if (f) {
-                document.getElementById('json-filename').textContent = `Editing: ${f.filename}.json`;
-                document.getElementById('json-textarea').value = JSON.stringify(f.data, null, 2);
-                const ed = document.getElementById('json-editor');
-                ed.dataset.nodeId = node.id;
-                ed.style.display = 'flex';
-              }
+              const memory = files.find(item => item.filename === node.id);
+              if (!memory) return;
+              document.getElementById('json-filename').textContent = `Editing: ${memory.filename}.json`;
+              document.getElementById('json-textarea').value = JSON.stringify(memory.data, null, 2);
+              const editor = document.getElementById('json-editor');
+              editor.dataset.nodeId = node.id;
+              editor.style.display = 'flex';
             });
-          } else {
-            // single-click: highlight component
-            highlightedNodes.clear();
-            getComponent(node.id).forEach(id => highlightedNodes.add(id));
-            refreshGraphStyles(Graph);
           }
-          lastClick = now; lastId = node.id;
+          lastClick = now;
+          lastId = node.id;
         })
         .onNodeRightClick(openNeighborMenu);
 
       activeGraph = Graph;
-      // Prevent production force-graph dragging from changing fixed locations.
-      if (!isLocal) {
-        Graph.enableNodeDrag(false);
-        const aspect = Math.max(graphElem.clientWidth || 1, 1) / Math.max(graphElem.clientHeight || 1, 1);
-        const verticalHalfFov = 50 * Math.PI / 360;
-        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect);
-        const distance = 47 * 1.15 / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov));
-        Graph.cameraPosition({ x: 0, y: 0, z: distance }, { x: 0, y: 0, z: 0 }, 0);
-      }
-      addRegionBoundaries(Graph);
-
+      createCurvedLinks(Graph);
+      refreshGraphStyles(Graph);
+      if (!isLocal) Graph.enableNodeDrag(false);
+      observeGraphSize(Graph, graphElem, nodes);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('controls-info').style.display = 'block';
     }
@@ -487,8 +573,12 @@
       });
     });
 
-    document.getElementById('close-controls').onclick = () => document.getElementById('controls-info').style.display = 'none';
-    document.getElementById('close-json-editor').onclick = () => document.getElementById('json-editor').style.display = 'none';
+    document.getElementById('close-controls').onclick = () => {
+      document.getElementById('controls-info').style.display = 'none';
+    };
+    document.getElementById('close-json-editor').onclick = () => {
+      document.getElementById('json-editor').style.display = 'none';
+    };
     document.getElementById('save-json-btn').onclick = async () => {
       const id = document.getElementById('json-editor').dataset.nodeId;
       try {
@@ -499,27 +589,25 @@
           await buildGraph(auth.currentUser);
           if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
         }
-      } catch(e) { alert('Save error'); console.error(e); }
+      } catch (error) {
+        alert('Save error');
+        console.error(error);
+      }
     };
 
     document.getElementById('download-json-btn').onclick = () => {
-      const filename = document.getElementById('json-editor').dataset.nodeId + '.json';
-      const json = document.getElementById('json-textarea').value;
-
-      const blob = new Blob([json], { type: 'application/json' });
+      const filename = `${document.getElementById('json-editor').dataset.nodeId}.json`;
+      const blob = new Blob([document.getElementById('json-textarea').value], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-
-      URL.revokeObjectURL(url); // clean up
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
     };
 
     document.getElementById('delete-json-btn').onclick = async () => {
       const id = document.getElementById('json-editor').dataset.nodeId;
-
       if (isLocal) {
         if (!confirm(`Delete ${id}.json?`)) return;
         try {
@@ -527,23 +615,14 @@
           document.getElementById('json-editor').style.display = 'none';
           await buildGraph(auth.currentUser);
           if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
-        } catch (error) { alert(`Delete failed: ${error.message}`); }
+        } catch (error) {
+          alert(`Delete failed: ${error.message}`);
+        }
         return;
       }
-
-      // Dispatch a custom event or simulate click if integrated in same DOM
-      const event = new CustomEvent('delete-file', { detail: { filename: id + '.json' } });
-      window.dispatchEvent(event); // or window.parent if this page is inside an iframe
-
+      window.dispatchEvent(new CustomEvent('delete-file', { detail: { filename: `${id}.json` } }));
       document.getElementById('json-editor').style.display = 'none';
     };
-
-
-
-
-
-
-
   </script>
 </body>
 </html>

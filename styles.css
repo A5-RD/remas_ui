@@ -1,8 +1,7 @@
 /* Material Symbols is intentionally not fetched in local mode. */
 .local-mode .material-symbols-outlined { font-size: 0; }
 .local-mode .material-symbols-outlined::after { font-size: 18px; }
-.local-mode #start::after, .local-mode #load-selected-object::after { content: '▶'; }
-.local-mode #find::after, .local-mode #find-objects::after { content: '⌕'; }
+.local-mode #load-selected-object::after { content: '▶'; }
 /* General Styles */
 body, html {
   margin: 0;
@@ -94,33 +93,29 @@ body, html {
 /* Right Panel */
 #right-panel {
   position: fixed;
+  display: flex;
+  flex-direction: column;
   width: 250px;
   height: 100%;
   background-color: rgba(50, 50, 50, 0.3); /* Semi-transparent right panel */
   right: 0;
   top: 0;
   border-left: 1px solid #444;
-  resize: horizontal;
-  transition: width 0.3s ease;
-  overflow: hidden; /* Prevent the entire right panel from scrolling */
-  z-index: 3;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 5;
+  box-sizing: border-box;
 }
 
-
-
-
-#right-panel:hover {
-  cursor: ew-resize; /* Show resizing cursor when hovering the panel */
-}
-
-#right-panel:before {
-  content: "";
+#right-panel-resize {
   position: absolute;
   top: 0;
-  right: -8px; /* The edge of the right panel */
+  left: 0;
   width: 8px;
   height: 100%;
   cursor: ew-resize;
+  touch-action: none;
+  z-index: 20;
 }
 
 
@@ -138,9 +133,13 @@ body, html {
 
   z-index: 10;
   border-bottom: 1px solid #ccc;
+  flex: 0 0 auto;
 }
 
 #right-panel-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 36px;
   height: 36px;
   font-size: 18px;
@@ -149,24 +148,79 @@ body, html {
   border-radius: 4px;
   cursor: pointer;
   flex: 0 0 auto; /* don't grow or shrink */
+  padding: 0;
+  line-height: 1;
 }
 
+#right-panel-toolbar button svg { display: block; flex: 0 0 auto; }
 
 #right-panel-toolbar button:hover {
   color: #00d0ff;
 }
 
+.graph-connections-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 14px;
+  font: 11px sans-serif;
+  color: white;
+  border-bottom: 1px solid #555;
+}
+
+.graph-visual-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  padding-left: 8px;
+  border-bottom: 1px solid #555;
+}
+
+.graph-visual-controls .graph-connections-control {
+  padding: 6px;
+  border-bottom: 0;
+  white-space: nowrap;
+}
+
+.brain-area-control {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  color: #fff;
+  font: 11px sans-serif;
+}
+
+.brain-area-control select {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: #252525;
+  color: #fff;
+  font: 12px sans-serif;
+}
+
+.brain-area-control select:disabled { opacity: 0.6; }
+
+.graph-connections-control input { margin: 0; }
+.graph-visual-controls input[type="checkbox"] { accent-color: #888; }
+
 
 /* File Explorer */
 #file-explorer {
-  flex: 1;
+  flex: 0 0 200px;
+  min-height: 80px;
   background-color: rgba(40, 40, 40, 0.1); /* Semi-transparent background for the file explorer */
   display: flex;
   flex-direction: column;
   height: 200px; /* Set default height to 200px */
-  resize: vertical; /* Enable vertical resizing */
   overflow: hidden; /* Prevent overflowing content */
   position: relative;
+  box-sizing: border-box;
 }
 
 /* File Explorer Header (sticky) */
@@ -229,27 +283,29 @@ body, html {
 
 .section-resize-handle {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 12px;
-  height: 12px;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
   padding: 0;
   border: 0;
-  background: repeating-linear-gradient(135deg, transparent 0 3px, #777 3px 4px);
+  background: repeating-linear-gradient(45deg, #777 0 1px, transparent 1px 3px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
   cursor: ns-resize;
-  opacity: 0.75;
+  opacity: 0.9;
   touch-action: none;
   z-index: 2;
 }
 
 .section-resize-handle:hover {
-  background: repeating-linear-gradient(135deg, transparent 0 3px, #00d0ff 3px 4px);
-  box-shadow: 0 0 8px rgba(0, 208, 255, 0.55);
+  background: repeating-linear-gradient(45deg, #00d0ff 0 1px, transparent 1px 3px);
 }
 
 /* File List */
 #file-list {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
   overflow-y: auto; /* Allow scrolling in file list */
   list-style: none;
   margin: 0;
@@ -336,7 +392,7 @@ body, html {
 #tabs {
   position: absolute;
   bottom: 10px;
-  right: 10px;
+  left: 10px;
   z-index: 10;
 }
 
@@ -377,12 +433,10 @@ body, html {
   background: #333; /* Darker grey when selected */
 }
 
-#right-panel {
-  z-index: 5;
-}
-
 /* 3D Objects Section */
 #objects-section {
+  flex: 0 0 200px;
+  min-height: 80px;
   background-color: rgba(40, 40, 40, 0.1);
   border-bottom: 1px solid #777;
   display: flex;
@@ -390,6 +444,7 @@ body, html {
   height: 200px;
   overflow: hidden;
   position: relative;
+  box-sizing: border-box;
 }
 
 #objects-section-header {
@@ -402,6 +457,11 @@ body, html {
   padding: 2px 8px;
   font-size: 16px;
   line-height: 1;
+}
+
+#find svg,
+#find-objects svg {
+  display: block;
 }
 
 .objects-actions,
@@ -419,7 +479,9 @@ body, html {
 }
 
 #objects-list {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
   overflow-y: auto;
   list-style: none;
   margin: 0;
@@ -607,6 +669,7 @@ body, html {
 }
 
 #simulation-run-modal-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -702,10 +765,23 @@ body, html {
 }
 
 #simulation-run-submit {
-  margin-left: auto;
   border-color: #00d0ff !important;
   color: #00d0ff !important;
   background: rgba(0, 208, 255, 0.12) !important;
+}
+
+#simulation-run-modal-header .simulation-run-close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  min-width: 32px;
+  margin: 0;
+  padding: 2px 8px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
 }
 
 #simulation-run-submit:hover,

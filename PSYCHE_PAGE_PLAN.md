@@ -4,10 +4,11 @@
 
 The right-hand **Maps** panel lists the user's persisted JSON Maps (called
 memories by the storage and backend APIs). The name change is a UI label, not a
-file or API migration. Each graph point represents a Map, and links represent
-Map IDs found in its `associations`. References to missing Maps appear as
-placeholder points; they do not supply Map data. Hovering over a point shows
-its top-level `description`, or a clear fallback when one is unavailable.
+file or API migration. Each graph point represents a loaded JSON Map, and links
+represent Map IDs found in its `associations` only when the target JSON file is
+also loaded. References to missing Maps are omitted from the graph. Hovering
+over a point shows its top-level `description`, or a clear fallback when one is
+unavailable.
 
 Selecting a graph point highlights its connected component. Double-clicking a
 Map point opens its JSON editor; it does not load an object into the scene.
@@ -17,25 +18,23 @@ the graph is a visualization, not the simulation itself.
 
 ## Brain-region view
 
-Ψ places Maps deterministically inside illustrative, color-coded region
-boundaries. Hovering shows both the Map description and its region. The
-boundaries are conceptual ellipsoids, **not an anatomical atlas**; positions
-do not imply measured locations or that a Map is exclusively stored in one
-brain structure. Region names refer to functional folders in the REMAS central
-nervous system, not a medical classification.
+Ψ places Map dots deterministically into illustrative 3D volumes selected by
+the root-level `brain_area` label. The available labels and volume coordinates
+are documented in the REMAS repository's [BRAIN_AREAS.md](../REMAS/BRAIN_AREAS.md).
+Region boundaries are invisible; hovering shows the description and area
+label. This is **not an anatomical atlas**: positions are visualization
+coordinates, not measured locations or claims that a Map belongs exclusively
+to a brain structure.
 
-The local initial set has a reviewed, provisional filename-to-region registry
-in [brain-regions.js](brain-regions.js). Four mixed or ambiguous Maps are
-explicitly unassigned, and missing association targets also appear in the
-unassigned area. The registry does not modify Map JSON: the persisted Map
-schema does not support a reliable extra label field, and other serializers may
-discard it. Review these annotations when a Map's contents change. Local
-filename labels are never applied to cloud users, whose files could reuse IDs;
-new or cloud Maps are assigned only when an association explicitly references
-a single supported region, otherwise they remain unassigned. Assignments are
-display-only and do not affect Map traversal or simulation.
+Every persisted Map has a root-level `brain_area` label. The UI uses a valid
+stored label first; older Maps without one can use the provisional local
+registry or association-based fallback. New ambiguous Maps are shown as
+`unassigned`. The sample-only repository at
+`REMAS_local_dev/fake_memories/` contains clearly synthetic Maps for all labels.
+Assignments control display placement only and do not affect Map traversal or
+simulation.
 
-Use **Show connections** to hide or show all graph lines. Right-click a Map and
+Use **Show connections** in the right panel to hide or show all graph lines. Right-click a Map and
 choose **Show Neighbors**: a positive depth displays edges among nodes up to
 that many association hops from the chosen Map. A blank depth shows all edges,
 including other components. **Show All** clears the neighbor filter and turns
