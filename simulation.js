@@ -5,17 +5,20 @@ function initializeSimulation() {
   const psiFrame = document.getElementById('psi-iframe');
   const connectionsControl = document.getElementById('show-connections');
   const brightenNodesControl = document.getElementById('brighten-nodes');
+  const isolateNetworkControl = document.getElementById('isolate-network');
   const brainAreaControl = document.getElementById('brain-area-filter');
   const syncPsiConnections = () => {
     psiFrame.contentWindow?.postMessage({
       type: 'psi-set-display-options',
       showConnections: connectionsControl.checked,
       brightenNodes: brightenNodesControl.checked,
+      isolateNetwork: isolateNetworkControl.checked,
       brainArea: brainAreaControl.value,
     }, window.location.origin);
   };
   connectionsControl.addEventListener('change', syncPsiConnections);
   brightenNodesControl.addEventListener('change', syncPsiConnections);
+  isolateNetworkControl.addEventListener('change', syncPsiConnections);
   brainAreaControl.addEventListener('change', syncPsiConnections);
   psiFrame.addEventListener('load', syncPsiConnections);
   window.addEventListener('message', event => {
@@ -37,6 +40,7 @@ function initializeSimulation() {
         typeof event.data.showConnections === 'boolean' && typeof event.data.brightenNodes === 'boolean') {
       connectionsControl.checked = event.data.showConnections;
       brightenNodesControl.checked = event.data.brightenNodes;
+      if (typeof event.data.isolateNetwork === 'boolean') isolateNetworkControl.checked = event.data.isolateNetwork;
       if (typeof event.data.brainArea === 'string') brainAreaControl.value = event.data.brainArea;
     }
   });
@@ -795,6 +799,8 @@ function initializeSimulation() {
         memoryZipInput.value = '';
         snapshotStatus.textContent = `Saved snapshot and replaced Maps: ${savedMemorySnapshot.filenames.length} memories.`;
         zipRequirement.textContent = '(optional replacement)';
+        await loadUserFiles(user.email);
+        psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
       }
       const names = savedMemorySnapshot.filenames;
       const settings = config.simulation || {};

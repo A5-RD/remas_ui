@@ -49,6 +49,57 @@ test('brain-area selection brightens only matching Map nodes without rendering g
   assert.match(psi, /\(event\.data\.brainArea !== '' && !availableBrainAreas\.has\(event\.data\.brainArea\)\)/);
 });
 
+test('Isolate Network hides nodes outside the active neighbor set only when enabled', () => {
+  const start = psi.indexOf('    function graphNodeVisible(node) {');
+  const end = psi.indexOf('    function graphNodeColor(', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`let isolateNetwork = false; let neighborIds = new Set(['a', 'b']);\n${psi.slice(start, end)}\nthis.graphNodeVisible = graphNodeVisible;`, context);
+  assert.equal(context.graphNodeVisible({ id: 'c' }), true);
+  vm.runInContext('isolateNetwork = true;', context);
+  assert.equal(context.graphNodeVisible({ id: 'a' }), true);
+  assert.equal(context.graphNodeVisible({ id: 'c' }), false);
+  vm.runInContext('neighborIds = null;', context);
+  assert.equal(context.graphNodeVisible({ id: 'c' }), true);
+
+  const controlsStart = psi.indexOf('    function setupGraphControls() {');
+  const controlsEnd = psi.indexOf('    function positionHoverTooltip()', controlsStart);
+  assert.ok(controlsStart >= 0 && controlsEnd > controlsStart);
+  const listeners = {};
+  const menu = { addEventListener() {} };
+  const window = {
+    parent: { postMessage() {} }, location: { origin: 'https://remas.test' },
+    addEventListener(name, callback) { listeners[name] = callback; },
+  };
+  const document = {
+    addEventListener() {},
+    getElementById: () => ({ addEventListener() {} }),
+  };
+  const messageContext = {
+    window, document, neighborMenu: menu,
+    neighborDistance: {}, neighborError: {}, hoverTooltip: {},
+    neighborIds: new Set(['a', 'b']), availableBrainAreas: new Set(),
+    connectionsEnabled: true, brightenNodes: true, isolateNetwork: false,
+    selectedBrainArea: null, activeGraph: null, auth: { currentUser: null },
+    buildGraph() {}, closeNeighborMenu() {}, console,
+  };
+  vm.createContext(messageContext);
+  vm.runInContext(
+    `${psi.slice(start, end)}\n${psi.slice(controlsStart, controlsEnd)}\nsetupGraphControls();\nthis.visible = graphNodeVisible;`,
+    messageContext,
+  );
+  listeners.message({
+    source: window.parent,
+    origin: window.location.origin,
+    data: {
+      type: 'psi-set-display-options', showConnections: true,
+      brightenNodes: true, isolateNetwork: true, brainArea: '',
+    },
+  });
+  assert.equal(messageContext.visible({ id: 'c' }), false);
+});
+
 class Element {
   constructor() { this.listeners = {}; this.style = {}; this.dataset = {}; this.hidden = false; this.checked = true; this.value = ''; this.offsetWidth = 180; this.offsetHeight = 120; }
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
@@ -93,7 +144,7 @@ function pageHarness(isLocal, embedded = false) {
       const graph = { _scene: new Object3D(), scene() { return this._scene; }, _destructor() { this.destroyed = true; } };
       for (const method of ['nodeRelSize', 'nodeOpacity', 'linkWidth', 'linkOpacity', 'linkDirectionalParticleWidth', 'backgroundColor', 'enableNodeDrag', 'width', 'height']) graph[method] = function (value) { this[method + 'Value'] = value; return this; };
       graph.cameraPosition = function (position, target, duration) { this.camera = { position, target, duration }; this.cameraCalls = (this.cameraCalls || 0) + 1; return this; };
-      for (const method of ['graphData', 'nodeColor', 'nodeLabel', 'linkColor', 'linkVisibility', 'linkDirectionalParticles', 'onNodeClick', 'onNodeRightClick']) graph[method] = function (value) { if (value === undefined) return this[method + 'Value']; this[method + 'Value'] = value; return this; };
+      for (const method of ['graphData', 'nodeColor', 'nodeVisibility', 'nodeLabel', 'linkColor', 'linkVisibility', 'linkDirectionalParticles', 'onNodeClick', 'onNodeRightClick']) graph[method] = function (value) { if (value === undefined) return this[method + 'Value']; this[method + 'Value'] = value; return this; };
       graphs.push(graph);
       return graph;
     };
@@ -274,7 +325,8 @@ test('brain-area dropdown lists loaded areas and sends the selected area to Ψ',
   const frame = new Element(), controls = new Map(), window = new Element(), sent = [];
   frame.contentWindow = { postMessage: (data, origin) => sent.push({ data, origin }) };
   window.location = { origin: 'https://remas.test' };
-  for (const id of ['show-connections', 'brighten-nodes', 'brain-area-filter']) controls.set(id, new Element());
+  for (const id of ['show-connections', 'brighten-nodes', 'isolate-network', 'brain-area-filter']) controls.set(id, new Element());
+  controls.get('isolate-network').checked = false;
   const document = { getElementById: id => id === 'psi-iframe' ? frame : controls.get(id) };
   vm.runInNewContext(simulation.slice(start, end), {
     document, window,
@@ -297,10 +349,17 @@ test('brain-area dropdown lists loaded areas and sends the selected area to Ψ',
   areaSelect.fire('change');
   assert.equal(sent.at(-1).data.brainArea, 'visual_cortex');
   assert.equal(sent.at(-1).data.showConnections, true);
+  assert.equal(sent.at(-1).data.isolateNetwork, false);
+  controls.get('isolate-network').checked = true;
+  controls.get('isolate-network').fire('change');
+  assert.equal(sent.at(-1).data.isolateNetwork, true);
   send('https://remas.test', frame.contentWindow, { type: 'psi-map-areas', areas: [{ id: 'frontal_lobe', label: 'Frontal lobe' }] });
   assert.equal(areaSelect.value, '');
   assert.equal(areaSelect.disabled, false);
-  assert.match(html, /<label class="graph-connections-control"><input id="show-connections" type="checkbox" checked> Show connections<\/label>/);
+  assert.match(html, /<label class="graph-connections-control"><input id="show-connections" type="checkbox" checked> Show Edges<\/label>/);
+  assert.ok(html.indexOf('id="show-connections"') < html.indexOf('id="brighten-nodes"'));
+  assert.ok(html.indexOf('id="brighten-nodes"') < html.indexOf('id="isolate-network"'));
+  assert.match(html, /id="isolate-network" type="checkbox"> Isolate Network/);
   assert.match(html, /id="brain-area-filter"/);
   assert.match(psi, /if \(window\.parent !== window\) \{[\s\S]*type: 'psi-map-areas'/);
   assert.match(psi, /if \(selectedBrainArea\) return node\.regionId === selectedBrainArea \? '#ffffff' : '#3b3b3b'/);
@@ -319,7 +378,7 @@ test('local graph picks nodes independently of overlays, suppresses right drags,
   class Camera { constructor() { camera = this; this.position = { set: (...values) => { this.position.values = values; } }; } updateProjectionMatrix() { this.projections = (this.projections || 0) + 1; } lookAt(target) { this.lookTarget = target.values; } }
   class Renderer { constructor() { renderer = this; this.domElement = canvas; } setPixelRatio() {} setSize(...size) { this.size = size; } render() {} dispose() {} }
   class Controls { constructor() { controls = this; this.target = { set: (...values) => { this.target.values = values; } }; } update() {} dispose() {} }
-  class Raycaster { setFromCamera() {} intersectObjects(objects) { return picked ? [{ object: objects.find(object => object.userData.node.id === picked) }] : []; } }
+  class Raycaster { setFromCamera() {} intersectObjects(objects) { const object = objects.find(item => item.userData.node.id === picked); return object ? [{ object }] : []; } }
   const localThree = { ...THREE, PerspectiveCamera: Camera, WebGLRenderer: Renderer, Raycaster, Vector2: class { set() {} }, Color: class {} };
   const context = { THREE: localThree, OrbitControls: Controls, window: { devicePixelRatio: 1 }, ResizeObserver: class { constructor(callback) { this.callback = callback; observer = this; } observe(element) { this.element = element; } disconnect() {} }, requestAnimationFrame: () => 1, cancelAnimationFrame() {}, Math };
   const source = adapter.replace(/^import .*;\n/gm, '').replace('export function ForceGraph3D()', 'function ForceGraph3D()');
@@ -328,6 +387,10 @@ test('local graph picks nodes independently of overlays, suppresses right drags,
   const graph = context.ForceGraph3D()(parent);
   const nodes = [{ id: 'a', fx: 1, fy: 2, fz: 3 }, { id: 'b', fx: 4, fy: 5, fz: 6 }], links = [{ source: 'a', target: 'b' }];
   graph.graphData({ nodes, links });
+  graph.nodeVisibility(node => node.id === 'a');
+  const bMeshes = graph.scene().children.filter(object => object.userData.node?.id === 'b');
+  assert.ok(bMeshes.length > 0 && bMeshes.every(mesh => mesh.visible === false));
+  graph.nodeVisibility(() => true);
   graph.cameraPosition({ x: 30, y: 20, z: 40 }, { x: 2, y: 3, z: 4 });
   assert.deepEqual(camera.position.values, [30, 20, 40]);
   assert.deepEqual(controls.target.values, [2, 3, 4]);
@@ -336,7 +399,8 @@ test('local graph picks nodes independently of overlays, suppresses right drags,
   assert.deepEqual(renderer.size, [400, 200]);
   assert.equal(camera.aspect, 2);
   assert.deepEqual(camera.position.values, [30, 20, 40]);
-  const [first, second, line] = graph.scene().children;
+  const [first, second] = graph.scene().children;
+  const line = graph.scene().children.find(object => object.geometry.points);
   assert.deepEqual(first.position.values, [1, 2, 3]);
   assert.deepEqual(Array.from(line.geometry.points, p => [p.x, p.y, p.z]), [[1, 2, 3], [4, 5, 6]]);
   graph.linkVisibility(() => false);
@@ -345,6 +409,14 @@ test('local graph picks nodes independently of overlays, suppresses right drags,
   assert.equal(line.visible, true);
   const overlay = new Object3D(); graph.scene().add(overlay);
   let clicked = 0; graph.onNodeRightClick(() => clicked++); picked = 'a';
+  graph.nodeVisibility(node => node.id === 'a');
+  picked = 'b';
+  canvas.fire('pointerdown', { button: 2, clientX: 10, clientY: 10 });
+  canvas.fire('pointerup', { button: 2, clientX: 10, clientY: 10 });
+  canvas.fire('contextmenu', { clientX: 10, clientY: 10 });
+  assert.equal(clicked, 0);
+  graph.nodeVisibility(() => true);
+  picked = 'a';
   canvas.fire('pointerdown', { button: 2, clientX: 10, clientY: 10 });
   canvas.fire('pointermove', { clientX: 30, clientY: 10 });
   canvas.fire('pointerup', { button: 2, clientX: 30, clientY: 10 });
@@ -368,7 +440,7 @@ test('local graph picks nodes independently of overlays, suppresses right drags,
   assert.equal(second.material.disposed, 1);
   assert.equal(line.geometry.disposed, 1);
   assert.equal(graph.scene().children.includes(overlay), true);
-  assert.equal(graph.scene().children.length, 2);
+  assert.equal(graph.scene().children.length, 3);
 });
 
 test('loopback server explicitly allows the region module', () => {

@@ -18,6 +18,7 @@ export function ForceGraph3D() {
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let nodeColor = () => '#bbb', linkColor = () => 'white', click = () => {}, backgroundClick = () => {}, rightClick = () => {}, hover = () => {};
+    let nodeVisible = () => true;
     let linkVisible = () => true;
     let nodes = [], links = [], nodeMeshes = [], nodeHitMeshes = [], linkMeshes = [], frame;
     let nodeLabel = n => n.id;
@@ -41,7 +42,7 @@ export function ForceGraph3D() {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
-      return raycaster.intersectObjects(nodeHitMeshes)[0]?.object.userData.node;
+      return raycaster.intersectObjects(nodeHitMeshes.filter(mesh => mesh.visible))[0]?.object.userData.node;
     }
     let rightStart = null;
     renderer.domElement.addEventListener('pointerdown', event => {
@@ -114,6 +115,7 @@ export function ForceGraph3D() {
             ? new THREE.Vector3(node.fx, node.fy, node.fz)
             : new THREE.Vector3(Math.cos(angle) * r * radius, y * radius, Math.sin(angle) * r * radius);
           const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshBasicMaterial({ color: nodeColor(node) }));
+          mesh.visible = nodeVisible(node);
           mesh.position.copy(position);
           mesh.userData.node = node;
           scene.add(mesh); nodeMeshes.push(mesh); byId.set(node.id, position);
@@ -121,6 +123,7 @@ export function ForceGraph3D() {
             new THREE.SphereGeometry(0.65, 8, 6),
             new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
           );
+          hitMesh.visible = nodeVisible(node);
           hitMesh.position.copy(position);
           hitMesh.userData.node = node;
           scene.add(hitMesh);
@@ -147,6 +150,13 @@ export function ForceGraph3D() {
         if (value === undefined) return nodeColor;
         nodeColor = value;
         nodeMeshes.forEach(mesh => mesh.material.color.set(nodeColor(mesh.userData.node)));
+        return graph;
+      },
+      nodeVisibility(value) {
+        if (value === undefined) return nodeVisible;
+        nodeVisible = typeof value === 'function' ? value : () => Boolean(value);
+        nodeMeshes.forEach(mesh => { mesh.visible = nodeVisible(mesh.userData.node); });
+        nodeHitMeshes.forEach(mesh => { mesh.visible = nodeVisible(mesh.userData.node); });
         return graph;
       },
       linkColor(value) {

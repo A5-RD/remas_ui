@@ -144,7 +144,7 @@
 
     let ForceGraph3D;
     if (isLocal) {
-      ({ ForceGraph3D } = await import('./local-graph.js?v=20261111a'));
+      ({ ForceGraph3D } = await import('./local-graph.js?v=20261111b'));
     } else {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -163,6 +163,7 @@
     let graphBuildVersion = 0;
     let connectionsEnabled = true;
     let brightenNodes = true;
+    let isolateNetwork = false;
     let pointerPosition = { x: 16, y: 16 };
 
     const neighborMenu = document.getElementById('neighbor-menu');
@@ -221,6 +222,10 @@
     function connectionVisible(link) {
       return connectionsEnabled && (!neighborIds ||
         (neighborIds.has(endpointId(link.source)) && neighborIds.has(endpointId(link.target))));
+    }
+
+    function graphNodeVisible(node) {
+      return !isolateNetwork || !neighborIds || neighborIds.has(node.id);
     }
 
     function graphNodeColor(node) {
@@ -323,6 +328,7 @@
 
     function refreshGraphStyles(graph) {
       graph.nodeColor(node => graphNodeColor(node))
+        .nodeVisibility(graphNodeVisible)
         .linkVisibility(() => false);
       for (const { line, link } of curvedLinkMeshes) {
         line.material.color.set(graphLinkColor(link));
@@ -362,18 +368,25 @@
       const embedded = window.parent !== window;
       const notifyParent = type => {
         if (embedded) window.parent.postMessage({
-          type, showConnections: connectionsEnabled, brightenNodes, brainArea: selectedBrainArea || '',
+          type, showConnections: connectionsEnabled, brightenNodes, isolateNetwork,
+          brainArea: selectedBrainArea || '',
         }, window.location.origin);
       };
       window.addEventListener('message', event => {
         if (!embedded || event.source !== window.parent || event.origin !== window.location.origin ||
-            !event.data || typeof event.data !== 'object' || event.data.type !== 'psi-set-display-options' ||
+            !event.data || typeof event.data !== 'object') return;
+        if (event.data.type === 'psi-refresh-maps') {
+          if (auth.currentUser) buildGraph(auth.currentUser).catch(error => console.error('[psi] unable to refresh Maps', error));
+          return;
+        }
+        if (event.data.type !== 'psi-set-display-options' ||
             typeof event.data.showConnections !== 'boolean' || typeof event.data.brightenNodes !== 'boolean' ||
+            typeof event.data.isolateNetwork !== 'boolean' ||
             typeof event.data.brainArea !== 'string' ||
             (event.data.brainArea !== '' && !availableBrainAreas.has(event.data.brainArea))) return;
-        if (event.data.showConnections) neighborIds = null;
         connectionsEnabled = event.data.showConnections;
         brightenNodes = event.data.brightenNodes;
+        isolateNetwork = event.data.isolateNetwork;
         selectedBrainArea = event.data.brainArea || null;
         if (activeGraph) refreshGraphStyles(activeGraph);
       });
