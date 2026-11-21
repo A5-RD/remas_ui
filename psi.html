@@ -30,6 +30,9 @@
       font-weight: 100;
     }
     #loading { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+    #graph-warning { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:100;
+      padding:8px 12px; border-radius:6px; background:#453c22; color:#fff; font:13px sans-serif; }
+    #graph-warning[hidden] { display:none; }
     #controls-info { bottom:20px; left:20px; display:none; max-width:300px; }
     #neighbor-menu {
       position: absolute; z-index: 110; background: rgba(25, 30, 38, 0.62);
@@ -84,7 +87,8 @@
 <body>
   <div id="3d-graph"></div>
 
-  <div id="loading">Authenticating and loading network data...</div>
+  <div id="loading" role="status" aria-live="polite">Authenticating and loading network data...</div>
+  <div id="graph-warning" role="status" aria-live="polite" hidden></div>
 
   <script>
     // Module bootstrap errors otherwise leave the initial loading message onscreen.
@@ -177,18 +181,24 @@
     let availableBrainAreas = new Set();
 
     async function fetchMemoryFiles(email) {
-      try {
-        const dir = ref(storage, `users/${email}/memories`);
-        const result = await listAll(dir);
-        return await Promise.all(result.items.map(async item => {
+      const dir = ref(storage, `users/${email}/memories`);
+      const result = await listAll(dir);
+      const items = result.items.filter(item => /\.json$/i.test(item.name));
+      const results = await Promise.allSettled(items.map(async item => {
           const bytes = await getBytes(item);
           const data = JSON.parse(new TextDecoder().decode(bytes));
-          return { filename: item.name.split('.')[0], data };
-        }));
-      } catch (error) {
-        console.error(error);
-        throw error;
-      }
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Map must be a JSON object');
+          return { filename: item.name.slice(0, -5), data };
+      }));
+      const memories = [], failures = [];
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') memories.push(result.value);
+        else {
+          failures.push(items[index].name);
+          console.error('[psi] unable to load Map', items[index].name, result.reason);
+        }
+      });
+      return { memories, failures };
     }
 
     function buildAdjacency(memories) {
@@ -376,7 +386,7 @@
         if (!embedded || event.source !== window.parent || event.origin !== window.location.origin ||
             !event.data || typeof event.data !== 'object') return;
         if (event.data.type === 'psi-refresh-maps') {
-          if (auth.currentUser) buildGraph(auth.currentUser).catch(error => console.error('[psi] unable to refresh Maps', error));
+          if (auth.currentUser) buildGraph(auth.currentUser).catch(showGraphError);
           return;
         }
         if (event.data.type !== 'psi-set-display-options' ||
@@ -484,8 +494,15 @@
 
     async function buildGraph(user) {
       const version = ++graphBuildVersion;
-      const memories = await fetchMemoryFiles(user.email);
+      const { memories, failures } = await fetchMemoryFiles(user.email);
       if (version !== graphBuildVersion) return;
+      const loading = document.getElementById('loading');
+      const warning = document.getElementById('graph-warning');
+      warning.hidden = true;
+      if (failures.length) {
+        warning.textContent = `Could not load ${failures.length} Map(s): ${failures.join(', ')}. Check the browser console and storage permissions.`;
+        warning.hidden = false;
+      }
       const graphElem = document.getElementById('3d-graph');
       graphResizeObserver?.disconnect();
       graphResizeObserver = null;
@@ -550,15 +567,15 @@
         .onNodeClick(node => {
           const now = Date.now();
           if (node.id === lastId && now - lastClick < 500) {
-            fetchMemoryFiles(auth.currentUser.email).then(files => {
-              const memory = files.find(item => item.filename === node.id);
+            fetchMemoryFiles(auth.currentUser.email).then(({ memories }) => {
+              const memory = memories.find(item => item.filename === node.id);
               if (!memory) return;
               document.getElementById('json-filename').textContent = `Editing: ${memory.filename}.json`;
               document.getElementById('json-textarea').value = JSON.stringify(memory.data, null, 2);
               const editor = document.getElementById('json-editor');
               editor.dataset.nodeId = node.id;
               editor.style.display = 'flex';
-            });
+            }).catch(showGraphError);
           }
           lastClick = now;
           lastId = node.id;
@@ -570,8 +587,18 @@
       refreshGraphStyles(Graph);
       if (!isLocal) Graph.enableNodeDrag(false);
       observeGraphSize(Graph, graphElem, nodes);
-      document.getElementById('loading').style.display = 'none';
+      loading.textContent = failures.length
+        ? 'No Maps could be loaded. Check the warning above and your storage permissions.'
+        : 'No Maps found for this account. Add Maps in the sidebar to display nodes.';
+      loading.style.display = nodes.length ? 'none' : 'block';
       document.getElementById('controls-info').style.display = 'block';
+    }
+
+    function showGraphError(error) {
+      console.error('[psi] unable to load Maps', error);
+      const loading = document.getElementById('loading');
+      loading.textContent = `Unable to load Map graph: ${error.message || error}`;
+      loading.style.display = 'block';
     }
 
     setupGraphControls();
@@ -580,10 +607,7 @@
         document.getElementById('loading').textContent = 'Waiting for authenticated user...';
         return;
       }
-      buildGraph(user).catch(error => {
-        console.error(error);
-        document.getElementById('loading').textContent = `Unable to load Map graph: ${error.message}`;
-      });
+      buildGraph(user).catch(showGraphError);
     });
 
     document.getElementById('close-controls').onclick = () => {
@@ -598,10 +622,8 @@
         const data = JSON.parse(document.getElementById('json-textarea').value);
         await uploadString(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`), JSON.stringify(data));
         document.getElementById('json-editor').style.display = 'none';
-        if (isLocal) {
-          await buildGraph(auth.currentUser);
-          if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
-        }
+        await buildGraph(auth.currentUser);
+        if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
       } catch (error) {
         alert('Save error');
         console.error(error);
@@ -621,20 +643,15 @@
 
     document.getElementById('delete-json-btn').onclick = async () => {
       const id = document.getElementById('json-editor').dataset.nodeId;
-      if (isLocal) {
-        if (!confirm(`Delete ${id}.json?`)) return;
-        try {
-          await deleteObject(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`));
-          document.getElementById('json-editor').style.display = 'none';
-          await buildGraph(auth.currentUser);
-          if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
-        } catch (error) {
-          alert(`Delete failed: ${error.message}`);
-        }
-        return;
+      if (!confirm(`Delete ${id}.json?`)) return;
+      try {
+        await deleteObject(ref(storage, `users/${auth.currentUser.email}/memories/${id}.json`));
+        document.getElementById('json-editor').style.display = 'none';
+        await buildGraph(auth.currentUser);
+        if (window.parent !== window) window.parent.postMessage({ type: 'local-memories-changed' }, location.origin);
+      } catch (error) {
+        alert(`Delete failed: ${error.message}`);
       }
-      window.dispatchEvent(new CustomEvent('delete-file', { detail: { filename: `${id}.json` } }));
-      document.getElementById('json-editor').style.display = 'none';
     };
   </script>
 </body>

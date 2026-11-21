@@ -1057,6 +1057,7 @@ function initializeSimulation() {
     try {
       const result = await uploadFile(user, file);
       await loadUserFiles(user);
+      psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
       alert("Uploaded successfully as " + result.filename);
     } catch (err) {
       console.error(err);
@@ -1398,9 +1399,9 @@ function initializeSimulation() {
   }
 
   window.addEventListener('message', (event) => {
-    if (isLocal && event.source === document.getElementById('psi-iframe')?.contentWindow &&
+    if (event.source === document.getElementById('psi-iframe')?.contentWindow &&
         event.origin === window.location.origin && event.data?.type === 'local-memories-changed') {
-      loadUserFiles(auth.currentUser.email);
+      if (auth.currentUser?.email) loadUserFiles(auth.currentUser.email);
       return;
     }
     if (event.source !== document.getElementById('sigma-iframe')?.contentWindow || event.origin !== window.location.origin) return;
@@ -1856,10 +1857,12 @@ function initializeSimulation() {
     }
 
     const filesToDelete = [...selectedFiles];
+    let deletedAny = false;
 
     for (const fileName of filesToDelete) {
       try {
         await deleteObject(ref(storage, `users/${user}/memories/${fileName}`));
+        deletedAny = true;
         const li = [...fileList.children].find(li => li.textContent === fileName);
         if (li) li.remove();
         selectedFiles.delete(fileName);
@@ -1868,6 +1871,7 @@ function initializeSimulation() {
         alert(`Error deleting ${fileName}`);
       }
     }
+    if (deletedAny) psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
   });
 
 
@@ -2020,6 +2024,7 @@ function initializeSimulation() {
       if (!user) throw new Error('User not authenticated');
       await uploadString(ref(storage, `users/${user}/memories/${filename}`), JSON.stringify(data), 'raw', { contentType: 'application/json' });
       await loadUserFiles(user);
+      psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
       document.getElementById('json-editor').style.display = 'none';
     } catch(e) { alert('Save error'); console.error(e); }
   };
