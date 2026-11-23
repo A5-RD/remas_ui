@@ -15,7 +15,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      color: rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.75);
       font-size: 16px;
       text-align: center;
       pointer-events: none;
@@ -83,10 +83,29 @@
 </head>
 <body>
   <div id="canvas-container"></div>
-  <div id="drop-hint">No 3D model loaded.<br>Upload a .glb, .gltf, or .obj file from the panel.</div>
+  <div id="drop-hint" role="status">No 3D model loaded.<br>Upload an object and load it into the scene.</div>
   <div id="model-list"></div>
   <div id="loading-overlay">Loading model...</div>
   <div id="status"></div>
+
+  <script>
+    window.addEventListener('error', event => {
+      const hint = document.getElementById('drop-hint');
+      if (hint && (event.message || event.target?.tagName === 'SCRIPT')) {
+        hint.textContent = 'The 3D viewer could not start. Check WebGL, your browser, and network access to the viewer libraries.';
+        hint.style.color = '#ffb6b6';
+        hint.style.display = 'block';
+      }
+    }, true);
+    window.addEventListener('unhandledrejection', event => {
+      const hint = document.getElementById('drop-hint');
+      if (hint) {
+        hint.textContent = 'The 3D viewer could not start. Check WebGL, your browser, and network access to the viewer libraries.';
+        hint.style.color = '#ffb6b6';
+        hint.style.display = 'block';
+      }
+    });
+  </script>
 
   <script type="module">
     import * as THREE from 'three';

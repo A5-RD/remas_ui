@@ -1,6 +1,7 @@
 import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, uploadString, getDownloadURL, deleteObject } from "./firebase-adapter.js";
 
 function initializeSimulation() {
+  window.dispatchEvent(new Event('remas-simulation-initialized'));
   const simContainer = document.getElementById("simulation-container");
   const psiFrame = document.getElementById('psi-iframe');
   const connectionsControl = document.getElementById('show-connections');
@@ -81,6 +82,7 @@ function initializeSimulation() {
   simContainer.style.display = "none";
 
   onAuthStateChanged(auth, user => {
+    window.dispatchEvent(new Event('remas-simulation-auth-resolved'));
     if (simulationSession && simulationSession.user !== user && sceneConfigUid === (user?.uid || null)) {
       stopSimulation();
     }

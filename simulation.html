@@ -6,11 +6,13 @@
   <title>Simulation</title>
   <link rel="stylesheet" href="styles.css?v=20261111d" />
   <script src="page-resources.js"></script>
+  <script src="simulation-bootstrap.js?v=20261122a"></script>
   <!-- Simulation logic -->
-  <script type="module" src="simulation.js?v=20261121a"></script>
+  <script type="module" src="simulation.js?v=20261122a"></script>
 
 </head>
 <body>
+  <div id="simulation-startup-status" role="status" aria-live="polite" hidden></div>
 
   <div id="iframe-overlay" style="
     position: fixed;
@@ -110,7 +112,7 @@
       </div>
 
       <div id="sigma-container" class="simulation-container">
-        <iframe id="sigma-iframe" src="sigma.html?v=20261109b" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
+        <iframe id="sigma-iframe" src="sigma.html?v=20261122a" frameborder="0" scrolling="no" width="100%" height="100%"></iframe>
       </div>
     </div>
   </div>
