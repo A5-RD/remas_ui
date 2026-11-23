@@ -1,7 +1,6 @@
 import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, uploadString, getDownloadURL, deleteObject } from "./firebase-adapter.js";
 
 function initializeSimulation() {
-  window.dispatchEvent(new Event('remas-simulation-initialized'));
   const simContainer = document.getElementById("simulation-container");
   const psiFrame = document.getElementById('psi-iframe');
   const connectionsControl = document.getElementById('show-connections');
@@ -2060,5 +2059,9 @@ function initializeSimulation() {
 
 
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeSimulation, { once: true });
-else initializeSimulation();
+function startSimulationUi() {
+  initializeSimulation();
+  window.dispatchEvent(new Event('remas-simulation-initialized'));
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startSimulationUi, { once: true });
+else startSimulationUi();
