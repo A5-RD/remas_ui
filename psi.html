@@ -180,8 +180,14 @@
     let selectedBrainArea = null;
     let availableBrainAreas = new Set();
 
+    function normalizeUserKey(email) {
+      return String(email || '').trim().toLowerCase();
+    }
+
     async function fetchMemoryFiles(email) {
-      const dir = ref(storage, `users/${email}/memories`);
+      const userKey = normalizeUserKey(email);
+      if (!userKey) throw new Error('Authenticated user email is missing.');
+      const dir = ref(storage, `users/${userKey}/memories`);
       const result = await listAll(dir);
       const items = result.items.filter(item => /\.json$/i.test(item.name));
       const results = await Promise.allSettled(items.map(async item => {

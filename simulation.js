@@ -1,6 +1,10 @@
 import { auth, storage, isLocal, onAuthStateChanged, ref, listAll, getBytes, getMetadata, uploadBytes, uploadBytesResumable, uploadString, getDownloadURL, deleteObject } from "./firebase-adapter.js";
 
 function initializeSimulation() {
+  function normalizeUserKey(raw) {
+    return String(raw || '').trim().toLowerCase();
+  }
+
   const simContainer = document.getElementById("simulation-container");
   const psiFrame = document.getElementById('psi-iframe');
   const connectionsControl = document.getElementById('show-connections');
@@ -104,9 +108,10 @@ function initializeSimulation() {
     if (!user) {
       window.location.href = "index.html";
     } else {
+      const userKey = normalizeUserKey(user.email);
       simContainer.style.display = "flex";
-      loadUserFiles(user.email);
-      loadObjectsList(user.email);
+      loadUserFiles(userKey);
+      loadObjectsList(userKey);
     }
   });
   async function loadUserFiles(email) {
@@ -980,7 +985,7 @@ function initializeSimulation() {
     const filename = await getUniqueFilename(user);
     const text = await file.text();
     JSON.parse(text);
-    await uploadString(ref(storage, `users/${user}/memories/${filename}`), text, 'raw', { contentType: 'application/json' });
+    await uploadString(ref(storage, `users/${normalizeUserKey(user)}/memories/${filename}`), text, 'raw', { contentType: 'application/json' });
     return { filename };
   }
 
@@ -1035,7 +1040,7 @@ function initializeSimulation() {
 
 
   async function getExistingFilenames(user) {
-    const result = await listAll(ref(storage, `users/${user}/memories`));
+    const result = await listAll(ref(storage, `users/${normalizeUserKey(user)}/memories`));
     return result.items.map(item => item.name);
   }
 
@@ -1402,7 +1407,7 @@ function initializeSimulation() {
   window.addEventListener('message', (event) => {
     if (event.source === document.getElementById('psi-iframe')?.contentWindow &&
         event.origin === window.location.origin && event.data?.type === 'local-memories-changed') {
-      if (auth.currentUser?.email) loadUserFiles(auth.currentUser.email);
+      if (auth.currentUser?.email) loadUserFiles(normalizeUserKey(auth.currentUser.email));
       return;
     }
     if (event.source !== document.getElementById('sigma-iframe')?.contentWindow || event.origin !== window.location.origin) return;
@@ -1498,7 +1503,7 @@ function initializeSimulation() {
   async function loadCachedBlendOutput(li) {
     const blendFilename = li.dataset.filename;
     const glbFilename = li.dataset.convertedFilename;
-    const userEmail = auth.currentUser?.email;
+    const userEmail = normalizeUserKey(auth.currentUser?.email);
     if (!glbFilename || !userEmail) {
       throw new Error(`No cached GLB is available for ${blendFilename}`);
     }
@@ -1851,7 +1856,7 @@ function initializeSimulation() {
     const confirmDelete = confirm(`Are you sure you want to delete ${selectedFiles.size} file(s)?`);
     if (!confirmDelete) return;
 
-    const user = auth.currentUser?.email;
+    const user = normalizeUserKey(auth.currentUser?.email);
     if (!user) {
       alert("User not authenticated");
       return;
@@ -1862,7 +1867,7 @@ function initializeSimulation() {
 
     for (const fileName of filesToDelete) {
       try {
-        await deleteObject(ref(storage, `users/${user}/memories/${fileName}`));
+        await deleteObject(ref(storage, `users/${normalizeUserKey(user)}/memories/${fileName}`));
         deletedAny = true;
         const li = [...fileList.children].find(li => li.textContent === fileName);
         if (li) li.remove();
@@ -2021,9 +2026,9 @@ function initializeSimulation() {
     try {
       const data = JSON.parse(document.getElementById('json-textarea').value);
       if (!filename) throw new Error('Missing memory filename');
-      const user = auth.currentUser?.email;
+      const user = normalizeUserKey(auth.currentUser?.email);
       if (!user) throw new Error('User not authenticated');
-      await uploadString(ref(storage, `users/${user}/memories/${filename}`), JSON.stringify(data), 'raw', { contentType: 'application/json' });
+      await uploadString(ref(storage, `users/${normalizeUserKey(user)}/memories/${filename}`), JSON.stringify(data), 'raw', { contentType: 'application/json' });
       await loadUserFiles(user);
       psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
       document.getElementById('json-editor').style.display = 'none';

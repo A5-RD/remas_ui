@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const psi = fs.readFileSync(path.join(root, 'psi.html'), 'utf8');
 const simulation = fs.readFileSync(path.join(root, 'simulation.js'), 'utf8');
-const begin = psi.indexOf('    async function fetchMemoryFiles(');
+const begin = psi.indexOf('    function normalizeUserKey(');
 const end = psi.indexOf('    function buildAdjacency(', begin);
 assert.ok(begin >= 0 && end > begin);
 
