@@ -36,7 +36,7 @@ test('one unreadable or malformed Map does not hide other nodes', async () => {
     'denied12345.json': new Error('access denied'),
   });
   const result = await context.fetchMemoryFiles('a@example.com');
-  assert.deepEqual(Array.from(result.memories, x => x.filename), ['gooda12345']);
+  assert.deepEqual(Array.from(result.memories, x => x.filename), ['gooda12345', 'badxx12345', 'denied12345']);
   assert.deepEqual(Array.from(result.failures), ['badxx12345.json', 'denied12345.json']);
   assert.equal(errors.length, 2);
 });

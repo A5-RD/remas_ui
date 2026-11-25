@@ -191,6 +191,7 @@
         if (result.status === 'fulfilled') memories.push(result.value);
         else {
           failures.push(items[index].name);
+          memories.push({ filename: items[index].name.slice(0, -5), data: {}, unreadable: true });
           console.error('[psi] unable to load Map', items[index].name, result.reason);
         }
       });
