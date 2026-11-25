@@ -582,7 +582,10 @@
       activeGraph = Graph;
       createCurvedLinks(Graph);
       refreshGraphStyles(Graph);
-      if (!isLocal) Graph.enableNodeDrag(false);
+      if (!isLocal) {
+        if (typeof Graph.enableNodeDrag === 'function') Graph.enableNodeDrag(false);
+        else if (typeof Graph.nodeDrag === 'function') Graph.nodeDrag(false);
+      }
       observeGraphSize(Graph, graphElem, nodes);
       loading.textContent = failures.length
         ? 'No Maps could be loaded. Check the warning above and your storage permissions.'
