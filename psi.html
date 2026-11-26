@@ -148,7 +148,7 @@
 
     // Use the bundled graph library in both deployed and local modes so
     // third-party script blocking cannot blank the Ψ graph.
-    const { ForceGraph3D } = await import('./local-graph.js?v=20261125b');
+    const { ForceGraph3D } = await import('./local-graph.js?v=20261125c');
 
     let activeGraph = null;
     let graphResizeObserver = null;
@@ -450,7 +450,14 @@
         const width = element.clientWidth;
         const height = element.clientHeight;
         if (!width || !height) return;
-        if (!isLocal) graph.width(width).height(height);
+        if (!isLocal) {
+          try {
+            if (typeof graph?.width === 'function') graph.width(width);
+            if (typeof graph?.height === 'function') graph.height(height);
+          } catch (error) {
+            console.warn('[psi] graph resize API unavailable', error);
+          }
+        }
         if (framed) return;
         framed = true;
         const points = nodes.map(({ x, y, z }) => [x, y, z]);
