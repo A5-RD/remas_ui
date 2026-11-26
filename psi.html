@@ -350,6 +350,7 @@
     }
 
     function openNeighborMenu(node, event) {
+      if (event?.shiftKey) return;
       event.preventDefault();
       menuNodeId = node.id;
       document.getElementById('neighbor-title').textContent = `Neighbors of ${node.id}`;
