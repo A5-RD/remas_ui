@@ -19,7 +19,7 @@ async function loadSnapshot() {
   } catch (error) {
     if (error.message.startsWith('No starting memory snapshot')) {
       state.snapshot = null;
-      $('snapshot-status').textContent = 'A ZIP is required for the first run.';
+      $('snapshot-status').textContent = 'No saved snapshot. Play can use currently available local memories.';
     } else throw error;
   }
 }
@@ -84,17 +84,26 @@ $('run-form').addEventListener('submit', async event => {
       state.snapshot = await request('/api/blender/memory-snapshots', {method:'POST', headers:{'Content-Type':'application/zip'}, body:zip, signal});
       $('zip').value = ''; $('snapshot-status').textContent = `Saved snapshot: ${state.snapshot.filenames.length} memories.`;
     } else { await loadSnapshot(); }
-    if (!state.snapshot) throw new Error('Choose a starting memories ZIP.');
-    const settings = state.config.simulation || {}, names = state.snapshot.filenames;
-    const start = settings.start_memory_filename || [...names].sort()[0];
-    if (!names.includes(start)) throw new Error(`Starting memory ${start} is not in the ZIP.`);
+    const settings = state.config.simulation || {};
+    const names = state.snapshot?.filenames?.slice() || await request('/local/memories');
+    if (!Array.isArray(names) || !names.length) throw new Error('No memories available. Upload a ZIP or add memory files first.');
+    const sorted = [...names].sort();
+    const start = names.includes(settings.start_memory_filename) ? settings.start_memory_filename : sorted[0];
     const repeat = settings.duration_seconds === 'N/A';
     const scene_objects = [...document.querySelectorAll('#objects input:checked:not(:disabled)')].map(input => ({filename:input.value}));
     status(`Rendering ${start} with Blender. This can take several minutes; progress is unknown.`);
+    const body = {
+      start_memory_filename:start,
+      memory_filename:start,
+      duration_seconds:repeat ? null : settings.duration_seconds,
+      camera_preset:state.config.default,
+      embodiment_mode:'simulation',
+      scene_objects,
+    };
+    if (state.snapshot?.memory_snapshot_id) body.memory_snapshot_id = state.snapshot.memory_snapshot_id;
     const result = await request('/api/blender/simulate/ava_1.8_dress_packed.blend', {
       method:'POST', headers:{'Content-Type':'application/json'}, signal,
-      body:JSON.stringify({memory_snapshot_id:state.snapshot.memory_snapshot_id, start_memory_filename:start,
-        duration_seconds:repeat ? null : settings.duration_seconds, camera_preset:state.config.default, embodiment_mode:'simulation', scene_objects})
+      body:JSON.stringify(body)
     });
     if (!result.url || !result.url.startsWith('/local/files/')) throw new Error('Invalid local render URL.');
     $('video').src = result.url; $('video').loop = repeat; $('video').hidden = false;

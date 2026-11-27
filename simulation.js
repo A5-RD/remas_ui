@@ -638,8 +638,16 @@ function initializeSimulation() {
       const snapshot = response.status !== 404 ? validateSnapshot(await readApiResponse(response, 'Memory snapshot lookup')) : null;
       if (auth.currentUser !== user || openToken !== modalOpenToken || simulationSession) return;
       savedMemorySnapshot = snapshot;
-      snapshotStatus.textContent = savedMemorySnapshot ? `Saved starting snapshot: ${savedMemorySnapshot.filenames.length} memories. Choose a ZIP to replace it.` : 'A memory ZIP is required for the first run.';
-      zipRequirement.textContent = savedMemorySnapshot ? '(optional replacement)' : '(required)';
+      if (savedMemorySnapshot) {
+        snapshotStatus.textContent = `Saved starting snapshot: ${savedMemorySnapshot.filenames.length} memories. Choose a ZIP to replace it.`;
+        zipRequirement.textContent = '(optional replacement)';
+      } else if (availableMemoryFiles.length) {
+        snapshotStatus.textContent = `No saved snapshot. Play can use current Maps (${availableMemoryFiles.length}). Choose a ZIP to replace them.`;
+        zipRequirement.textContent = '(optional)';
+      } else {
+        snapshotStatus.textContent = 'A memory ZIP is required when no Maps are available.';
+        zipRequirement.textContent = '(required)';
+      }
     } catch (error) {
       if (auth.currentUser !== user || openToken !== modalOpenToken || simulationSession) return;
       snapshotStatus.textContent = `Unable to load saved snapshot: ${error.message}`;
@@ -739,6 +747,13 @@ function initializeSimulation() {
   }
 
   async function runAvaSimulation() {
+    let runSettings;
+    try {
+      runSettings = readSimulationSettings(true);
+    } catch (error) {
+      setSimulationStatus(error.message, 'error');
+      return;
+    }
     const user = auth.currentUser;
     if (!user) { setSimulationStatus('User not authenticated.', 'error'); return; }
     const session = beginSimulationSession();
@@ -764,15 +779,21 @@ function initializeSimulation() {
         if (snapshotResponse.status === 404) {
           check();
           savedMemorySnapshot = null;
-          snapshotStatus.textContent = 'A memory ZIP is required for the first run.';
-          zipRequirement.textContent = '(required)';
-          throw new Error('A memories ZIP is required for the first run.');
+          const localCount = availableMemoryFiles.length;
+          if (!localCount) {
+            snapshotStatus.textContent = 'No saved snapshot and no Maps are loaded. Upload a memory ZIP or add Maps first.';
+            zipRequirement.textContent = '(required)';
+            throw new Error('No saved snapshot and no Maps are loaded. Upload a memories ZIP or add Maps first.');
+          }
+          snapshotStatus.textContent = `No saved snapshot. Using currently loaded Maps (${localCount}).`;
+          zipRequirement.textContent = '(optional)';
+        } else {
+          const snapshot = validateSnapshot(await readApiResponse(snapshotResponse, 'Memory snapshot lookup'));
+          check();
+          savedMemorySnapshot = snapshot;
+          snapshotStatus.textContent = `Saved starting snapshot: ${snapshot.filenames.length} memories.`;
+          zipRequirement.textContent = '(optional replacement)';
         }
-        const snapshot = validateSnapshot(await readApiResponse(snapshotResponse, 'Memory snapshot lookup'));
-        check();
-        savedMemorySnapshot = snapshot;
-        snapshotStatus.textContent = `Saved starting snapshot: ${snapshot.filenames.length} memories.`;
-        zipRequirement.textContent = '(optional replacement)';
       }
       let configResponse;
       if (configFile) {
@@ -808,10 +829,14 @@ function initializeSimulation() {
         await loadUserFiles(user.email);
         psiFrame.contentWindow?.postMessage({ type: 'psi-refresh-maps' }, window.location.origin);
       }
-      const names = savedMemorySnapshot.filenames;
+      const names = savedMemorySnapshot?.filenames?.slice()
+        || availableMemoryFiles.slice().sort((left, right) => left.localeCompare(right));
+      if (!names.length) throw new Error('No memories are available. Upload a ZIP or add Map files first.');
       const settings = config.simulation || {};
-      const startMemory = settings.start_memory_filename || [...names].sort()[0];
-      if (!names.includes(startMemory)) throw new Error(`Starting memory ${startMemory} is not in the ZIP.`);
+      const configuredStart = typeof settings.start_memory_filename === 'string' ? settings.start_memory_filename : '';
+      const selectedStart = runSettings.memoryFilename || names[0];
+      const startMemory = names.includes(configuredStart) ? configuredStart : (names.includes(selectedStart) ? selectedStart : names[0]);
+      if (!startMemory || !names.includes(startMemory)) throw new Error('Unable to determine a valid starting memory.');
       const repeat = settings.duration_seconds === 'N/A';
       setSimulationStatus(`Preparing the scene for ${startMemory}…`, 'info');
       const sceneState = await requestSigmaSceneState();
@@ -820,14 +845,17 @@ function initializeSimulation() {
       updateSimulationSceneSummary(latestSigmaSceneState);
 
       setSimulationStatus(`Starting with ${startMemory}. The server is preparing and rendering the video; this can take several minutes. Progress and remaining time are unavailable.`, 'info');
-      const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`, {
-        memory_snapshot_id: savedMemorySnapshot.memory_snapshot_id,
+      const simulationRequest = {
         start_memory_filename: startMemory,
+        memory_filename: startMemory,
         duration_seconds: repeat ? null : settings.duration_seconds,
         camera_preset: config.default,
         embodiment_mode: 'simulation',
         scene_objects: sceneState,
-      }, session, traceId);
+      };
+      if (savedMemorySnapshot?.memory_snapshot_id) simulationRequest.memory_snapshot_id = savedMemorySnapshot.memory_snapshot_id;
+      const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`,
+        simulationRequest, session, traceId);
       const payload = await readApiResponse(response, 'Simulation');
       check();
       setSimulationStatus('Render finished. Preparing video playback…', 'info');
