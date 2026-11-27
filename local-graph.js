@@ -14,6 +14,13 @@ export function ForceGraph3D() {
     renderer.setPixelRatio(window.devicePixelRatio);
     element.appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
+    // Match Ψ control hints:
+    // - Rotate: right-drag
+    // - Pan: Shift + right-drag
+    // OrbitControls switches rotate<->pan when Shift/Ctrl/Meta is held.
+    if (controls.mouseButtons && typeof controls.mouseButtons === 'object') {
+      controls.mouseButtons.RIGHT = THREE.MOUSE?.ROTATE ?? 0;
+    }
     controls.enableDamping = true;
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
