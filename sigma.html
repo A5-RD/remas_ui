@@ -260,11 +260,28 @@
       return [...loadedModels.entries()].map(([filename, object]) => serializeLoadedModel(filename, object));
     }
 
+    function serializeCameraState() {
+      const projection = camera.isOrthographicCamera ? 'ORTHO' : 'PERSP';
+      const base = {
+        projection,
+        location: [camera.position.x, camera.position.y, camera.position.z],
+        rotation_euler: [camera.rotation.x, camera.rotation.y, camera.rotation.z],
+      };
+      if (projection === 'ORTHO') {
+        const vertical = Math.max(0.001, Math.abs((camera.top ?? 1) - (camera.bottom ?? -1)) / Math.max(camera.zoom || 1, 0.001));
+        return { ...base, ortho_scale: vertical };
+      }
+      const fovRadians = (camera.fov || 50) * Math.PI / 180;
+      const lens = 24 / (2 * Math.tan(fovRadians / 2));
+      return { ...base, lens: Number.isFinite(lens) && lens > 0 ? lens : 42 };
+    }
+
     function publishSceneState(requestId = null) {
       window.parent.postMessage({
         type: 'sigma-scene-state',
         requestId,
         sceneObjects: getSceneState(),
+        camera: serializeCameraState(),
       }, window.location.origin);
     }
 

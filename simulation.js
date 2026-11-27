@@ -320,6 +320,7 @@ function initializeSimulation() {
   const defaultSimulationBlendFilename = 'ava_1.8_dress_packed.blend';
   const defaultCameraPresetId = 'frame';
   let latestSigmaSceneState = [];
+  let latestSigmaCameraState = null;
   let sigmaSceneRequestId = 0;
   const pendingSigmaSceneResolvers = new Map();
 
@@ -437,15 +438,39 @@ function initializeSimulation() {
     if (requireMemory && !/^[a-z]{5}[0-9]{5}\.json$/.test(memoryFilename)) {
       throw new Error('Enter a memory filename with five lowercase letters, five digits, and .json.');
     }
-    if (!simulationCameraPresetSelect.value || !availableCameraPresets.length) {
-      throw new Error('Load a scene configuration before starting a simulation.');
+    const hasCameraPreset = Boolean(simulationCameraPresetSelect.value && availableCameraPresets.length);
+    if (!hasCameraPreset && !latestSigmaCameraState) {
+      throw new Error('Load a scene configuration or set a camera view in Σ before starting a simulation.');
     }
     return {
       memoryFilename,
       durationSeconds,
       armatureName: simulationArmatureInput.value.trim() || null,
-      cameraPreset: simulationCameraPresetSelect.value || defaultCameraPresetId,
+      cameraPreset: hasCameraPreset ? (simulationCameraPresetSelect.value || defaultCameraPresetId) : null,
     };
+  }
+
+  function isFiniteVec3(value) {
+    return Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
+  }
+
+  function sanitizeSigmaCamera(camera) {
+    if (!camera || typeof camera !== 'object') return null;
+    const projection = String(camera.projection || 'PERSP').toUpperCase();
+    if (!isFiniteVec3(camera.location) || !isFiniteVec3(camera.rotation_euler)) return null;
+    const sanitized = {
+      projection: projection === 'ORTHO' ? 'ORTHO' : 'PERSP',
+      location: camera.location.map(Number),
+      rotation_euler: camera.rotation_euler.map(Number),
+    };
+    if (sanitized.projection === 'ORTHO') {
+      const orthoScale = Number(camera.ortho_scale);
+      if (Number.isFinite(orthoScale) && orthoScale > 0) sanitized.ortho_scale = orthoScale;
+    } else {
+      const lens = Number(camera.lens);
+      sanitized.lens = Number.isFinite(lens) && lens > 0 ? lens : 42;
+    }
+    return sanitized;
   }
 
   async function readApiResponse(response, operation) {
@@ -655,18 +680,19 @@ function initializeSimulation() {
     }
     await loadCameraPresets();
     if (openToken !== modalOpenToken || simulationSession) return;
-    const sceneState = await requestSigmaSceneState().catch((error) => {
+    const sigmaState = await requestSigmaSceneState().catch((error) => {
       console.warn('[simulation] unable to fetch Sigma scene state before opening modal', error);
-      return latestSigmaSceneState;
+      return { sceneObjects: latestSigmaSceneState, camera: latestSigmaCameraState };
     });
     if (openToken !== modalOpenToken || simulationSession) return;
-    latestSigmaSceneState = sceneState;
+    latestSigmaSceneState = Array.isArray(sigmaState?.sceneObjects) ? sigmaState.sceneObjects : [];
+    latestSigmaCameraState = sanitizeSigmaCamera(sigmaState?.camera) || latestSigmaCameraState;
     updateSimulationSceneSummary(latestSigmaSceneState);
   }
 
   async function requestSigmaSceneState() {
     const sigmaFrame = document.getElementById('sigma-iframe');
-    if (!sigmaFrame?.contentWindow) return [];
+    if (!sigmaFrame?.contentWindow) return { sceneObjects: [], camera: null };
 
     const requestId = `scene-${++sigmaSceneRequestId}-${Date.now()}`;
     return new Promise((resolve, reject) => {
@@ -675,9 +701,9 @@ function initializeSimulation() {
         reject(new Error('Timed out waiting for Sigma scene state'));
       }, 2000);
 
-      pendingSigmaSceneResolvers.set(requestId, (sceneObjects) => {
+      pendingSigmaSceneResolvers.set(requestId, (payload) => {
         window.clearTimeout(timeoutId);
-        resolve(sceneObjects);
+        resolve(payload || { sceneObjects: [], camera: null });
       });
 
       sigmaFrame.contentWindow.postMessage({ type: 'get-scene-state', requestId }, window.location.origin);
@@ -839,9 +865,10 @@ function initializeSimulation() {
       if (!startMemory || !names.includes(startMemory)) throw new Error('Unable to determine a valid starting memory.');
       const repeat = settings.duration_seconds === 'N/A';
       setSimulationStatus(`Preparing the scene for ${startMemory}…`, 'info');
-      const sceneState = await requestSigmaSceneState();
+      const sigmaState = await requestSigmaSceneState();
       check();
-      latestSigmaSceneState = sceneState;
+      latestSigmaSceneState = Array.isArray(sigmaState?.sceneObjects) ? sigmaState.sceneObjects : [];
+      latestSigmaCameraState = sanitizeSigmaCamera(sigmaState?.camera) || latestSigmaCameraState;
       updateSimulationSceneSummary(latestSigmaSceneState);
 
       setSimulationStatus(`Starting with ${startMemory}. The server is preparing and rendering the video; this can take several minutes. Progress and remaining time are unavailable.`, 'info');
@@ -849,10 +876,12 @@ function initializeSimulation() {
         start_memory_filename: startMemory,
         memory_filename: startMemory,
         duration_seconds: repeat ? null : settings.duration_seconds,
-        camera_preset: config.default,
+        camera_preset: runSettings.cameraPreset || config.default || null,
         embodiment_mode: 'simulation',
-        scene_objects: sceneState,
+        scene_objects: latestSigmaSceneState,
       };
+      const sigmaCamera = sanitizeSigmaCamera(latestSigmaCameraState);
+      if (sigmaCamera) simulationRequest.camera = sigmaCamera;
       if (savedMemorySnapshot?.memory_snapshot_id) simulationRequest.memory_snapshot_id = savedMemorySnapshot.memory_snapshot_id;
       const response = await postSimulationJson(`/api/blender/simulate/${encodeURIComponent(defaultSimulationBlendFilename)}`,
         simulationRequest, session, traceId);
@@ -953,10 +982,11 @@ function initializeSimulation() {
     let traceId = '';
     try {
       setSimulationStatus('Preparing scene for buffered playback…', 'info');
-      const sceneState = await requestSigmaSceneState().catch(() => latestSigmaSceneState);
+      const sigmaState = await requestSigmaSceneState().catch(() => ({ sceneObjects: latestSigmaSceneState, camera: latestSigmaCameraState }));
       if (!isCurrentSession(session)) return;
-      latestSigmaSceneState = sceneState;
-      updateSimulationSceneSummary(sceneState);
+      latestSigmaSceneState = Array.isArray(sigmaState?.sceneObjects) ? sigmaState.sceneObjects : [];
+      latestSigmaCameraState = sanitizeSigmaCamera(sigmaState?.camera) || latestSigmaCameraState;
+      updateSimulationSceneSummary(latestSigmaSceneState);
 
       while (isCurrentSession(session)) {
         segment += 1;
@@ -977,9 +1007,10 @@ function initializeSimulation() {
           duration_seconds: settings.durationSeconds,
           armature_name: settings.armatureName,
           camera_preset: settings.cameraPreset,
+          ...(sanitizeSigmaCamera(latestSigmaCameraState) ? { camera: sanitizeSigmaCamera(latestSigmaCameraState) } : {}),
           force_rerender: true,
           embodiment_mode: 'simulation',
-          scene_objects: sceneState,
+          scene_objects: latestSigmaSceneState,
         }, session, traceId);
         const payload = await readApiResponse(renderResponse, 'Simulation');
         if (!isCurrentSession(session)) return;
@@ -1480,13 +1511,15 @@ function initializeSimulation() {
     if (event.data?.type === 'sigma-scene-state') {
       const requestId = event.data.requestId;
       const sceneObjects = Array.isArray(event.data.sceneObjects) ? event.data.sceneObjects : [];
+      const camera = sanitizeSigmaCamera(event.data.camera);
       latestSigmaSceneState = sceneObjects;
+      latestSigmaCameraState = camera;
       updateSimulationSceneSummary(sceneObjects);
 
       const resolver = pendingSigmaSceneResolvers.get(requestId);
       if (resolver) {
         pendingSigmaSceneResolvers.delete(requestId);
-        resolver(sceneObjects);
+        resolver({ sceneObjects, camera });
       }
     }
   });
